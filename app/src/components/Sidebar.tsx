@@ -47,6 +47,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
       ["/settings/fiscal", "Räkenskapsår och moms", "calendar"],
       ["/settings/accounts", "Kontoplan", "grid"],
       ["/settings/templates", "Bokföringsmallar", "wand"],
+      ["/settings/import-export", "Import och export", "upload"],
       ["/settings/appearance", "Utseende", "sun"],
     ],
   },
