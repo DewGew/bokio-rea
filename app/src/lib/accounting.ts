@@ -26,7 +26,14 @@ async function tx<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<
 export async function createVerification(
   t: Tx,
   companyId: number,
-  input: { date: Date; description: string; lines: LineInput[]; series?: string },
+  input: {
+    date: Date;
+    description: string;
+    lines: LineInput[];
+    series?: string;
+    /** Bokslut och ingående balanser rör inte momsen och får bokföras även i en låst momsperiod. */
+    ignoreVatLock?: boolean;
+  },
 ) {
   const lines = input.lines
     .map((l) => ({ ...l, debit: l.debit ?? 0, credit: l.credit ?? 0 }))
@@ -45,7 +52,10 @@ export async function createVerification(
   const missing = lines.find((l) => !known.has(l.account));
   if (missing) throw new AccountingError(`Kontot ${missing.account} finns inte i kontoplanen.`);
 
-  await assertPeriodOpen(t, companyId, input.date);
+  if (!input.ignoreVatLock) await assertPeriodOpen(t, companyId, input.date);
+  if (input.ignoreVatLock && lines.some((l) => l.account >= 2600 && l.account <= 2699)) {
+    throw new AccountingError("Verifikat som påverkar momskontona måste ligga i en öppen momsperiod.");
+  }
 
   // Verifikaten numreras i en obruten serie per räkenskapsår.
   let fiscalYearId: number;
@@ -81,7 +91,7 @@ async function assertPeriodOpen(t: Tx, companyId: number, date: Date) {
 }
 
 /** Makulerar ett verifikat genom att skapa ett omvänt verifikat (bokföringslagen tillåter inte radering). */
-export async function reverseVerification(companyId: number, id: number, date?: Date) {
+export async function reverseVerification(companyId: number, id: number, date?: Date, opts: { ignoreVatLock?: boolean } = {}) {
   return tx(async (t) => {
     const v = await t.verification.findFirst({ where: { id, companyId }, include: { lines: true, reverses: true } });
     if (!v) throw new AccountingError("Verifikatet finns inte.");
@@ -91,6 +101,8 @@ export async function reverseVerification(companyId: number, id: number, date?: 
       date: date ?? v.date,
       description: `Makulering av ${v.series}${v.number}: ${v.description}`,
       lines: v.lines.map((l) => ({ account: l.accountNumber, debit: l.credit, credit: l.debit, text: l.text })),
+      series: v.series === "IB" ? "V" : v.series,
+      ignoreVatLock: opts.ignoreVatLock,
     });
     await t.verification.update({ where: { id: v.id }, data: { reversedById: rev.id } });
     return rev;
@@ -276,17 +288,20 @@ export async function payExpenses(companyId: number, ids: number[], date: Date) 
   });
 }
 
+/** Verifikatserie för ingående balanser (räknas som ingående saldo i rapporterna, inte som en händelse under året). */
+export const IB_SERIES = "IB";
+
 /** Saldo per konto (debet - kredit) för verifikat inom intervallet. */
 export async function balances(
   companyId: number,
-  range: { from?: Date; to?: Date; excludeIds?: number[] } = {},
+  range: { from?: Date; to?: Date; excludeIds?: number[]; series?: { in?: string[]; notIn?: string[] } } = {},
   t: Tx = db,
 ) {
   const rows = await t.verificationLine.groupBy({
     by: ["accountNumber"],
     where: {
       companyId,
-      verification: { date: { gte: range.from, lte: range.to } },
+      verification: { date: { gte: range.from, lte: range.to }, series: range.series },
       verificationId: range.excludeIds?.length ? { notIn: range.excludeIds } : undefined,
     },
     _sum: { debit: true, credit: true },

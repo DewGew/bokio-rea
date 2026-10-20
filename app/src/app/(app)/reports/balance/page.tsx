@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
-import { balances, sumRange } from "@/lib/accounting";
+import { IB_SERIES, balances, sumRange } from "@/lib/accounting";
 import { BALANCE_SECTIONS } from "@/lib/bas";
 import { num } from "@/lib/money";
 import { Card, PageHeader, readParams, type SP } from "@/components/ui";
@@ -12,10 +12,14 @@ export default async function BalanceReport({ searchParams }: { searchParams: SP
   const { companyId } = await requireCompany();
   const { get } = await readParams(searchParams);
   const { all: years, fy } = await pickFiscalYear(companyId, get("fy"));
-  const [opening, closing] = await Promise.all([
+  const [before, ib, closing] = await Promise.all([
     balances(companyId, { to: new Date(fy.start.getTime() - 1) }),
+    balances(companyId, { from: fy.start, to: fy.end, series: { in: [IB_SERIES] } }),
     balances(companyId, { to: fy.end }),
   ]);
+  // Ingående balanser (IB-serien) räknas som ingående saldo, inte som förändring under året.
+  const opening = new Map(before);
+  for (const [acc, v] of ib) opening.set(acc, (opening.get(acc) ?? 0) + v);
   const accounts = await db.account.findMany({ where: { companyId, number: { lt: 3000 } }, orderBy: { number: "asc" } });
 
   // Årets resultat (och tidigare ej omförda resultat) läggs till eget kapital tills bokslut görs.

@@ -97,6 +97,8 @@ model FiscalYear {
   start         DateTime
   end           DateTime
   closedAt      DateTime?
+  // Verifikat som skapades av bokslutet (skatt, årets resultat, omföring), så att bokslutet kan ångras.
+  closingVerificationIds Int[] @default([])
   verifications Verification[]
 
   @@unique([companyId, start])

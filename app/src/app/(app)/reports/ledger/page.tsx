@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
-import { balances } from "@/lib/accounting";
+import { IB_SERIES, balances } from "@/lib/accounting";
 import { dateStr, num } from "@/lib/money";
 import { Card, Empty, PageHeader, readParams, type SP } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
@@ -16,17 +16,23 @@ export default async function Ledger({ searchParams }: { searchParams: SP }) {
   const from = fy.start;
   const to = fy.end;
 
-  const [opening, lines, accounts] = await Promise.all([
+  const [before, ib, lines, accounts] = await Promise.all([
     balances(companyId, { to: new Date(from.getTime() - 1) }),
+    balances(companyId, { from, to, series: { in: [IB_SERIES] } }),
     db.verificationLine.findMany({
-      where: { companyId, accountNumber: only, verification: { date: { gte: from, lte: to } } },
+      // Ingående balanser visas som ingående saldo, inte som rader.
+      where: { companyId, accountNumber: only, verification: { date: { gte: from, lte: to }, series: { not: IB_SERIES } } },
       include: { verification: true },
       orderBy: [{ verification: { date: "asc" } }, { verification: { number: "asc" } }],
     }),
     db.account.findMany({ where: { companyId }, orderBy: { number: "asc" } }),
   ]);
 
-  const used = accounts.filter((a) => (only ? a.number === only : lines.some((l) => l.accountNumber === a.number)));
+  const opening = new Map(before);
+  for (const [acc, v] of ib) opening.set(acc, (opening.get(acc) ?? 0) + v);
+  const used = accounts.filter((a) =>
+    only ? a.number === only : lines.some((l) => l.accountNumber === a.number) || (a.number < 3000 && (opening.get(a.number) ?? 0) !== 0),
+  );
 
   return (
     <>

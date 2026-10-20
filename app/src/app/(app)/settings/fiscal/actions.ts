@@ -97,24 +97,6 @@ async function removeFiscalYear(fd: FormData): Promise<SettingsState> {
   return done("Räkenskapsåret är borttaget.");
 }
 
-/** Stänger ett räkenskapsår så att inget mer kan bokföras i det (eller öppnar det igen). */
-async function toggleFiscalYearClosed(fd: FormData): Promise<SettingsState> {
-  const { companyId } = await requireCompany();
-  const all = await fiscalYears(companyId);
-  const i = all.findIndex((f) => f.id === Number(str(fd, "id")));
-  const fy = all[i];
-  if (!fy) return { error: "Räkenskapsåret finns inte." };
-  if (!fy.closedAt) {
-    if (fy.end >= new Date(new Date().toISOString().slice(0, 10))) return { error: "Räkenskapsåret har inte tagit slut än." };
-    if (all.slice(0, i).some((f) => !f.closedAt)) return { error: "Stäng tidigare räkenskapsår först." };
-    await db.fiscalYear.update({ where: { id: fy.id }, data: { closedAt: new Date() } });
-    return done(`Räkenskapsåret ${fyLabel(fy)} är stängt.`);
-  }
-  if (all[i + 1]?.closedAt) return { error: "Öppna senare räkenskapsår först." };
-  await db.fiscalYear.update({ where: { id: fy.id }, data: { closedAt: null } });
-  return done(`Räkenskapsåret ${fyLabel(fy)} är öppnat igen.`);
-}
-
 /** Alla ändringar av räkenskapsår går via en åtgärd; formulären anger vad som ska göras i fältet "intent". */
 export async function fiscalYearAction(_: SettingsState, fd: FormData): Promise<SettingsState> {
   switch (str(fd, "intent")) {
@@ -124,8 +106,6 @@ export async function fiscalYearAction(_: SettingsState, fd: FormData): Promise<
       return addFiscalYear();
     case "remove":
       return removeFiscalYear(fd);
-    case "toggle":
-      return toggleFiscalYearClosed(fd);
     default:
       return { error: "Okänd åtgärd." };
   }

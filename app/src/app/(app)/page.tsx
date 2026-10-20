@@ -28,11 +28,11 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
     vatPeriod ? vatReport(companyId, vatPeriod.start, vatPeriod.end) : null,
     // Inkomster och kostnader per månad, senaste 12 månaderna.
     db.verificationLine.findMany({
-      where: { companyId, accountNumber: { gte: 3000, lte: 8999 }, verification: { date: { gte: from } } },
+      where: { companyId, accountNumber: { gte: 3000, lte: 8989 }, verification: { date: { gte: from } } },
       select: { debit: true, credit: true, accountNumber: true, verification: { select: { date: true } }, account: { select: { name: true } } },
     }),
   ]);
-  const result = -sumRange(yearBal, 3000, 8999);
+  const result = -sumRange(yearBal, 3000, 8989);
   const bank = sumRange(allBal, 1900, 1999);
   const unpaid = openInvoices.reduce((s, i) => s + invoiceTotals(i.lines).total, 0);
   const overdue = openInvoices.filter((i) => i.dueDate < now).reduce((s, i) => s + invoiceTotals(i.lines).total, 0);

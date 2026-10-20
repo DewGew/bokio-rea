@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { AccountingError, balances, createVerification, type LineInput } from "./accounting";
+import { AccountingError, IB_SERIES, balances, createVerification, type LineInput } from "./accounting";
 import type { Company } from "@prisma/client";
 import { VAT_SETTLEMENT } from "./bas";
 import { contains, fiscalYears } from "./fiscal";
@@ -77,7 +77,7 @@ export async function vatReport(companyId: number, start: Date, end: Date) {
     settlementIds(companyId),
     db.account.findMany({ where: { companyId, number: { gte: 3000, lte: 3999 } }, select: { number: true, vatCode: true } }),
   ]);
-  const b = await balances(companyId, { from: start, to: end, excludeIds });
+  const b = await balances(companyId, { from: start, to: end, excludeIds, series: { notIn: [IB_SERIES] } });
   const credit = (n: number) => -(b.get(n) ?? 0);
   const debit = (n: number) => b.get(n) ?? 0;
 

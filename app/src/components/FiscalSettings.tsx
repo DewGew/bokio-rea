@@ -188,16 +188,9 @@ export function FiscalYearsTable({ years }: { years: FyRow[] }) {
                     </button>
                   )}
                   {(y.ended || y.closed) && (
-                    <form action={action}>
-                      <input type="hidden" name="intent" value="toggle" />
-                      <input type="hidden" name="id" value={y.id} />
-                      <ConfirmButton
-                        className="btn-secondary px-3 py-1.5 text-[13px]"
-                        message={y.closed ? "Öppna räkenskapsåret igen?" : "Stäng räkenskapsåret? Inga fler verifikat kan bokföras i det."}
-                      >
-                        {y.closed ? "Öppna igen" : "Stäng år"}
-                      </ConfirmButton>
-                    </form>
+                    <a href={`/closing/${y.id}`} className="btn-secondary px-3 py-1.5 text-[13px]">
+                      {y.closed ? "Bokslut" : "Gör bokslut"}
+                    </a>
                   )}
                   {isLast && years.length > 1 && y.verifications === 0 && idx === 0 && (
                     <form action={action}>

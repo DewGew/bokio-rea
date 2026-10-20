@@ -57,7 +57,7 @@ export default async function FiscalSettings() {
           <Card title="Räkenskapsår">
             <div className="px-5 pb-5 pt-2">
               <p className="mb-4 text-[13px] text-muted">
-                Verifikaten numreras från V1 i varje räkenskapsår. Nästa år skapas automatiskt när du bokför efter årets slut. Stäng ett år när bokslutet är klart.
+                Verifikaten numreras från V1 i varje räkenskapsår. Nästa år skapas automatiskt när du bokför efter årets slut. Under Bokslut bokförs årets skatt och resultat och året stängs.
               </p>
               <FiscalYearsTable
                 years={years.map((y) => ({
