@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
 import { balances, invoiceTotals, sumRange } from "@/lib/accounting";
 import { kr } from "@/lib/money";
-import { quarterOf, vatReport } from "@/lib/vat";
+import { periodLabel, vatPeriods, vatReport } from "@/lib/vat";
+import { currentFiscalYear, fyLabel } from "@/lib/fiscal";
 import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
 import { BarChart } from "@/components/BarChart";
 
@@ -11,8 +12,10 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const { notice } = await readParams(searchParams);
   const { companyId } = await requireCompany();
   const now = new Date();
-  const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
-  const q = quarterOf(now);
+  // Räkenskapsåret och momsperioden som pågår idag.
+  const [fy, periods] = await Promise.all([currentFiscalYear(companyId), vatPeriods(companyId)]);
+  const yearStart = fy.start;
+  const vatPeriod = periods.find((p) => p.current) ?? null;
   const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
   // Alla frågor körs parallellt; varje databasrundresa kostar tid, särskilt i serverless.
   const [yearBal, allBal, openInvoices, toBook, pendingExpenses, drafts, vat, lines] = await Promise.all([
@@ -22,7 +25,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
     db.upload.count({ where: { companyId, verificationId: null, expense: null } }),
     db.expense.count({ where: { companyId, status: "pending" } }),
     db.invoice.count({ where: { companyId, status: "draft" } }),
-    vatReport(companyId, q.start, q.end),
+    vatPeriod ? vatReport(companyId, vatPeriod.start, vatPeriod.end) : null,
     // Inkomster och kostnader per månad, senaste 12 månaderna.
     db.verificationLine.findMany({
       where: { companyId, accountNumber: { gte: 3000, lte: 8999 }, verification: { date: { gte: from } } },
@@ -64,7 +67,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
     <>
       <PageHeader
         title="Översikt"
-        subtitle={`Räkenskapsår ${now.getUTCFullYear()}`}
+        subtitle={`Räkenskapsår ${fyLabel(fy)}`}
         actions={
           <>
             <Link href="/uploads" className="btn-secondary">Ladda upp underlag</Link>
@@ -79,9 +82,9 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
         <Stat label="Saldo bank och kassa" value={kr(bank)} hint="Enligt bokföringen (19xx)" />
         <Stat label="Obetalda kundfakturor" value={kr(unpaid)} hint={overdue ? `varav förfallet ${kr(overdue)}` : "Inget förfallet"} tone={overdue ? "warn" : undefined} />
         <Stat
-          label={`Preliminär moms ${q.start.toISOString().slice(0, 7)}–${q.end.toISOString().slice(5, 7)}`}
-          value={kr(Math.abs(vat.toPay))}
-          hint={vat.toPay >= 0 ? "Att betala" : "Att få tillbaka"}
+          label={vatPeriod ? `Preliminär moms, ${periodLabel(vatPeriod)}` : "Moms"}
+          value={vat ? kr(Math.abs(vat.toPay)) : "–"}
+          hint={vat ? (vat.toPay >= 0 ? "Att betala" : "Att få tillbaka") : "Ej momsregistrerat"}
         />
       </div>
 

@@ -59,6 +59,7 @@ const BADGE: Record<string, [string, string]> = {
   locked: ["Låst", "bg-success-soft text-success"],
   open: ["Pågår", "bg-fill text-muted"],
   late: ["Försenad", "bg-danger-soft text-danger"],
+  todo: ["Att deklarera", "bg-warn-soft text-warn"],
   reversed: ["Makulerad", "bg-danger-soft text-danger"],
 };
 

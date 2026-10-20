@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { BAS_ACCOUNTS } from "./bas";
+import { createFirstFiscalYear } from "./fiscal";
 
 export const DEFAULT_TEMPLATES: {
   name: string;
@@ -39,13 +40,23 @@ export type CompanyInput = {
   city?: string;
   email?: string;
   bankgiro?: string;
+  companyType?: string;
+  vatPeriod?: string;
+  fiscalStartMonth?: number;
 };
+
+export const COMPANY_TYPES = { ab: "Aktiebolag", ef: "Enskild firma", hb: "Handelsbolag / kommanditbolag", ek: "Ekonomisk förening" } as const;
+export const isCompanyType = (s: string): s is keyof typeof COMPANY_TYPES => Object.hasOwn(COMPANY_TYPES, s);
+export const isVatPeriod = (s: string) => ["month", "quarter", "year", "none"].includes(s);
 
 /** Skapar ett företag med BAS-kontoplan och standardmallar, och gör användaren till ägare. */
 export async function createCompany(tx: Prisma.TransactionClient, userId: number, input: CompanyInput) {
+  // Enskild firma har alltid kalenderår som räkenskapsår.
+  const fiscalStartMonth = input.companyType === "ef" ? 1 : (input.fiscalStartMonth ?? 1);
   const company = await tx.company.create({
-    data: { ...input, memberships: { create: { userId, role: "owner" } } },
+    data: { ...input, fiscalStartMonth, memberships: { create: { userId, role: "owner" } } },
   });
+  await createFirstFiscalYear(tx, company.id, fiscalStartMonth);
   await tx.account.createMany({
     data: BAS_ACCOUNTS.map(([number, name, vatCode]) => ({ companyId: company.id, number, name, vatCode: vatCode ?? "" })),
   });

@@ -43,6 +43,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
     title: "Inställningar",
     items: [
       ["/settings", "Företag", "building"],
+      ["/settings/fiscal", "Räkenskapsår och moms", "calendar"],
       ["/settings/accounts", "Kontoplan", "grid"],
       ["/settings/templates", "Bokföringsmallar", "wand"],
       ["/settings/appearance", "Utseende", "sun"],

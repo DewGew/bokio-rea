@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
 import { dateStr, kr, parseDate } from "@/lib/money";
-import { deadline, quarterOf, vatReport } from "@/lib/vat";
+import { periodLabel, vatPeriods, vatReport } from "@/lib/vat";
 import { Badge, Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { lockPeriod } from "../actions";
@@ -14,19 +14,21 @@ export default async function VatPeriod({ params, searchParams }: { params: Prom
   const { error, notice } = await readParams(searchParams);
   const date = parseDate(s);
   if (!date) notFound();
-  const { start, end } = quarterOf(date);
+  const period = (await vatPeriods(companyId)).find((p) => p.start.getTime() === date.getTime());
+  if (!period) notFound();
+  const { start, end } = period;
   const report = await vatReport(companyId, start, end);
   const stored = await db.vatPeriod.findUnique({ where: { companyId_start_end: { companyId, start, end } } });
   const settlement = stored?.verificationId ? await db.verification.findUnique({ where: { id: stored.verificationId } }) : null;
   const unbooked = await db.upload.count({ where: { companyId, verificationId: null, expense: null } });
-  const isOver = end < new Date();
+  const isOver = !period.current && end < new Date(new Date().toISOString().slice(0, 10));
   const accounts = await db.account.findMany({ where: { companyId, number: { in: [...report.balances.keys()].filter((n) => n >= 2600 && n < 2700) } } });
 
   return (
     <>
       <PageHeader
-        title={`Moms ${dateStr(start)} – ${dateStr(end)}`}
-        subtitle={`Deklareras senast ${dateStr(deadline(end))}`}
+        title={`Moms ${periodLabel(period)}`}
+        subtitle={`${dateStr(start)} – ${dateStr(end)} · deklareras och betalas senast ${dateStr(period.deadline)}`}
         actions={<Link href="/vat" className="btn-secondary">Alla perioder</Link>}
       />
       <Flash error={error} notice={notice} />

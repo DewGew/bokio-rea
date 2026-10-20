@@ -5,18 +5,19 @@ import { RESULT_SECTIONS } from "@/lib/bas";
 import { num } from "@/lib/money";
 import { Card, PageHeader, readParams, type SP } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
-import { YearForm, yearsWithData } from "@/components/YearSelect";
+import { YearForm } from "@/components/YearSelect";
+import { fyLabel, pickFiscalYear } from "@/lib/fiscal";
 
 export default async function ResultReport({ searchParams }: { searchParams: SP }) {
   const { companyId } = await requireCompany();
   const { get } = await readParams(searchParams);
-  const years = await yearsWithData(companyId);
-  const year = Number(get("year")) || years[0];
+  const { all: years, fy } = await pickFiscalYear(companyId, get("fy"));
   const decimals = get("dec") === "1";
-  const cols = [year, year - 1];
-  const data = await Promise.all(
-    cols.map((y) => balances(companyId, { from: new Date(Date.UTC(y, 0, 1)), to: new Date(Date.UTC(y, 11, 31, 23, 59)) })),
-  );
+  // Valt räkenskapsår jämfört med föregående (om det finns).
+  const prev = years[years.findIndex((y) => y.id === fy.id) - 1];
+  const fys = prev ? [fy, prev] : [fy];
+  const cols = fys.map((y) => fyLabel(y));
+  const data = await Promise.all(fys.map((y) => balances(companyId, { from: y.start, to: y.end })));
   const accounts = await db.account.findMany({ where: { companyId, number: { gte: 3000, lte: 8999 } } });
   // Intäkter visas positiva, kostnader negativa (kredit - debet).
   const val = (i: number, from: number, to: number) => -sumRange(data[i], from, to);
@@ -28,7 +29,7 @@ export default async function ResultReport({ searchParams }: { searchParams: SP 
     <>
       <PageHeader title="Resultatrapport" actions={<PrintButton />} />
       <Card>
-        <YearForm years={years} year={year}>
+        <YearForm years={years} fy={fy}>
           <label className="flex items-center gap-2 pb-2 text-sm">
             <input type="checkbox" name="dec" value="1" defaultChecked={decimals} /> Visa decimaler
           </label>
@@ -55,7 +56,7 @@ export default async function ResultReport({ searchParams }: { searchParams: SP 
                       ...accs.map((a) => (
                         <tr key={a.number} className="text-muted">
                           <td className="pl-8">
-                            <a href={`/reports/ledger?account=${a.number}&year=${year}`} className="hover:text-brand">{a.number} {a.name}</a>
+                            <a href={`/reports/ledger?account=${a.number}&fy=${fy.id}`} className="hover:text-brand">{a.number} {a.name}</a>
                           </td>
                           {cols.map((y, i) => <td key={y} className="num">{f(-(data[i].get(a.number) ?? 0))}</td>)}
                         </tr>

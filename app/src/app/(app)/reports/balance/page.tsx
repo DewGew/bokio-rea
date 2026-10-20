@@ -5,17 +5,17 @@ import { BALANCE_SECTIONS } from "@/lib/bas";
 import { num } from "@/lib/money";
 import { Card, PageHeader, readParams, type SP } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
-import { YearForm, yearsWithData } from "@/components/YearSelect";
+import { YearForm } from "@/components/YearSelect";
+import { fyLabel, pickFiscalYear } from "@/lib/fiscal";
 
 export default async function BalanceReport({ searchParams }: { searchParams: SP }) {
   const { companyId } = await requireCompany();
   const { get } = await readParams(searchParams);
-  const years = await yearsWithData(companyId);
-  const year = Number(get("year")) || years[0];
-  const yearStart = new Date(Date.UTC(year, 0, 1));
-  const yearEnd = new Date(Date.UTC(year, 11, 31, 23, 59));
-  const opening = await balances(companyId, { to: new Date(yearStart.getTime() - 1) });
-  const closing = await balances(companyId, { to: yearEnd });
+  const { all: years, fy } = await pickFiscalYear(companyId, get("fy"));
+  const [opening, closing] = await Promise.all([
+    balances(companyId, { to: new Date(fy.start.getTime() - 1) }),
+    balances(companyId, { to: fy.end }),
+  ]);
   const accounts = await db.account.findMany({ where: { companyId, number: { lt: 3000 } }, orderBy: { number: "asc" } });
 
   // Årets resultat (och tidigare ej omförda resultat) läggs till eget kapital tills bokslut görs.
@@ -25,9 +25,9 @@ export default async function BalanceReport({ searchParams }: { searchParams: SP
 
   return (
     <>
-      <PageHeader title="Balansrapport" subtitle={`Per ${year}-12-31`} actions={<PrintButton />} />
+      <PageHeader title="Balansrapport" subtitle={`Räkenskapsår ${fyLabel(fy)} · per ${fy.end.toISOString().slice(0, 10)}`} actions={<PrintButton />} />
       <Card>
-        <YearForm years={years} year={year} />
+        <YearForm years={years} fy={fy} />
         <div className="overflow-x-auto">
           <table className="table">
             {BALANCE_SECTIONS.map((section, si) => {
@@ -60,7 +60,7 @@ export default async function BalanceReport({ searchParams }: { searchParams: SP
                         return (
                           <tr key={a.number} className="text-muted">
                             <td className="pl-8">
-                              <a href={`/reports/ledger?account=${a.number}&year=${year}`} className="hover:text-brand">{a.number} {a.name}</a>
+                              <a href={`/reports/ledger?account=${a.number}&fy=${fy.id}`} className="hover:text-brand">{a.number} {a.name}</a>
                             </td>
                             <td className="num">{num(ao)}</td>
                             <td className="num">{num(ac - ao)}</td>

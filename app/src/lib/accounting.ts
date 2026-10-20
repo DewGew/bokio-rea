@@ -2,6 +2,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "./db";
 import { BANK_ACCOUNT, INPUT_VAT, OUTPUT_VAT, PAYABLE_EXPENSES, RECEIVABLES, SALES_ACCOUNT, VAT_SETTLEMENT } from "./bas";
 import { vatFromGross } from "./money";
+import { FiscalError, ensureFiscalYearFor } from "./fiscal";
 
 type Tx = Prisma.TransactionClient | PrismaClient;
 
@@ -46,15 +47,22 @@ export async function createVerification(
 
   await assertPeriodOpen(t, companyId, input.date);
 
+  // Verifikaten numreras i en obruten serie per räkenskapsår.
+  let fiscalYearId: number;
+  try {
+    fiscalYearId = (await ensureFiscalYearFor(t, companyId, input.date)).id;
+  } catch (e) {
+    if (e instanceof FiscalError) throw new AccountingError(e.message);
+    throw e;
+  }
   const series = input.series ?? "V";
-  const year = input.date.getUTCFullYear();
-  const last = await t.verification.findFirst({ where: { companyId, series, year }, orderBy: { number: "desc" } });
+  const last = await t.verification.findFirst({ where: { companyId, series, fiscalYearId }, orderBy: { number: "desc" } });
 
   return t.verification.create({
     data: {
       companyId,
       series,
-      year,
+      fiscalYearId,
       number: (last?.number ?? 0) + 1,
       date: input.date,
       description: input.description.trim(),
@@ -95,8 +103,11 @@ export async function bookWithTemplate(
   input: { uploadId?: number; templateId: number; date: Date; gross: number; paymentAccount: number; description: string },
 ) {
   return tx(async (t) => {
-    const tpl = await t.template.findFirst({ where: { id: input.templateId, companyId } });
-    if (!tpl) throw new AccountingError("Mallen finns inte.");
+    const found = await t.template.findFirst({ where: { id: input.templateId, companyId } });
+    if (!found) throw new AccountingError("Mallen finns inte.");
+    // Ett företag som inte är momsregistrerat drar ingen moms: hela beloppet blir kostnad/intäkt.
+    const company = await t.company.findUniqueOrThrow({ where: { id: companyId }, select: { vatPeriod: true } });
+    const tpl = company.vatPeriod === "none" ? { ...found, vatRate: 0, direction: found.direction === "reverse" ? "purchase" : found.direction } : found;
     if (input.gross <= 0) throw new AccountingError("Beloppet måste vara större än noll.");
     const lines: LineInput[] = [];
 
@@ -154,6 +165,16 @@ export function invoiceTotals(lines: { quantity: number; unitPrice: number; vatR
   return { byRate, net, vat, total: net + vat };
 }
 
+/** Intäkts- och momsrader för en faktura, grupperat per momssats. */
+function salesLines(totals: ReturnType<typeof invoiceTotals>): LineInput[] {
+  const lines: LineInput[] = [];
+  for (const [rate, v] of totals.byRate) {
+    lines.push({ account: SALES_ACCOUNT[rate] ?? 3004, credit: v.net });
+    if (v.vat) lines.push({ account: OUTPUT_VAT[rate], credit: v.vat });
+  }
+  return lines;
+}
+
 /** Bokför ett fakturautkast: tilldelar fakturanummer och bokför kundfordran. */
 export async function sendInvoice(companyId: number, id: number) {
   return tx(async (t) => {
@@ -163,16 +184,23 @@ export async function sendInvoice(companyId: number, id: number) {
     if (inv.lines.length === 0) throw new AccountingError("Fakturan saknar rader.");
     const totals = invoiceTotals(inv.lines);
     if (totals.total <= 0) throw new AccountingError("Fakturans belopp måste vara större än noll.");
+    const company = await t.company.findUniqueOrThrow({ where: { id: companyId } });
+    if (company.vatPeriod === "none" && totals.vat !== 0) {
+      throw new AccountingError("Företaget är inte momsregistrerat och får inte ta ut moms. Sätt momsen till 0 % på alla rader.");
+    }
 
     const last = await t.invoice.findFirst({ where: { companyId, number: { not: null } }, orderBy: { number: "desc" } });
     const number = (last?.number ?? 0) + 1;
 
-    const lines: LineInput[] = [{ account: RECEIVABLES, debit: totals.total }];
-    for (const [rate, v] of totals.byRate) {
-      lines.push({ account: SALES_ACCOUNT[rate] ?? 3004, credit: v.net });
-      if (v.vat) lines.push({ account: OUTPUT_VAT[rate], credit: v.vat });
+    // Kontantmetoden: fakturan bokförs först när den betalas.
+    if (company.accountingMethod === "cash") {
+      return t.invoice.update({ where: { id }, data: { number, status: "sent" } });
     }
-    const v = await createVerification(t, companyId, { date: inv.date, description: `Faktura #${number} till ${inv.customer.name}`, lines });
+    const v = await createVerification(t, companyId, {
+      date: inv.date,
+      description: `Faktura #${number} till ${inv.customer.name}`,
+      lines: [{ account: RECEIVABLES, debit: totals.total }, ...salesLines(totals)],
+    });
     return t.invoice.update({ where: { id }, data: { number, status: "sent", verificationId: v.id } });
   });
 }
@@ -182,14 +210,18 @@ export async function registerInvoicePayment(companyId: number, id: number, date
     const inv = await t.invoice.findFirst({ where: { id, companyId }, include: { lines: true, customer: true } });
     if (!inv) throw new AccountingError("Fakturan finns inte.");
     if (inv.status !== "sent") throw new AccountingError("Endast skickade, obetalda fakturor kan registreras som betalda.");
-    const { total } = invoiceTotals(inv.lines);
+    const totals = invoiceTotals(inv.lines);
+    // Bokförd vid utskick (fakturametoden): betalningen nollar kundfordran.
+    // Ej bokförd (kontantmetoden): intäkt och moms bokförs nu, på betaldagen.
     const v = await createVerification(t, companyId, {
       date,
       description: `Faktura #${inv.number} betalad av ${inv.customer.name}`,
-      lines: [
-        { account, debit: total },
-        { account: RECEIVABLES, credit: total },
-      ],
+      lines: inv.verificationId
+        ? [
+            { account, debit: totals.total },
+            { account: RECEIVABLES, credit: totals.total },
+          ]
+        : [{ account, debit: totals.total }, ...salesLines(totals)],
     });
     return t.invoice.update({ where: { id }, data: { status: "paid", paidDate: date, paymentVerificationId: v.id } });
   });
@@ -197,9 +229,10 @@ export async function registerInvoicePayment(companyId: number, id: number, date
 
 export async function creditInvoice(companyId: number, id: number) {
   const inv = await db.invoice.findFirst({ where: { id, companyId } });
-  if (!inv || !inv.verificationId) throw new AccountingError("Fakturan är inte bokförd.");
+  if (!inv) throw new AccountingError("Fakturan finns inte.");
   if (inv.status !== "sent") throw new AccountingError("Endast obetalda fakturor kan krediteras.");
-  await reverseVerification(companyId, inv.verificationId);
+  // Med kontantmetoden finns inget verifikat att vända förrän fakturan betalats.
+  if (inv.verificationId) await reverseVerification(companyId, inv.verificationId);
   return db.invoice.update({ where: { id }, data: { status: "credited" } });
 }
 
@@ -208,7 +241,8 @@ export async function bookExpense(companyId: number, id: number) {
     const e = await t.expense.findFirst({ where: { id, companyId } });
     if (!e) throw new AccountingError("Utlägget finns inte.");
     if (e.status !== "pending") throw new AccountingError("Utlägget är redan bokfört.");
-    const vat = vatFromGross(e.amount, e.vatRate);
+    const company = await t.company.findUniqueOrThrow({ where: { id: companyId }, select: { vatPeriod: true } });
+    const vat = company.vatPeriod === "none" ? 0 : vatFromGross(e.amount, e.vatRate);
     const v = await createVerification(t, companyId, {
       date: e.date,
       description: `Utlägg ${e.employee}: ${e.description}`,

@@ -51,8 +51,14 @@ model Company {
   city        String   @default("")
   email       String   @default("")
   bankgiro    String   @default("")
-  vatPeriod   String   @default("quarter")
   invoiceDays Int      @default(30)
+
+  // Bokföring och moms
+  companyType      String @default("ab") // ab | ef | hb | ek
+  accountingMethod String @default("invoice") // invoice (fakturametoden) | cash (kontantmetoden)
+  vatPeriod        String @default("quarter") // month | quarter | year | none (ej momsregistrerad)
+  euTrade          Boolean @default(false) // påverkar sista dag för helårsmoms
+  fiscalStartMonth Int    @default(1) // startmånad för kommande räkenskapsår (1-12)
   phone       String   @default("")
   website     String   @default("")
   createdAt   DateTime @default(now())
@@ -81,6 +87,19 @@ model Company {
   invoices      Invoice[]
   expenses      Expense[]
   vatPeriods    VatPeriod[]
+  fiscalYears   FiscalYear[]
+}
+
+model FiscalYear {
+  id            Int            @id @default(autoincrement())
+  companyId     Int
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  start         DateTime
+  end           DateTime
+  closedAt      DateTime?
+  verifications Verification[]
+
+  @@unique([companyId, start])
 }
 
 model Account {
@@ -101,7 +120,8 @@ model Verification {
   companyId    Int
   company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   series       String        @default("V")
-  year         Int
+  fiscalYearId Int
+  fiscalYear   FiscalYear    @relation(fields: [fiscalYearId], references: [id])
   number       Int
   date         DateTime
   description  String
@@ -116,7 +136,7 @@ model Verification {
   expenses     Expense[]     @relation("ExpenseVerification")
   expensePays  Expense[]     @relation("ExpensePayment")
 
-  @@unique([companyId, series, year, number])
+  @@unique([companyId, series, fiscalYearId, number])
   @@index([companyId, date])
 }
 

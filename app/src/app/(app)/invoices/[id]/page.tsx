@@ -11,7 +11,7 @@ import { InvoiceEditor } from "@/components/InvoiceEditor";
 import { credit, deleteDraft, markPaid, saveAndSend, saveDraft } from "../actions";
 
 export default async function InvoicePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
-  const { companyId } = await requireCompany();
+  const { companyId, company } = await requireCompany();
   const { id } = await params;
   const { error, notice } = await readParams(searchParams);
   const invoice = await db.invoice.findFirst({
@@ -47,6 +47,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
             articles={articles}
             action={saveDraft}
             sendAction={saveAndSend}
+            noVat={company.vatPeriod === "none"}
           />
         </Card>
       </>

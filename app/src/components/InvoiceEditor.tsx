@@ -7,7 +7,7 @@ type Article = { id: number; name: string; unit: string; price: number; vatRate:
 
 const toNum = (s: string) => Number(String(s).replace(/\s/g, "").replace(",", ".")) || 0;
 const fmt = (n: number) => n.toLocaleString("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const emptyLine = (): Line => ({ description: "", quantity: "1", unit: "st", unitPrice: "", vatRate: "25" });
+const emptyLine = (vat = "25"): Line => ({ description: "", quantity: "1", unit: "st", unitPrice: "", vatRate: vat });
 
 export function InvoiceEditor({
   invoice,
@@ -15,6 +15,7 @@ export function InvoiceEditor({
   articles,
   action,
   sendAction,
+  noVat = false,
 }: {
   invoice: {
     id: number;
@@ -30,17 +31,20 @@ export function InvoiceEditor({
   articles: Article[];
   action: (fd: FormData) => Promise<void>;
   sendAction: (fd: FormData) => Promise<void>;
+  /** Företaget är inte momsregistrerat: alla rader får 0 % moms. */
+  noVat?: boolean;
 }) {
+  const defaultVat = noVat ? "0" : "25";
   const [lines, setLines] = useState<Line[]>(
     invoice.lines.length
       ? invoice.lines.map((l) => ({ description: l.description, quantity: String(l.quantity), unit: l.unit, unitPrice: (l.unitPrice / 100).toFixed(2).replace(".", ","), vatRate: String(l.vatRate) }))
-      : [emptyLine()],
+      : [emptyLine(defaultVat)],
   );
   const set = (i: number, patch: Partial<Line>) => setLines(lines.map((l, j) => (j === i ? { ...l, ...patch } : l)));
   const addArticle = (id: string) => {
     const a = articles.find((x) => String(x.id) === id);
     if (!a) return;
-    const line = { description: a.name, quantity: "1", unit: a.unit, unitPrice: (a.price / 100).toFixed(2).replace(".", ","), vatRate: String(a.vatRate) };
+    const line = { description: a.name, quantity: "1", unit: a.unit, unitPrice: (a.price / 100).toFixed(2).replace(".", ","), vatRate: noVat ? "0" : String(a.vatRate) };
     setLines(lines.length === 1 && !lines[0].description && !lines[0].unitPrice ? [line] : [...lines, line]);
   };
 
@@ -102,7 +106,7 @@ export function InvoiceEditor({
                 <td><input aria-label="Enhet" value={l.unit} onChange={(e) => set(i, { unit: e.target.value })} className="input" /></td>
                 <td><input aria-label="À-pris" value={l.unitPrice} onChange={(e) => set(i, { unitPrice: e.target.value })} className="input text-right" inputMode="decimal" /></td>
                 <td>
-                  <select aria-label="Moms" value={l.vatRate} onChange={(e) => set(i, { vatRate: e.target.value })} className="input">
+                  <select aria-label="Moms" value={l.vatRate} disabled={noVat} onChange={(e) => set(i, { vatRate: e.target.value })} className="input">
                     <option value="25">25 %</option>
                     <option value="12">12 %</option>
                     <option value="6">6 %</option>
@@ -118,7 +122,7 @@ export function InvoiceEditor({
           </tbody>
         </table>
         <div className="flex flex-wrap items-center gap-3 p-3">
-          <button type="button" onClick={() => setLines([...lines, emptyLine()])} className="btn-secondary">+ Rad</button>
+          <button type="button" onClick={() => setLines([...lines, emptyLine(defaultVat)])} className="btn-secondary">+ Rad</button>
           {articles.length > 0 && (
             <select aria-label="Lägg till artikel" value="" onChange={(e) => addArticle(e.target.value)} className="input w-auto">
               <option value="">+ Lägg till artikel…</option>

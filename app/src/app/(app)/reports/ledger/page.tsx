@@ -5,16 +5,16 @@ import { balances } from "@/lib/accounting";
 import { dateStr, num } from "@/lib/money";
 import { Card, Empty, PageHeader, readParams, type SP } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
-import { YearForm, yearsWithData } from "@/components/YearSelect";
+import { YearForm } from "@/components/YearSelect";
+import { fyLabel, pickFiscalYear } from "@/lib/fiscal";
 
 export default async function Ledger({ searchParams }: { searchParams: SP }) {
   const { companyId } = await requireCompany();
   const { get } = await readParams(searchParams);
-  const years = await yearsWithData(companyId);
-  const year = Number(get("year")) || years[0];
+  const { all: years, fy } = await pickFiscalYear(companyId, get("fy"));
   const only = Number(get("account")) || undefined;
-  const from = new Date(Date.UTC(year, 0, 1));
-  const to = new Date(Date.UTC(year, 11, 31, 23, 59));
+  const from = fy.start;
+  const to = fy.end;
 
   const [opening, lines, accounts] = await Promise.all([
     balances(companyId, { to: new Date(from.getTime() - 1) }),
@@ -30,9 +30,9 @@ export default async function Ledger({ searchParams }: { searchParams: SP }) {
 
   return (
     <>
-      <PageHeader title="Huvudbok" subtitle={only ? `Konto ${only}` : `Alla konton med transaktioner ${year}`} actions={<PrintButton />} />
+      <PageHeader title="Huvudbok" subtitle={only ? `Konto ${only}` : `Alla konton med transaktioner, räkenskapsår ${fyLabel(fy)}`} actions={<PrintButton />} />
       <Card>
-        <YearForm years={years} year={year}>
+        <YearForm years={years} fy={fy}>
           <div>
             <label className="label" htmlFor="account">Konto</label>
             <select id="account" name="account" defaultValue={only ?? ""} className="input w-72">

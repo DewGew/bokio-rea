@@ -3,18 +3,18 @@ import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
 import { dateStr, kr } from "@/lib/money";
 import { Badge, Card, Empty, Flash, PageHeader, readParams, type SP } from "@/components/ui";
+import { fyLabel, pickFiscalYear } from "@/lib/fiscal";
 
 export default async function Verifications({ searchParams }: { searchParams: SP }) {
   const { companyId } = await requireCompany();
   const { get, error, notice } = await readParams(searchParams);
-  const years = (await db.verification.findMany({ where: { companyId }, distinct: ["year"], select: { year: true }, orderBy: { year: "desc" } })).map((v) => v.year);
-  const year = Number(get("year")) || years[0] || new Date().getUTCFullYear();
+  const { all: years, fy } = await pickFiscalYear(companyId, get("fy"));
   const q = get("q") ?? "";
 
   const list = await db.verification.findMany({
     where: {
       companyId,
-      year,
+      fiscalYearId: fy.id,
       OR: q
         ? [
             { description: { contains: q } },
@@ -43,9 +43,11 @@ export default async function Verifications({ searchParams }: { searchParams: SP
       <Card>
         <form className="flex flex-wrap items-end gap-3 border-b border-line p-4">
           <div>
-            <label className="label" htmlFor="year">Räkenskapsår</label>
-            <select id="year" name="year" defaultValue={year} className="input w-32">
-              {(years.length ? years : [year]).map((y) => <option key={y}>{y}</option>)}
+            <label className="label" htmlFor="fy">Räkenskapsår</label>
+            <select id="fy" name="fy" defaultValue={fy.id} className="input w-48">
+              {[...years].reverse().map((y) => (
+                <option key={y.id} value={y.id}>{fyLabel(y)}</option>
+              ))}
             </select>
           </div>
           <div className="min-w-48 flex-1">

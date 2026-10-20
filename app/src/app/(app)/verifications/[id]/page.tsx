@@ -76,7 +76,7 @@ export default async function VerificationPage({ params, searchParams }: { param
                 {v.lines.map((l) => (
                   <tr key={l.id}>
                     <td>
-                      <Link href={`/reports/ledger?account=${l.accountNumber}&year=${v.year}`} className="text-brand">{l.accountNumber}</Link>
+                      <Link href={`/reports/ledger?account=${l.accountNumber}&fy=${v.fiscalYearId}`} className="text-brand">{l.accountNumber}</Link>
                     </td>
                     <td>
                       {l.account.name}

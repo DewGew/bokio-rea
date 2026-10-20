@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { requireCompany } from "@/lib/auth";
 import { dateStr, kr } from "@/lib/money";
-import { vatPeriods, vatReport } from "@/lib/vat";
+import { VAT_FREQUENCIES, periodLabel, vatPeriods, vatReport } from "@/lib/vat";
 import { Badge, Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAJ", "JUN", "JUL", "AUG", "SEP", "OKT", "NOV", "DEC"];
 
 export default async function Vat({ searchParams }: { searchParams: SP }) {
-  const { companyId } = await requireCompany();
+  const { companyId, company } = await requireCompany();
   const { error, notice } = await readParams(searchParams);
   const periods = await vatPeriods(companyId);
   const now = new Date();
@@ -15,13 +15,24 @@ export default async function Vat({ searchParams }: { searchParams: SP }) {
 
   return (
     <>
-      <PageHeader title="Momsredovisning" subtitle="Kvartalsvis moms. Perioder deklareras i tur och ordning och låses när de är avstämda." />
+      <PageHeader
+        title="Momsredovisning"
+        subtitle={`Redovisningsperiod: ${VAT_FREQUENCIES[company.vatPeriod as keyof typeof VAT_FREQUENCIES] ?? company.vatPeriod}. Perioder deklareras i tur och ordning och låses när de är avstämda.`}
+        actions={<Link href="/settings/fiscal" className="btn-secondary">Ändra inställningar</Link>}
+      />
       <Flash error={error} notice={notice} />
+      {company.vatPeriod === "none" && (
+        <Card className="mb-6 p-5 text-[15px]">
+          Företaget är inställt som <strong>ej momsregistrerat</strong>. Ingen moms dras eller redovisas.{" "}
+          <Link href="/settings/fiscal" className="text-brand">Ändra under Räkenskapsår och moms</Link>.
+        </Card>
+      )}
+      {withAmounts.length > 0 && (
       <Card>
         <ul className="divide-y divide-line">
           {withAmounts.map((p) => {
             const status = p.lockedAt ? "locked" : p.current ? "open" : p.deadline < now ? "late" : "pending";
-            const label = `${p.start.toLocaleDateString("sv-SE", { month: "long", year: "numeric", timeZone: "UTC" })} – ${p.end.toLocaleDateString("sv-SE", { month: "long", year: "numeric", timeZone: "UTC" })}`;
+            const label = periodLabel(p);
             return (
               <li key={p.start.toISOString()}>
                 <Link href={`/vat/${dateStr(p.start)}`} className="flex items-center gap-4 px-4 py-3 hover:bg-surface-2">
@@ -41,7 +52,7 @@ export default async function Vat({ searchParams }: { searchParams: SP }) {
                     <p className="text-xs text-muted">{p.toPay >= 0 ? "att betala" : "att få tillbaka"}</p>
                   </div>
                   <span className="hidden sm:block">
-                    <Badge status={status === "pending" ? "pending" : status} />
+                    <Badge status={status === "pending" ? "todo" : status} />
                   </span>
                 </Link>
               </li>
@@ -49,6 +60,7 @@ export default async function Vat({ searchParams }: { searchParams: SP }) {
           })}
         </ul>
       </Card>
+      )}
     </>
   );
 }

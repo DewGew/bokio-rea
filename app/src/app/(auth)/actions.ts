@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { endSession, getSession, hashPassword, requireUser, setActiveCompany, startSession, verifyPassword } from "@/lib/auth";
-import { createCompany, validOrgNumber } from "@/lib/company-setup";
+import { createCompany, isCompanyType, isVatPeriod, validOrgNumber } from "@/lib/company-setup";
 import { str, withParam } from "@/lib/action";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,6 +18,9 @@ function companyFields(fd: FormData) {
     postalCode: str(fd, "postalCode"),
     city: str(fd, "city"),
     email: str(fd, "companyEmail"),
+    companyType: isCompanyType(str(fd, "companyType")) ? str(fd, "companyType") : "ab",
+    vatPeriod: isVatPeriod(str(fd, "vatPeriod")) ? str(fd, "vatPeriod") : "quarter",
+    fiscalStartMonth: Math.min(12, Math.max(1, Number(str(fd, "fiscalStartMonth")) || 1)),
   };
 }
 
