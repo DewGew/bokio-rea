@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { Uploaded } from "@/lib/upload-client";
 import { ConfirmButton } from "./ConfirmButton";
+import { FileUploader } from "./FileUploader";
+import { Icon } from "./Icon";
 
 type Row = { account: string; debit: string; credit: string; text: string };
 const empty = (): Row => ({ account: "", debit: "", credit: "", text: "" });
@@ -16,12 +19,16 @@ export function VerificationEditor({
   accounts,
   action,
   defaults,
+  uploader,
 }: {
   accounts: { number: number; name: string }[];
   action: (fd: FormData) => Promise<void>;
   defaults?: { date?: string; description?: string; uploadId?: number };
+  /** Visar en sektion för att bifoga underlag (foto eller PDF) direkt i verifikatet. */
+  uploader?: { blob: boolean; companyId: number };
 }) {
   const [rows, setRows] = useState<Row[]>([empty(), empty(), empty()]);
+  const [attachments, setAttachments] = useState<Uploaded[]>([]);
   const [problem, setProblem] = useState("");
   const names = useMemo(() => new Map(accounts.map((a) => [String(a.number), a.name])), [accounts]);
   const debit = rows.reduce((s, r) => s + toOre(r.debit), 0);
@@ -53,6 +60,7 @@ export function VerificationEditor({
     >
       <input type="hidden" name="lines" value={JSON.stringify(rows)} />
       {defaults?.uploadId && <input type="hidden" name="uploadId" value={defaults.uploadId} />}
+      <input type="hidden" name="uploadIds" value={attachments.map((a) => a.id).join(",")} />
       <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
         <div>
           <label className="label" htmlFor="date">Datum</label>
@@ -115,6 +123,42 @@ export function VerificationEditor({
           </tfoot>
         </table>
       </div>
+      {uploader && (
+        <section aria-labelledby="attach-title" className="space-y-3">
+          <h3 id="attach-title" className="flex items-center gap-2 text-[15px] font-semibold">
+            <Icon name="paperclip" className="h-[18px] w-[18px] text-brand" />
+            Underlag
+            <span className="font-normal text-muted">(kvitto, faktura eller avtal)</span>
+          </h3>
+          {attachments.length > 0 && (
+            <ul className="flex flex-wrap gap-3">
+              {attachments.map((a) => (
+                <li key={a.id} className="group relative h-28 w-24 overflow-hidden rounded-xl bg-surface-2">
+                  {a.mimeType.startsWith("image/") && !a.mimeType.includes("hei") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={`/api/files/${a.id}`} alt={a.fileName} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex h-full flex-col items-center justify-center gap-1 p-2 text-center text-[11px] text-muted">
+                      <Icon name="doc" className="h-7 w-7 text-brand" />
+                      <span className="line-clamp-2 break-all">{a.fileName}</span>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    aria-label={`Ta bort ${a.fileName} från verifikatet`}
+                    onClick={() => setAttachments(attachments.filter((x) => x.id !== a.id))}
+                    className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white opacity-90 hover:opacity-100"
+                  >
+                    <Icon name="x" className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <FileUploader compact blob={uploader.blob} companyId={uploader.companyId} onUploaded={(f) => setAttachments((prev) => [...prev, ...f])} />
+        </section>
+      )}
+
       <div className="flex items-center justify-end gap-3">
         {problem && <p role="alert" className="text-sm text-danger">{problem}</p>}
         <ConfirmButton>Bokför</ConfirmButton>

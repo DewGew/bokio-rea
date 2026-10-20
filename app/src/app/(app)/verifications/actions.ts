@@ -10,6 +10,8 @@ import { parseDate, parseKr } from "@/lib/money";
 export async function createManualVerification(fd: FormData) {
   const { companyId } = await requireCompany();
   const uploadId = parseInt(str(fd, "uploadId"), 10) || 0;
+  // Underlag kan komma från en uppladdning (uploadId) eller bifogas direkt i formuläret (uploadIds).
+  const uploadIds = [...new Set([uploadId, ...str(fd, "uploadIds").split(",").map((x) => parseInt(x, 10))].filter((x) => x > 0))];
   const v = await attempt(
     () =>
       db.$transaction(async (tx) => {
@@ -23,12 +25,12 @@ export async function createManualVerification(fd: FormData) {
           if ((debit || credit) && !account) throw new AccountingError(`Rad ${i + 1} saknar konto.`);
           return { account, debit, credit, text: l.text ?? "" };
         });
-        if (uploadId) {
-          const u = await tx.upload.findFirst({ where: { id: uploadId, companyId } });
-          if (!u || u.verificationId) throw new AccountingError("Underlaget finns inte eller är redan bokfört.");
+        if (uploadIds.length) {
+          const found = await tx.upload.findMany({ where: { id: { in: uploadIds }, companyId, verificationId: null } });
+          if (found.length !== uploadIds.length) throw new AccountingError("Något underlag finns inte eller är redan bokfört.");
         }
         const created = await createVerification(tx, companyId, { date, description: str(fd, "description"), lines });
-        if (uploadId) await tx.upload.update({ where: { id: uploadId }, data: { verificationId: created.id } });
+        if (uploadIds.length) await tx.upload.updateMany({ where: { id: { in: uploadIds } }, data: { verificationId: created.id } });
         return created;
       }),
     uploadId ? `/uploads/${uploadId}?tab=manual` : "/verifications/new",

@@ -82,7 +82,7 @@ export function InvoiceEditor({
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-line">
-        <table className="table table-edit">
+        <table className="table table-edit min-w-[760px]">
           <thead>
             <tr>
               <th>Beskrivning</th>

@@ -16,6 +16,7 @@ model User {
   email        String       @unique
   name         String
   passwordHash String
+  theme        String       @default("system") // system | light | dark
   createdAt    DateTime     @default(now())
   memberships  Membership[]
   sessions     Session[]
@@ -52,7 +53,23 @@ model Company {
   bankgiro    String   @default("")
   vatPeriod   String   @default("quarter")
   invoiceDays Int      @default(30)
+  phone       String   @default("")
+  website     String   @default("")
   createdAt   DateTime @default(now())
+
+  // Fakturadesign och betalningsuppgifter på fakturan
+  invoiceTemplate String  @default("modern") // modern | klassisk | minimal | elegant
+  invoiceColor    String  @default("#0071e3")
+  invoiceFooter   String  @default("")
+  logoStoredName  String?
+  logoBlobUrl     String?
+  logoMime        String?
+  plusgiro        String  @default("")
+  iban            String  @default("")
+  bic             String  @default("")
+  swishNumber     String  @default("")
+  swishQr         Boolean @default(false)
+  paymentLink     String  @default("")
 
   memberships   Membership[]
   accounts      Account[]

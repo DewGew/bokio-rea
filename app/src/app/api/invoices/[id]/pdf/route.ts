@@ -1,6 +1,7 @@
 import { apiCompany } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { invoicePdf } from "@/lib/invoice-pdf";
+import { loadLogo } from "@/lib/company-logo";
+import { designFromCompany, invoicePdf } from "@/lib/invoice-pdf";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await apiCompany();
@@ -12,7 +13,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   });
   if (!invoice) return new Response("Hittades inte", { status: 404 });
   const company = await db.company.findUniqueOrThrow({ where: { id: ctx.companyId } });
-  const bytes = await invoicePdf(invoice, company);
+  const bytes = await invoicePdf(invoice, company, designFromCompany(company), await loadLogo(company));
   const name = `Faktura-${invoice.number ?? "utkast"}-${company.name}.pdf`.replace(/[^\w.\-åäöÅÄÖ]+/g, "_");
   const download = new URL(req.url).searchParams.has("download");
   return new Response(new Uint8Array(bytes), {

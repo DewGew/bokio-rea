@@ -1,16 +1,18 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
 import { apiCompany } from "@/lib/auth";
-import { ALLOWED_TYPES, MAX_SIZE, blobEnabled, companyPrefix } from "@/lib/storage";
+import { ALLOWED_TYPES, MAX_SIZE, STORAGE_MISSING, blobToken, companyPrefix } from "@/lib/storage";
 
 /** Ger webbläsaren en kortlivad token för att ladda upp direkt till Vercel Blob. */
 export async function POST(request: Request) {
-  if (!blobEnabled()) return NextResponse.json({ error: "Blob är inte konfigurerat." }, { status: 400 });
+  const token = blobToken();
+  if (!token) return NextResponse.json({ error: STORAGE_MISSING }, { status: 400 });
   const body = (await request.json()) as HandleUploadBody;
   try {
     const result = await handleUpload({
       body,
       request,
+      token,
       onBeforeGenerateToken: async (pathname) => {
         const ctx = await apiCompany();
         if (!ctx) throw new Error("Inte inloggad.");

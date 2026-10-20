@@ -8,10 +8,13 @@ med eget namn, egen design och egen kod.
 - **Konton och företag**: registrera dig med e-post och lösenord och skapa ett eller flera företag. Varje företag
   får en egen BAS-kontoplan och egna bokföringsmallar, och du växlar mellan företagen i sidomenyn. All data är isolerad per företag.
 - **Översikt**: årets resultat, banksaldo, obetalda fakturor, preliminär moms, diagram, topp 5 kostnader och att göra-lista.
-- **Uppladdat**: dra och släpp eller fota kvitton (JPG, PNG, WEBP, HEIC eller PDF, max 20 MB) och bokför dem med *mall*, *manuellt* eller som *utlägg*.
+- **Uppladdat**: dra och släpp, välj PDF/bild eller ta en bild direkt med mobilkameran (JPG, PNG, WEBP, HEIC eller PDF, max 20 MB) och bokför dem med *mall*, *manuellt* eller som *utlägg*.
 - **Bokfört**: verifikat numrerade per företag och år, sök, underlag och makulering via omvänt verifikat.
 - **Momsredovisning**: kvartalsperioder, rutor enligt Skatteverkets blankett, avstämning mot 2650 med öresutjämning och låsning.
 - **Fakturering**: kunder, artiklar, utkast, bokföring, betalning och kreditering. **PDF-fakturor** genereras på servern (`/api/invoices/[id]/pdf`).
+- **Fakturadesign**: fyra mallar (Modern, Klassisk, Minimal, Elegant), valfri accentfärg, logotyp, bankgiro, plusgiro, IBAN/BIC,
+  Swish-QR (förifyllt belopp och fakturanummer), klickbar betallänk och egen sidfot, med förhandsvisning i realtid.
+- **Utseende**: ljust, mörkt eller automatiskt tema per användare.
 - **Utlägg**, **rapporter** (resultat, balans, huvudbok) och **inställningar** (företag, kontoplan, mallar).
 
 ## Lokal utveckling
@@ -41,6 +44,13 @@ Lokalt sparas uppladdade filer i `uploads/`.
 4. Öppna sajten och registrera ditt företag.
 
 Kör inte `db:seed` mot produktionsdatabasen.
+
+### Felsökning
+
+- **"Fillagring är inte konfigurerad"** eller `ENOENT ... mkdir '/var/task/...'`: ingen Blob-token finns i deployen.
+  Koppla Blob-storen till projektet (Storage → Connect, välj Production) och gör **Redeploy**.
+- **"Blob-storen är publik"**: skapa en ny Blob-store med åtkomst **Private** och koppla den istället.
+- Variabler med prefix (t.ex. `STORAGE_DATABASE_URL`, `STORAGE_BLOB_READ_WRITE_TOKEN`) hittas automatiskt.
 
 ### Så fungerar uppladdning på Vercel
 

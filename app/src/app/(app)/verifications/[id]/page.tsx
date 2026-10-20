@@ -6,6 +6,9 @@ import { requireCompany } from "@/lib/auth";
 import { dateStr, kr } from "@/lib/money";
 import { Badge, Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { FileUploader } from "@/components/FileUploader";
+import { PdfPreview } from "@/components/PdfPreview";
+import { blobEnabled } from "@/lib/storage";
 import { reverse } from "../actions";
 
 export default async function VerificationPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
@@ -95,25 +98,35 @@ export default async function VerificationPage({ params, searchParams }: { param
           </div>
         </Card>
         <Card title="Underlag">
-          <div className="space-y-3 p-4 text-sm">
+          <div className="space-y-4 px-5 pb-5 text-[14px]">
             {invoice && (
               <p>
                 Kopplad till <Link className="text-brand" href={`/invoices/${invoice.id}`}>faktura #{invoice.number}</Link>
               </p>
             )}
             {v.uploads.length === 0 && !invoice && <p className="text-muted">Inget underlag bifogat.</p>}
-            {v.uploads.map((u) =>
-              u.mimeType.startsWith("image/") ? (
-                <a key={u.id} href={`/api/files/${u.id}`} target="_blank">
-                  <img src={`/api/files/${u.id}`} alt={u.fileName} className="rounded border border-line" />
+            {v.uploads.map((u) => (
+              <figure key={u.id} className="space-y-1.5">
+                <a href={`/api/files/${u.id}`} target="_blank" className="block overflow-hidden rounded-xl bg-surface-2 ring-1 ring-line">
+                  {u.mimeType === "application/pdf" ? (
+                    <PdfPreview src={`/api/files/${u.id}`} maxPages={2} label={u.fileName} />
+                  ) : (
+                    <img src={`/api/files/${u.id}`} alt={u.fileName} className="w-full" />
+                  )}
                 </a>
-              ) : (
-                <a key={u.id} href={`/api/files/${u.id}`} target="_blank" className="block text-brand">
-                  📎 {u.fileName}
-                </a>
-              ),
+                <figcaption className="flex items-center justify-between gap-2 text-[12px] text-muted">
+                  <span className="truncate">{u.fileName}</span>
+                  <a href={`/api/files/${u.id}?download`} className="shrink-0 text-brand">Ladda ner</a>
+                </figcaption>
+              </figure>
+            ))}
+            {!v.reverses && (
+              <div>
+                <p className="mb-2 text-[13px] font-medium text-muted">Bifoga fler underlag</p>
+                <FileUploader compact blob={blobEnabled()} companyId={companyId} verificationId={v.id} />
+              </div>
             )}
-            <p className="text-xs text-muted">Skapad {v.createdAt.toLocaleString("sv-SE")}</p>
+            <p className="text-[12px] text-muted">Skapad {v.createdAt.toLocaleString("sv-SE")}</p>
           </div>
         </Card>
       </div>

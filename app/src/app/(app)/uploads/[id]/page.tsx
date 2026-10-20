@@ -5,6 +5,7 @@ import { requireCompany } from "@/lib/auth";
 import { Card, Flash, PageHeader, readParams, Segmented, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { TemplateBooker } from "@/components/TemplateBooker";
+import { PdfPreview } from "@/components/PdfPreview";
 import { VerificationEditor } from "@/components/VerificationEditor";
 import { ExpenseFields } from "@/components/ExpenseFields";
 import { createManualVerification } from "@/app/(app)/verifications/actions";
@@ -52,7 +53,7 @@ export default async function UploadPage({ params, searchParams }: { params: Pro
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="overflow-hidden">
           {u.mimeType === "application/pdf" ? (
-            <iframe src={src} title={u.fileName} className="h-[70vh] w-full" />
+            <PdfPreview src={src} maxPages={3} label={u.fileName} />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={src} alt={u.fileName} className="max-h-[70vh] w-full object-contain" />

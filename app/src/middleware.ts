@@ -17,5 +17,6 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/|favicon.ico).*)"],
+  // Statiska filer i public/ (t.ex. pdf.js-workern) kräver ingen inloggning.
+  matcher: ["/((?!_next/|favicon.ico|.*\\.(?:mjs|js|svg|png|jpg|ico|txt)$).*)"],
 };

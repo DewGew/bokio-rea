@@ -27,6 +27,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
       ["/invoices", "Fakturor", "doc"],
       ["/customers", "Kunder", "people"],
       ["/articles", "Artiklar", "tag"],
+      ["/invoices/design", "Fakturadesign", "palette"],
     ],
   },
   { title: "Utgifter", items: [["/expenses", "Utlägg", "card"]] },
@@ -44,6 +45,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
       ["/settings", "Företag", "building"],
       ["/settings/accounts", "Kontoplan", "grid"],
       ["/settings/templates", "Bokföringsmallar", "wand"],
+      ["/settings/appearance", "Utseende", "sun"],
     ],
   },
 ];

@@ -6,12 +6,12 @@ import { dateStr } from "@/lib/money";
 import { displayStatus } from "@/lib/invoice-status";
 import { Badge, Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { InvoiceDocument } from "@/components/InvoiceDocument";
+import { PdfPreview } from "@/components/PdfPreview";
 import { InvoiceEditor } from "@/components/InvoiceEditor";
 import { credit, deleteDraft, markPaid, saveAndSend, saveDraft } from "../actions";
 
 export default async function InvoicePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
-  const { companyId, company } = await requireCompany();
+  const { companyId } = await requireCompany();
   const { id } = await params;
   const { error, notice } = await readParams(searchParams);
   const invoice = await db.invoice.findFirst({
@@ -75,7 +75,14 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
       <Flash error={error} notice={notice} />
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         <Card className="overflow-hidden">
-          <InvoiceDocument invoice={invoice} company={company} />
+          <div className="bg-surface-2 p-3 sm:p-6">
+            <div className="mx-auto max-w-[640px] overflow-hidden rounded-md shadow-xl ring-1 ring-black/5">
+              <PdfPreview src={`/api/invoices/${invoice.id}/pdf?v=${invoice.status}`} label={`Faktura ${invoice.number}`} />
+            </div>
+            <p className="mt-3 text-center text-[13px] text-muted">
+              Utseendet ändrar du under <Link href="/invoices/design" className="text-brand">Fakturadesign</Link>.
+            </p>
+          </div>
         </Card>
         <div className="space-y-4">
           <Card title="Status" action={<Badge status={status} />}>

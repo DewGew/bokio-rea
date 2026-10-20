@@ -1,16 +1,30 @@
 "use client";
 
-import { upload } from "@vercel/blob/client";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { ACCEPT_ALL, uploadFiles, type Uploaded } from "@/lib/upload-client";
 import { Icon } from "./Icon";
 
-const ACCEPT = "application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif";
-
-/** Dra-och-släpp-uppladdning av kvitton och underlag (bilder och PDF). */
-export function FileUploader({ blob, companyId, onDone = "open" }: { blob: boolean; companyId: number; onDone?: "open" | "refresh" }) {
+/**
+ * Uppladdning av kvitton och underlag: dra och släpp, välj fil (bild eller PDF) eller ta en bild med kameran.
+ * Utan onUploaded öppnas ett ensamt underlag direkt för bokföring.
+ */
+export function FileUploader({
+  blob,
+  companyId,
+  verificationId,
+  onUploaded,
+  compact = false,
+}: {
+  blob: boolean;
+  companyId: number;
+  verificationId?: number;
+  onUploaded?: (files: Uploaded[]) => void;
+  compact?: boolean;
+}) {
   const router = useRouter();
-  const input = useRef<HTMLInputElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [drag, setDrag] = useState(false);
   const [status, setStatus] = useState("");
@@ -21,44 +35,41 @@ export function FileUploader({ blob, companyId, onDone = "open" }: { blob: boole
     setBusy(true);
     setError("");
     try {
-      let res: Response;
-      if (blob) {
-        const done: { url: string; fileName: string }[] = [];
-        for (const [i, f] of files.entries()) {
-          setStatus(`Laddar upp ${i + 1} av ${files.length}: ${f.name}`);
-          const ext = (f.name.match(/\.[a-z0-9]{1,6}$/i)?.[0] ?? "").toLowerCase();
-          const b = await upload(`companies/${companyId}/${crypto.randomUUID()}${ext}`, f, {
-            access: "private",
-            handleUploadUrl: "/api/blob",
-            contentType: f.type,
-          });
-          done.push({ url: b.url, fileName: f.name });
-        }
-        setStatus("Sparar…");
-        res = await fetch("/api/uploads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ files: done }) });
-      } else {
-        setStatus(`Laddar upp ${files.length} fil(er)…`);
-        const fd = new FormData();
-        files.forEach((f) => fd.append("files", f));
-        res = await fetch("/api/uploads", { method: "POST", body: fd });
-      }
-      const json = (await res.json()) as { ids?: number[]; error?: string };
-      if (!res.ok) throw new Error(json.error ?? "Uppladdningen misslyckades.");
-      if (onDone === "open" && json.ids?.length === 1) router.push(`/uploads/${json.ids[0]}`);
-      else router.refresh();
-      setStatus(`${json.ids?.length ?? 0} fil(er) uppladdade.`);
+      const done = await uploadFiles(files, { blob, companyId, verificationId, onStatus: setStatus });
+      setStatus(done.length === 1 ? `${done[0].fileName} är uppladdad.` : `${done.length} filer är uppladdade.`);
+      if (onUploaded) onUploaded(done);
+      // Ett ensamt nytt underlag öppnas direkt för bokföring; annars uppdateras sidan.
+      if (!onUploaded && !verificationId && done.length === 1) router.push(`/uploads/${done[0].id}`);
+      else if (!onUploaded) router.refresh();
     } catch (e) {
       setError((e as Error).message);
       setStatus("");
     } finally {
       setBusy(false);
-      if (input.current) input.current.value = "";
+      if (fileInput.current) fileInput.current.value = "";
+      if (cameraInput.current) cameraInput.current.value = "";
     }
   }
 
+  const buttons = (
+    <div className="flex flex-wrap items-center justify-center gap-2">
+      <button type="button" disabled={busy} onClick={() => cameraInput.current?.click()} className="btn-primary">
+        <Icon name="camera" className="h-[18px] w-[18px]" />
+        Ta bild
+      </button>
+      <button type="button" disabled={busy} onClick={() => fileInput.current?.click()} className="btn-secondary">
+        <Icon name="doc" className="h-[18px] w-[18px]" />
+        Välj PDF eller bild
+      </button>
+      <input ref={fileInput} type="file" multiple accept={ACCEPT_ALL} className="sr-only" tabIndex={-1} onChange={(e) => send([...(e.target.files ?? [])])} />
+      {/* capture öppnar kameran direkt på mobilen; på datorn öppnas en filväljare */}
+      <input ref={cameraInput} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} onChange={(e) => send([...(e.target.files ?? [])])} />
+    </div>
+  );
+
   return (
     <div>
-      <label
+      <div
         onDragOver={(e) => {
           e.preventDefault();
           setDrag(true);
@@ -69,26 +80,21 @@ export function FileUploader({ blob, companyId, onDone = "open" }: { blob: boole
           setDrag(false);
           send([...e.dataTransfer.files]);
         }}
-        className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-10 text-center transition ${drag ? "border-brand bg-brand-soft" : "border-line hover:border-brand/60 hover:bg-surface-2"} ${busy ? "pointer-events-none opacity-60" : ""}`}
+        className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition ${compact ? "px-4 py-5" : "px-4 py-9"} ${drag ? "border-brand bg-brand-soft" : "border-line"} ${busy ? "opacity-70" : ""}`}
       >
-        <span className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-brand">
-          <Icon name="upload" className="h-6 w-6" />
-        </span>
-        <span className="text-[17px] font-semibold text-ink">{busy ? status : "Släpp kvitton här"}</span>
-        {!busy && <span className="mt-0.5 text-[15px] text-brand">eller välj filer</span>}
-        <span className="mt-2 text-[13px] text-muted">Bilder (JPG, PNG, WEBP, HEIC) eller PDF, max 20 MB per fil. Fota direkt med mobilen.</span>
-        <input
-          ref={input}
-          type="file"
-          multiple
-          accept={ACCEPT}
-          className="sr-only"
-          onChange={(e) => send([...(e.target.files ?? [])])}
-          disabled={busy}
-        />
-      </label>
-      {error && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
-      {!busy && status && !error && <p role="status" className="mt-2 text-sm text-brand">{status}</p>}
+        {!compact && (
+          <span className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-brand">
+            <Icon name="upload" className="h-6 w-6" />
+          </span>
+        )}
+        {!compact && <span className="mb-1 text-[17px] font-semibold text-ink">{busy ? status : "Lägg till kvitton och fakturor"}</span>}
+        {!compact && !busy && <span className="mb-4 text-[14px] text-muted">Dra och släpp filer här, fota kvittot eller välj en fil.</span>}
+        {compact && busy ? <span className="text-[14px] text-muted">{status}</span> : buttons}
+        {!compact && busy && <span className="sr-only">{status}</span>}
+        <span className={`text-[12px] text-muted ${compact ? "mt-2" : "mt-4"}`}>PDF, JPG, PNG, WEBP eller HEIC · max 20 MB per fil</span>
+      </div>
+      {error && <p role="alert" className="mt-2 text-[14px] font-medium text-danger">{error}</p>}
+      {!busy && status && !error && <p role="status" className="mt-2 text-[14px] text-success">{status}</p>}
     </div>
   );
 }
