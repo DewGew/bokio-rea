@@ -32,9 +32,12 @@ Lokalt sparas uppladdade filer i `uploads/`.
 1. Lägg koden i ett GitHub-repo och importera det på [vercel.com/new](https://vercel.com/new).
    Sätt **Root Directory** till `app` om repot innehåller mappen `app/`.
 2. Under projektets **Storage**:
-   - Skapa en **Neon Postgres**-databas och koppla den till projektet. Det sätter `DATABASE_URL` och `DATABASE_URL_UNPOOLED`.
+   - Skapa en **Neon Postgres**-databas och koppla den till projektet (för miljöerna Production och Preview).
+     Det sätter `DATABASE_URL` och oftast `DATABASE_URL_UNPOOLED`. Bara `DATABASE_URL` krävs. Om en direkt anslutning
+     finns används den för migreringar (`scripts/migrate.mjs`).
    - Skapa en **Blob**-store med åtkomst **Private** och koppla den. Det sätter `BLOB_READ_WRITE_TOKEN`.
-3. Deploya. Skriptet `vercel-build` kör `prisma migrate deploy` automatiskt, så databastabellerna skapas vid första deployen.
+3. Deploya. Skriptet `vercel-build` kör migreringarna automatiskt, så databastabellerna skapas vid första deployen.
+   Kopplade du databasen efter ett misslyckat bygge måste du göra **Redeploy**, eftersom miljövariablerna läses vid byggstart.
 4. Öppna sajten och registrera ditt företag.
 
 Kör inte `db:seed` mot produktionsdatabasen.

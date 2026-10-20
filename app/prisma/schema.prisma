@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL_UNPOOLED")
+  url      = env("DATABASE_URL")
+  // Migreringar körs via scripts/migrate.mjs, som väljer en direkt anslutning om en sådan finns.
 }
 
 // Alla belopp lagras i öre (heltal) för att undvika avrundningsfel.

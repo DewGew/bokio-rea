@@ -10,7 +10,7 @@
     "db:setup": "docker compose up -d && prisma migrate dev && npm run db:seed",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "vercel-build": "prisma generate && node scripts/migrate.mjs && next build",
     "postinstall": "prisma generate"
   },
   "dependencies": {
