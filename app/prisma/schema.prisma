@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// Alla belopp lagras i öre (heltal) för att undvika avrundningsfel.
+// All bokföringsdata tillhör ett företag (companyId).
+
+model User {
+  id           Int          @id @default(autoincrement())
+  email        String       @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+  sessions     Session[]
+}
+
+model Session {
+  id              String   @id // sha256 av cookie-token
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeCompanyId Int?
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+}
+
+model Membership {
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role      String  @default("owner")
+
+  @@id([userId, companyId])
+}
+
+model Company {
+  id          Int      @id @default(autoincrement())
+  name        String
+  orgNumber   String
+  vatNumber   String   @default("")
+  address     String   @default("")
+  postalCode  String   @default("")
+  city        String   @default("")
+  email       String   @default("")
+  bankgiro    String   @default("")
+  vatPeriod   String   @default("quarter")
+  invoiceDays Int      @default(30)
+  createdAt   DateTime @default(now())
+
+  memberships   Membership[]
+  accounts      Account[]
+  verifications Verification[]
+  templates     Template[]
+  uploads       Upload[]
+  customers     Customer[]
+  articles      Article[]
+  invoices      Invoice[]
+  expenses      Expense[]
+  vatPeriods    VatPeriod[]
+}
+
+model Account {
+  id        Int                @id @default(autoincrement())
+  companyId Int
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number    Int
+  name      String
+  vatCode   String             @default("")
+  active    Boolean            @default(true)
+  lines     VerificationLine[]
+
+  @@unique([companyId, number])
+}
+
+model Verification {
+  id           Int           @id @default(autoincrement())
+  companyId    Int
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  series       String        @default("V")
+  year         Int
+  number       Int
+  date         DateTime
+  description  String
+  createdAt    DateTime      @default(now())
+  reversedById Int?          @unique
+  reversedBy   Verification? @relation("Reversal", fields: [reversedById], references: [id])
+  reverses     Verification? @relation("Reversal")
+  lines        VerificationLine[]
+  uploads      Upload[]
+  invoices     Invoice[]     @relation("InvoiceVerification")
+  invoicePays  Invoice[]     @relation("InvoicePayment")
+  expenses     Expense[]     @relation("ExpenseVerification")
+  expensePays  Expense[]     @relation("ExpensePayment")
+
+  @@unique([companyId, series, year, number])
+  @@index([companyId, date])
+}
+
+model VerificationLine {
+  id             Int          @id @default(autoincrement())
+  verificationId Int
+  verification   Verification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  companyId      Int
+  accountNumber  Int
+  account        Account      @relation(fields: [companyId, accountNumber], references: [companyId, number], onDelete: Cascade) // konton raderas bara när hela företaget raderas
+  debit          Int          @default(0)
+  credit         Int          @default(0)
+  text           String       @default("")
+
+  @@index([companyId, accountNumber])
+}
+
+model Template {
+  id          Int     @id @default(autoincrement())
+  companyId   Int
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  category    String
+  costAccount Int
+  vatRate     Int
+  vatAccount  Int?
+  direction   String  @default("purchase") // purchase | sale | reverse
+  keywords    String  @default("")
+}
+
+model Upload {
+  id             Int           @id @default(autoincrement())
+  companyId      Int
+  company        Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fileName       String
+  storedName     String        // lokalt filnamn eller sökväg i Vercel Blob
+  blobUrl        String?
+  mimeType       String
+  size           Int           @default(0)
+  date           DateTime?
+  amount         Int?
+  description    String        @default("")
+  createdAt      DateTime      @default(now())
+  verificationId Int?
+  verification   Verification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
+  expense        Expense?
+}
+
+model Customer {
+  id         Int       @id @default(autoincrement())
+  companyId  Int
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name       String
+  orgNumber  String    @default("")
+  email      String    @default("")
+  address    String    @default("")
+  postalCode String    @default("")
+  city       String    @default("")
+  reference  String    @default("")
+  invoices   Invoice[]
+}
+
+model Article {
+  id        Int     @id @default(autoincrement())
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  unit      String  @default("st")
+  price     Int
+  vatRate   Int     @default(25)
+  type      String  @default("service")
+}
+
+model Invoice {
+  id                    Int           @id @default(autoincrement())
+  companyId             Int
+  company               Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number                Int?
+  customerId            Int
+  customer              Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade) // appen tillåter inte att kunder med fakturor tas bort
+  date                  DateTime
+  dueDate               DateTime
+  status                String        @default("draft") // draft | sent | paid | credited
+  ourReference          String        @default("")
+  theirReference        String        @default("")
+  notes                 String        @default("")
+  paidDate              DateTime?
+  createdAt             DateTime      @default(now())
+  verificationId        Int?
+  verification          Verification? @relation("InvoiceVerification", fields: [verificationId], references: [id])
+  paymentVerificationId Int?
+  paymentVerification   Verification? @relation("InvoicePayment", fields: [paymentVerificationId], references: [id])
+  lines                 InvoiceLine[]
+
+  @@unique([companyId, number])
+}
+
+model InvoiceLine {
+  id          Int     @id @default(autoincrement())
+  invoiceId   Int
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float
+  unit        String  @default("st")
+  unitPrice   Int
+  vatRate     Int     @default(25)
+  type        String  @default("service")
+}
+
+model Expense {
+  id                    Int           @id @default(autoincrement())
+  companyId             Int
+  company               Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee              String
+  date                  DateTime
+  description           String
+  amount                Int
+  vatRate               Int           @default(25)
+  costAccount           Int
+  status                String        @default("pending") // pending | booked | paid
+  uploadId              Int?          @unique
+  upload                Upload?       @relation(fields: [uploadId], references: [id])
+  verificationId        Int?
+  verification          Verification? @relation("ExpenseVerification", fields: [verificationId], references: [id])
+  paymentVerificationId Int?
+  paymentVerification   Verification? @relation("ExpensePayment", fields: [paymentVerificationId], references: [id])
+  createdAt             DateTime      @default(now())
+}
+
+model VatPeriod {
+  id             Int       @id @default(autoincrement())
+  companyId      Int
+  company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  start          DateTime
+  end            DateTime
+  lockedAt       DateTime?
+  verificationId Int?
+
+  @@unique([companyId, start, end])
+}

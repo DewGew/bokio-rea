@@ -1,0 +1,152 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { logout, switchCompany } from "@/app/(auth)/actions";
+import { Icon, type IconName } from "./Icon";
+
+const NAV: { title?: string; items: [string, string, IconName][] }[] = [
+  {
+    items: [
+      ["/", "Översikt", "home"],
+      ["/uploads", "Uppladdat", "tray"],
+    ],
+  },
+  {
+    title: "Bokföring",
+    items: [
+      ["/verifications", "Bokfört", "book"],
+      ["/verifications/new", "Nytt verifikat", "plus"],
+      ["/vat", "Momsredovisning", "percent"],
+    ],
+  },
+  {
+    title: "Försäljning",
+    items: [
+      ["/invoices", "Fakturor", "doc"],
+      ["/customers", "Kunder", "people"],
+      ["/articles", "Artiklar", "tag"],
+    ],
+  },
+  { title: "Utgifter", items: [["/expenses", "Utlägg", "card"]] },
+  {
+    title: "Rapporter",
+    items: [
+      ["/reports/result", "Resultatrapport", "chart"],
+      ["/reports/balance", "Balansrapport", "scale"],
+      ["/reports/ledger", "Huvudbok", "list"],
+    ],
+  },
+  {
+    title: "Inställningar",
+    items: [
+      ["/settings", "Företag", "building"],
+      ["/settings/accounts", "Kontoplan", "grid"],
+      ["/settings/templates", "Bokföringsmallar", "wand"],
+    ],
+  },
+];
+
+const ALL = NAV.flatMap((g) => g.items.map(([h]) => h));
+
+/** Den längsta menylänk som matchar sökvägen är aktiv. */
+function activeHref(path: string) {
+  return ALL.filter((h) => (h === "/" ? path === "/" : path === h || path.startsWith(h + "/"))).sort((a, b) => b.length - a.length)[0];
+}
+
+type C = { id: number; name: string };
+
+export function Sidebar({ company, companies, userName }: { company: C; companies: C[]; userName: string }) {
+  const path = usePathname();
+  const [open, setOpen] = useState(false);
+  const active = activeHref(path);
+  const current = NAV.flatMap((g) => g.items).find(([h]) => h === active)?.[1] ?? "Huvudbok";
+
+  useEffect(() => setOpen(false), [path]);
+
+  return (
+    <>
+      {/* Mobil: genomskinlig toppmeny */}
+      <header className="no-print sticky top-0 z-30 flex h-12 items-center justify-between border-b border-line bg-[var(--sidebar)] px-4 backdrop-blur-xl backdrop-saturate-150 md:hidden">
+        <button onClick={() => setOpen(!open)} className="flex items-center gap-1.5 text-[15px] font-medium text-brand" aria-expanded={open}>
+          <Icon name="sidebar" className="h-5 w-5" />
+          Meny
+        </button>
+        <span className="text-[15px] font-semibold">{current}</span>
+        <span className="w-14" />
+      </header>
+
+      {open && <div className="fixed inset-0 z-30 bg-black/20 backdrop-blur-[2px] md:hidden" onClick={() => setOpen(false)} />}
+
+      <aside
+        className={`no-print fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-line bg-[var(--sidebar)] backdrop-blur-2xl backdrop-saturate-150 transition-transform duration-300 ease-out md:sticky md:top-0 md:z-auto md:h-screen md:translate-x-0 ${open ? "translate-x-0 shadow-2xl" : "-translate-x-full"}`}
+      >
+        <div className="px-4 pb-3 pt-5">
+          <Link href="/" className="mb-4 flex items-center gap-2.5 px-1">
+            <span className="grid h-8 w-8 place-items-center rounded-[9px] bg-gradient-to-br from-[#2b90ff] to-[#0058d1] text-white shadow-sm">
+              <Icon name="book" className="h-[18px] w-[18px]" />
+            </span>
+            <span className="text-[17px] font-semibold tracking-[-0.02em]">Huvudbok</span>
+          </Link>
+          <form action={switchCompany}>
+            <label className="sr-only" htmlFor="company-switch">Företag</label>
+            <select
+              key={company.id}
+              id="company-switch"
+              name="companyId"
+              defaultValue={company.id}
+              onChange={(e) => {
+                if (e.target.value === "new") window.location.href = "/companies/new";
+                else e.target.form?.requestSubmit();
+              }}
+              className="input bg-fill py-1.5 text-[13px] font-medium"
+            >
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+              <option value="new">Lägg till företag…</option>
+            </select>
+          </form>
+        </div>
+
+        <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
+          {NAV.map((group, i) => (
+            <div key={i}>
+              {group.title && <p className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted/80">{group.title}</p>}
+              <ul className="space-y-px">
+                {group.items.map(([href, label, icon]) => {
+                  const on = active === href;
+                  return (
+                    <li key={href}>
+                      <Link
+                        href={href}
+                        aria-current={on ? "page" : undefined}
+                        className={`flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[14px] transition-colors ${on ? "bg-brand text-white" : "text-ink hover:bg-fill"}`}
+                      >
+                        <Icon name={icon} className={`h-[18px] w-[18px] shrink-0 ${on ? "text-white" : "text-brand"}`} />
+                        {label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-2.5 border-t border-line px-4 py-3">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#a1a1a6] to-[#6e6e73] text-[13px] font-semibold text-white">
+            {userName.trim().charAt(0).toUpperCase() || "?"}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-medium">{userName}</p>
+            <form action={logout}>
+              <button className="text-[12px] text-brand hover:underline">Logga ut</button>
+            </form>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}
