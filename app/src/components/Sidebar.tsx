@@ -62,10 +62,15 @@ type C = { id: number; name: string };
 export function Sidebar({ company, companies, userName }: { company: C; companies: C[]; userName: string }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
-  const active = activeHref(path);
+  // Markera den klickade länken direkt, innan nästa sida hunnit laddas.
+  const [pending, setPending] = useState<string | null>(null);
+  const active = pending ?? activeHref(path);
   const current = NAV.flatMap((g) => g.items).find(([h]) => h === active)?.[1] ?? "Huvudbok";
 
-  useEffect(() => setOpen(false), [path]);
+  useEffect(() => {
+    setOpen(false);
+    setPending(null);
+  }, [path]);
 
   return (
     <>
@@ -124,6 +129,9 @@ export function Sidebar({ company, companies, userName }: { company: C; companie
                       <Link
                         href={href}
                         aria-current={on ? "page" : undefined}
+                        onClick={(e) => {
+                          if (!e.metaKey && !e.ctrlKey && href !== activeHref(path)) setPending(href);
+                        }}
                         className={`flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[14px] transition-colors ${on ? "bg-brand text-white" : "text-ink hover:bg-fill"}`}
                       >
                         <Icon name={icon} className={`h-[18px] w-[18px] shrink-0 ${on ? "text-white" : "text-brand"}`} />

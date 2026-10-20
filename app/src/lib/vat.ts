@@ -31,8 +31,11 @@ async function settlementIds(companyId: number) {
 }
 
 export async function vatReport(companyId: number, start: Date, end: Date) {
-  const b = await balances(companyId, { from: start, to: end, excludeIds: await settlementIds(companyId) });
-  const accounts = await db.account.findMany({ where: { companyId, number: { gte: 3000, lte: 3999 } } });
+  const [excludeIds, accounts] = await Promise.all([
+    settlementIds(companyId),
+    db.account.findMany({ where: { companyId, number: { gte: 3000, lte: 3999 } }, select: { number: true, vatCode: true } }),
+  ]);
+  const b = await balances(companyId, { from: start, to: end, excludeIds });
   const credit = (n: number) => -(b.get(n) ?? 0);
   const debit = (n: number) => b.get(n) ?? 0;
 

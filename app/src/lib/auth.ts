@@ -37,7 +37,11 @@ export async function endSession() {
 export const getSession = cache(async () => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  const session = await db.session.findUnique({ where: { id: hashToken(token) }, include: { user: true } });
+  // Sessionen, användaren och dess företag hämtas i en enda fråga (färre rundresor till databasen).
+  const session = await db.session.findUnique({
+    where: { id: hashToken(token) },
+    include: { user: { include: { memberships: { include: { company: true }, orderBy: { companyId: "asc" } } } } },
+  });
   if (!session || session.expiresAt < new Date()) return null;
   return session;
 });
@@ -51,11 +55,7 @@ export async function requireUser() {
 /** Inloggad användare + det aktiva företaget som användaren är medlem i. */
 export const requireCompany = cache(async () => {
   const s = await requireUser();
-  const memberships = await db.membership.findMany({
-    where: { userId: s.userId },
-    include: { company: true },
-    orderBy: { companyId: "asc" },
-  });
+  const memberships = s.user.memberships;
   if (memberships.length === 0) redirect("/companies/new");
   const active = memberships.find((m) => m.companyId === s.activeCompanyId) ?? memberships[0];
   if (active.companyId !== s.activeCompanyId) {

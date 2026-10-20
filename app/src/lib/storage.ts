@@ -11,14 +11,38 @@ import { del, get, head, put } from "@vercel/blob";
  * - Lokalt utan token: filer i mappen uploads/.
  */
 
-/** Blob-token, även om integrationen gett variabeln ett prefix (t.ex. STORAGE_BLOB_READ_WRITE_TOKEN). */
-export function blobToken() {
-  if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
-  const key = Object.keys(process.env).find((k) => k.endsWith("_BLOB_READ_WRITE_TOKEN") && process.env[k]);
+function envWithPrefix(name: string) {
+  if (process.env[name]) return process.env[name];
+  const key = Object.keys(process.env).find((k) => k.endsWith(`_${name}`) && process.env[k]);
   return key ? process.env[key] : undefined;
 }
 
-export const blobEnabled = () => !!blobToken();
+/** Read-write-token, även om integrationen gett variabeln ett prefix (t.ex. STORAGE_BLOB_READ_WRITE_TOKEN). */
+export function blobToken() {
+  return envWithPrefix("BLOB_READ_WRITE_TOKEN");
+}
+
+/** Nyare Blob-stores ansluts med OIDC: Vercel sätter BLOB_STORE_ID och ger funktionen en OIDC-token. */
+export function blobStoreId() {
+  return envWithPrefix("BLOB_STORE_ID");
+}
+
+/** Inloggningsuppgifter till Blob-anropen: read-write-token om den finns, annars OIDC via store-id. */
+function auth(): { token?: string; storeId?: string } {
+  const token = blobToken();
+  if (token) return { token };
+  const storeId = blobStoreId();
+  return storeId ? { storeId } : {};
+}
+
+export const blobEnabled = () => !!(blobToken() || blobStoreId());
+
+/**
+ * Direktuppladdning från webbläsaren kräver en read-write-token. Med bara OIDC går filerna via servern,
+ * där Vercel begränsar varje anrop till 4,5 MB (stora foton krymps i webbläsaren innan uppladdning).
+ */
+export const directUploadEnabled = () => !!blobToken();
+export const serverUploadLimit = () => (process.env.VERCEL ? 4.3 * 1024 * 1024 : null);
 
 /** På Vercel finns ingen skrivbar disk, så utan Blob går det inte att spara filer. */
 export const STORAGE_MISSING =
@@ -53,6 +77,11 @@ function blobError(e: unknown): never {
   if (/private/i.test(msg) && /public/i.test(msg)) {
     throw new StorageError("Blob-storen är publik. Skapa en ny Blob-store med åtkomst Private och koppla den till projektet.");
   }
+  if (/oidc|credentials/i.test(msg)) {
+    throw new StorageError(
+      "Vercel Blob kunde inte autentisera med OIDC. Kontrollera att Secure Backend Access (OIDC) är påslaget under Settings → Security, eller lägg till BLOB_READ_WRITE_TOKEN som miljövariabel, och gör Redeploy.",
+    );
+  }
   if (/token|unauthori[sz]ed|forbidden/i.test(msg)) {
     throw new StorageError("Vercel Blob nekade åtkomst. Kontrollera att Blob-storen är kopplad till projektet och gör Redeploy.");
   }
@@ -64,10 +93,9 @@ export async function storeFile(companyId: number, file: File, opts: { folder?: 
   const err = checkFile(file.type, file.size, opts.allowed);
   if (err) throw new StorageError(err);
   const pathname = newPathname(companyId, file.name, opts.folder);
-  const token = blobToken();
-  if (token) {
+  if (blobEnabled()) {
     try {
-      const res = await put(pathname, file, { access: "private", contentType: file.type, token });
+      const res = await put(pathname, file, { access: "private", contentType: file.type, ...auth() });
       return { storedName: res.pathname, blobUrl: res.url };
     } catch (e) {
       blobError(e);
@@ -84,7 +112,7 @@ export async function storeFile(companyId: number, file: File, opts: { folder?: 
 export async function verifyBlob(companyId: number, url: string) {
   let meta;
   try {
-    meta = await head(url, { token: blobToken() });
+    meta = await head(url, auth());
   } catch (e) {
     blobError(e);
   }
@@ -100,7 +128,7 @@ function localPath(storedName: string) {
 /** Läser en lagrad fil som bytes (används t.ex. för logotypen i PDF-fakturor). */
 export async function readStored(s: Stored): Promise<Uint8Array | null> {
   if (s.blobUrl) {
-    const res = await get(s.blobUrl, { access: "private", token: blobToken() }).catch(() => null);
+    const res = await get(s.blobUrl, { access: "private", ...auth() }).catch(() => null);
     if (!res || res.statusCode !== 200) return null;
     return new Uint8Array(await new Response(res.stream).arrayBuffer());
   }
@@ -117,7 +145,7 @@ export async function fileResponse(u: Stored & { mimeType: string; fileName: str
     "Cache-Control": "private, no-store",
   });
   if (u.blobUrl) {
-    const res = await get(u.blobUrl, { access: "private", token: blobToken() }).catch(() => null);
+    const res = await get(u.blobUrl, { access: "private", ...auth() }).catch(() => null);
     if (!res || res.statusCode !== 200) return new Response("Hittades inte", { status: 404 });
     return new Response(res.stream, { headers });
   }
@@ -128,7 +156,7 @@ export async function fileResponse(u: Stored & { mimeType: string; fileName: str
 }
 
 export async function deleteStored(u: Stored) {
-  if (u.blobUrl) await del(u.blobUrl, { token: blobToken() }).catch(() => {});
+  if (u.blobUrl) await del(u.blobUrl, auth()).catch(() => {});
   else {
     const p = localPath(u.storedName);
     if (p) await unlink(p).catch(() => {});

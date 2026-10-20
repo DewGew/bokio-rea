@@ -4,7 +4,7 @@ import { requireCompany } from "@/lib/auth";
 import { dateStr, kr } from "@/lib/money";
 import { Card, Empty, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { FileUploader } from "@/components/FileUploader";
-import { blobEnabled } from "@/lib/storage";
+import { directUploadEnabled, serverUploadLimit } from "@/lib/storage";
 
 export default async function Uploads({ searchParams }: { searchParams: SP }) {
   const { companyId } = await requireCompany();
@@ -22,7 +22,7 @@ export default async function Uploads({ searchParams }: { searchParams: SP }) {
       <Flash error={error} notice={notice} />
 
       <Card className="mb-6 p-4">
-        <FileUploader blob={blobEnabled()} companyId={companyId} />
+        <FileUploader blob={directUploadEnabled()} limit={serverUploadLimit()} companyId={companyId} />
       </Card>
 
       <Card

@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
 import { Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { VerificationEditor } from "@/components/VerificationEditor";
-import { blobEnabled } from "@/lib/storage";
+import { directUploadEnabled, serverUploadLimit } from "@/lib/storage";
 import { createManualVerification } from "../actions";
 
 export default async function NewVerification({ searchParams }: { searchParams: SP }) {
@@ -14,7 +14,7 @@ export default async function NewVerification({ searchParams }: { searchParams: 
       <PageHeader title="Nytt verifikat" subtitle="Bokför manuellt med debet och kredit. Tryck = för att balansera en rad." />
       <Flash error={error} />
       <Card className="p-4">
-        <VerificationEditor accounts={accounts} action={createManualVerification} uploader={{ blob: blobEnabled(), companyId }} />
+        <VerificationEditor accounts={accounts} action={createManualVerification} uploader={{ blob: directUploadEnabled(), limit: serverUploadLimit(), companyId }} />
       </Card>
     </>
   );

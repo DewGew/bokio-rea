@@ -12,27 +12,28 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const { companyId } = await requireCompany();
   const now = new Date();
   const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
-  const yearBal = await balances(companyId, { from: yearStart, to: now });
-  const allBal = await balances(companyId);
+  const q = quarterOf(now);
+  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
+  // Alla frågor körs parallellt; varje databasrundresa kostar tid, särskilt i serverless.
+  const [yearBal, allBal, openInvoices, toBook, pendingExpenses, drafts, vat, lines] = await Promise.all([
+    balances(companyId, { from: yearStart, to: now }),
+    balances(companyId),
+    db.invoice.findMany({ where: { companyId, status: "sent" }, include: { lines: true } }),
+    db.upload.count({ where: { companyId, verificationId: null, expense: null } }),
+    db.expense.count({ where: { companyId, status: "pending" } }),
+    db.invoice.count({ where: { companyId, status: "draft" } }),
+    vatReport(companyId, q.start, q.end),
+    // Inkomster och kostnader per månad, senaste 12 månaderna.
+    db.verificationLine.findMany({
+      where: { companyId, accountNumber: { gte: 3000, lte: 8999 }, verification: { date: { gte: from } } },
+      select: { debit: true, credit: true, accountNumber: true, verification: { select: { date: true } }, account: { select: { name: true } } },
+    }),
+  ]);
   const result = -sumRange(yearBal, 3000, 8999);
   const bank = sumRange(allBal, 1900, 1999);
-
-  const openInvoices = await db.invoice.findMany({ where: { companyId, status: "sent" }, include: { lines: true } });
   const unpaid = openInvoices.reduce((s, i) => s + invoiceTotals(i.lines).total, 0);
   const overdue = openInvoices.filter((i) => i.dueDate < now).reduce((s, i) => s + invoiceTotals(i.lines).total, 0);
 
-  const toBook = await db.upload.count({ where: { companyId, verificationId: null, expense: null } });
-  const pendingExpenses = await db.expense.count({ where: { companyId, status: "pending" } });
-  const drafts = await db.invoice.count({ where: { companyId, status: "draft" } });
-  const q = quarterOf(now);
-  const vat = await vatReport(companyId, q.start, q.end);
-
-  // Inkomster och kostnader per månad, senaste 12 månaderna.
-  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
-  const lines = await db.verificationLine.findMany({
-    where: { companyId, accountNumber: { gte: 3000, lte: 8999 }, verification: { date: { gte: from } } },
-    include: { verification: { select: { date: true } }, account: true },
-  });
   const months = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + i, 1));
     return { key: d.toISOString().slice(0, 7), label: d.toLocaleDateString("sv-SE", { month: "short", timeZone: "UTC" }), income: 0, cost: 0 };

@@ -15,8 +15,12 @@ export function FileUploader({
   verificationId,
   onUploaded,
   compact = false,
+  limit = null,
 }: {
+  /** true = direkt till Vercel Blob från webbläsaren; false = via servern. */
   blob: boolean;
+  /** Maxstorlek per fil när filen går via servern (Vercel: 4,5 MB per anrop). */
+  limit?: number | null;
   companyId: number;
   verificationId?: number;
   onUploaded?: (files: Uploaded[]) => void;
@@ -35,7 +39,7 @@ export function FileUploader({
     setBusy(true);
     setError("");
     try {
-      const done = await uploadFiles(files, { blob, companyId, verificationId, onStatus: setStatus });
+      const done = await uploadFiles(files, { blob, limit, companyId, verificationId, onStatus: setStatus });
       setStatus(done.length === 1 ? `${done[0].fileName} är uppladdad.` : `${done.length} filer är uppladdade.`);
       if (onUploaded) onUploaded(done);
       // Ett ensamt nytt underlag öppnas direkt för bokföring; annars uppdateras sidan.

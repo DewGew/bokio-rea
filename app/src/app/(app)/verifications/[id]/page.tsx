@@ -8,7 +8,7 @@ import { Badge, Card, Flash, PageHeader, readParams, type SP } from "@/component
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { FileUploader } from "@/components/FileUploader";
 import { PdfPreview } from "@/components/PdfPreview";
-import { blobEnabled } from "@/lib/storage";
+import { directUploadEnabled, serverUploadLimit } from "@/lib/storage";
 import { reverse } from "../actions";
 
 export default async function VerificationPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
@@ -123,7 +123,7 @@ export default async function VerificationPage({ params, searchParams }: { param
             {!v.reverses && (
               <div>
                 <p className="mb-2 text-[13px] font-medium text-muted">Bifoga fler underlag</p>
-                <FileUploader compact blob={blobEnabled()} companyId={companyId} verificationId={v.id} />
+                <FileUploader compact blob={directUploadEnabled()} limit={serverUploadLimit()} companyId={companyId} verificationId={v.id} />
               </div>
             )}
             <p className="text-[12px] text-muted">Skapad {v.createdAt.toLocaleString("sv-SE")}</p>

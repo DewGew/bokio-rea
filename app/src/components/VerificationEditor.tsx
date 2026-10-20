@@ -25,7 +25,7 @@ export function VerificationEditor({
   action: (fd: FormData) => Promise<void>;
   defaults?: { date?: string; description?: string; uploadId?: number };
   /** Visar en sektion för att bifoga underlag (foto eller PDF) direkt i verifikatet. */
-  uploader?: { blob: boolean; companyId: number };
+  uploader?: { blob: boolean; limit?: number | null; companyId: number };
 }) {
   const [rows, setRows] = useState<Row[]>([empty(), empty(), empty()]);
   const [attachments, setAttachments] = useState<Uploaded[]>([]);
@@ -155,7 +155,7 @@ export function VerificationEditor({
               ))}
             </ul>
           )}
-          <FileUploader compact blob={uploader.blob} companyId={uploader.companyId} onUploaded={(f) => setAttachments((prev) => [...prev, ...f])} />
+          <FileUploader compact blob={uploader.blob} limit={uploader.limit} companyId={uploader.companyId} onUploaded={(f) => setAttachments((prev) => [...prev, ...f])} />
         </section>
       )}
 
