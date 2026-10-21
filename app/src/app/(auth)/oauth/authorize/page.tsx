@@ -56,21 +56,37 @@ export default async function Authorize({ searchParams }: { searchParams: SP }) 
               ))}
             </select>
           </div>
-          <div className="rounded-xl bg-surface-2 p-4 text-[14px]">
-            <p className="mb-2 font-medium">{req.clientName} kommer att kunna</p>
-            <ul className="space-y-1.5">
-              {req.scope.split(" ").map((s) => (
-                <li key={s} className="flex gap-2">
-                  <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                  {SCOPE_LABEL[s] ?? s}
-                </li>
-              ))}
-              <li className="flex gap-2 text-muted">
-                <Icon name="x" className="mt-0.5 h-4 w-4 shrink-0" />
-                Inte bokföra, ändra eller ta bort något
-              </li>
-            </ul>
-          </div>
+          <fieldset className="space-y-2 text-[14px]">
+            <legend className="label">Vad får {req.clientName} göra?</legend>
+            {(
+              [
+                ["read", "Läsa", [SCOPE_LABEL.read], "Inte bokföra, ändra eller ta bort något"],
+                ["write", "Läsa och bokföra", [SCOPE_LABEL.read, SCOPE_LABEL.write], "Inte ta bort eller makulera något. Allt som skapas märks med \"Skapad via\"."],
+              ] as const
+            ).map(([value, title, can, cannot]) => (
+              <label
+                key={value}
+                className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-2 p-3 ring-1 ring-transparent transition has-[:checked]:bg-brand-soft has-[:checked]:ring-brand"
+              >
+                <input type="radio" name="level" value={value} defaultChecked={value === "read"} className="mt-1 h-4 w-4 accent-[var(--brand)]" />
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-medium">{title}</span>
+                  <span className="mt-1 block space-y-1">
+                    {can.map((c) => (
+                      <span key={c} className="flex gap-2">
+                        <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                        {c}
+                      </span>
+                    ))}
+                    <span className="flex gap-2 text-muted">
+                      <Icon name="x" className="mt-0.5 h-4 w-4 shrink-0" />
+                      {cannot}
+                    </span>
+                  </span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
           <p className="text-[13px] text-muted">Du kan när som helst koppla från under Inställningar → Kopplingar. Ditt lösenord delas aldrig.</p>
           <div className="grid grid-cols-2 gap-2">
             <button formAction={denyConsent} formNoValidate className="btn-secondary">

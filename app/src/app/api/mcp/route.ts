@@ -13,7 +13,7 @@ function unauthorized(req: Request) {
       status: 401,
       headers: {
         ...CORS,
-        "WWW-Authenticate": `Bearer resource_metadata="${base}/.well-known/oauth-protected-resource/api/mcp", error="invalid_token", scope="read"`,
+        "WWW-Authenticate": `Bearer resource_metadata="${base}/.well-known/oauth-protected-resource/api/mcp", error="invalid_token", scope="read write"`,
       },
     },
   );

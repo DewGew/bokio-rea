@@ -72,7 +72,7 @@ export default async function Connections({ searchParams }: { searchParams: SP }
                   </li>
                   <li>Fråga Claude t.ex. &quot;Hur går det för företaget i år?&quot; eller &quot;Vilka fakturor är förfallna?&quot;.</li>
                 </ol>
-                <p className="text-muted">Kopplingen kan bara läsa. Den slutar fungera direkt om du kopplar från här eller om din behörighet ändras.</p>
+                <p className="text-muted">När du godkänner väljer du om kopplingen bara får läsa eller även bokföra. Allt Claude bokför märks med &quot;Skapad via Claude&quot;, och inget kan raderas. Kopplingen slutar fungera direkt om du kopplar från här eller om din behörighet ändras. En befintlig koppling som bara får läsa behöver kopplas om för att kunna bokföra.</p>
               </>
             ) : (
               <p className="text-muted">Du behöver vara ägare eller ha full behörighet för att koppla Claude till företaget.</p>

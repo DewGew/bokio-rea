@@ -17,8 +17,11 @@ const METADATA_REFRESH_MS = 24 * 3600_000;
 
 /** Roller som får koppla Claude (revisorer med läsbehörighet kan inte i nuläget). */
 export const MCP_ROLES = ["owner", "full"];
-export const SCOPES = ["read"] as const;
-export const SCOPE_LABEL: Record<string, string> = { read: "Läsa bokföring, rapporter, fakturor och moms" };
+export const SCOPES = ["read", "write"] as const;
+export const SCOPE_LABEL: Record<string, string> = {
+  read: "Läsa bokföring, rapporter, fakturor och moms",
+  write: "Bokföra med mall, bokföra bankrader, skapa fakturautkast och registrera betalningar",
+};
 
 export class OAuthError extends Error {
   constructor(

@@ -9,6 +9,7 @@ import { periodLabel, vatPeriods, vatReport } from "./vat";
 import { displayStatus } from "./invoice-status";
 import { proposalsFor } from "./bank";
 import type { McpContext } from "./oauth";
+import { registerHelpers, registerWriteTools } from "./mcp-write";
 
 /**
  * MCP-servern för en koppling. Varje anrop får en ny server med verktyg som bara når kopplingens företag.
@@ -50,13 +51,17 @@ async function resultSections(companyId: number, from: Date, to: Date) {
 
 export function buildMcpServer(ctx: McpContext) {
   const { companyId } = ctx;
+  const canWrite = ctx.scopes.includes("write");
   const server = new McpServer(
-    { name: "huvudbok", title: "Huvudbok", version: "1.0.0" },
+    { name: "huvudbok", title: "Huvudbok", version: "1.1.0" },
     {
       instructions:
         "Huvudbok är ett svenskt bokföringsprogram (BAS-kontoplan). Kopplingen gäller ett företag. Belopp är i kronor. " +
         "Intäkter visas positiva och kostnader negativa i resultatrapporten. Börja gärna med foretag_oversikt. " +
-        "Kopplingen kan bara läsa – ingenting kan bokföras eller ändras.",
+        (canWrite
+          ? "Kopplingen kan bokföra. Bokföring kan inte raderas, bara makuleras i appen – visa därför alltid konteringen " +
+            "(t.ex. bokfor_med_mall med forhandsgranska: true) och få användarens bekräftelse innan du bokför. Använd mallar och id:n från mallar, kunder och att_bokfora."
+          : "Kopplingen kan bara läsa – ingenting kan bokföras eller ändras. Användaren kan koppla om med nivån 'Läsa och bokföra' för att bokföra."),
     },
   );
 
@@ -345,16 +350,21 @@ export function buildMcpServer(ctx: McpContext) {
       ]);
       const proposals = await proposalsFor(companyId, bank);
       return result({
-        underlag: uploads.map((u) => ({ fil: u.fileName, beskrivning: u.description || null, belopp: u.amount != null ? sek(u.amount) : null, datum: u.date ? day(u.date) : null, uppladdad: day(u.createdAt), ai_avlast: u.aiStatus === "done" })),
-        banktransaktioner: bank.map((t) => {
-          const top = proposals.get(t.id)?.[0];
-          return { datum: day(t.date), text: t.text, belopp: sek(t.amount), forslag: top ? { bokforing: top.label, sakerhet: top.confidence === "high" ? "säker" : "kontrollera", motivering: top.reason } : null };
-        }),
+        underlag: uploads.map((u) => ({ underlag_id: u.id, fil: u.fileName, beskrivning: u.description || null, belopp: u.amount != null ? sek(u.amount) : null, datum: u.date ? day(u.date) : null, uppladdad: day(u.createdAt), ai_avlast: u.aiStatus === "done" })),
+        banktransaktioner: bank.map((t) => ({
+          bankrad_id: t.id,
+          datum: day(t.date),
+          text: t.text,
+          belopp: sek(t.amount),
+          forslag: (proposals.get(t.id) ?? []).slice(0, 3).map((p, i) => ({ nr: i + 1, bokforing: p.label, sakerhet: p.confidence === "high" ? "säker" : "kontrollera", motivering: p.reason })),
+        })),
         utlagg: expenses.map((e) => ({ datum: day(e.date), person: e.employee, beskrivning: e.description, belopp: sek(e.amount) })),
-        fakturautkast: drafts.map((i) => ({ kund: i.customer.name, datum: day(i.date), belopp_inkl_moms: sek(invoiceTotals(i.lines).total) })),
+        fakturautkast: drafts.map((i) => ({ utkast_id: i.id, kund: i.customer.name, datum: day(i.date), belopp_inkl_moms: sek(invoiceTotals(i.lines).total) })),
       });
     },
   );
 
+  registerHelpers(server, ctx);
+  if (canWrite) registerWriteTools(server, ctx);
   return server;
 }

@@ -27,7 +27,9 @@ export async function approveConsent(fd: FormData) {
   const companyId = Number(fd.get("companyId"));
   const m = s.user.memberships.find((x) => x.companyId === companyId);
   if (!m || !MCP_ROLES.includes(m.role)) back(p, "Välj ett företag där du är ägare eller har full behörighet.");
-  redirect(await issueCode(req, s.userId, companyId, base));
+  // Användaren väljer nivå på godkännandesidan (läsa, eller läsa och bokföra).
+  const scope = fd.get("level") === "write" ? "read write" : "read";
+  redirect(await issueCode({ ...req, scope }, s.userId, companyId, base));
 }
 
 /** Användaren avböjer: Claude får beskedet access_denied. */
