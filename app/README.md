@@ -23,6 +23,11 @@ med eget namn, egen design och egen kod.
 - **Användare och behörighet**: bjud in revisor eller redovisningskonsult med en länk (giltig i 14 dagar) som
   *Full behörighet* eller *Läsbehörighet*. Läsbehörighet stoppas på servern i alla åtgärder och API:er som ändrar data.
   Bara ägaren hanterar användare, och företaget har alltid minst en ägare.
+- **Koppling till Claude (MCP)**: lägg till `https://<din-app>/api/mcp` som anpassad koppling i Claude (Desktop,
+  claude.ai eller mobilen), logga in och godkänn. Claude kan då läsa översikt, resultat- och balansrapport, huvudbok,
+  verifikat, kontoplan, fakturor, moms och det som väntar på att bokföras. Inloggningen sker med OAuth 2.1 (PKCE,
+  dynamisk registrering, korta nycklar som byts vid förnyelse). Bara ägare och användare med full behörighet kan koppla,
+  och kopplingar syns och kopplas från under *Inställningar → Kopplingar*. Kopplingen kan bara läsa.
 - **Automatisk utloggning** efter 30 minuters inaktivitet per enhet, med varning två minuter innan (`IDLE_MINUTES` i
   `src/lib/session-config.ts`).
 - **Utseende**: ljust, mörkt eller automatiskt tema per användare.

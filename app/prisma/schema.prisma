@@ -20,6 +20,7 @@ model User {
   createdAt    DateTime     @default(now())
   memberships  Membership[]
   sessions     Session[]
+  oauthGrants  OAuthGrant[]
 }
 
 model Session {
@@ -91,6 +92,7 @@ model Company {
   fiscalYears   FiscalYear[]
   bankTransactions BankTransaction[]
   invitations   Invitation[]
+  oauthGrants   OAuthGrant[]
 }
 
 model FiscalYear {
@@ -328,4 +330,66 @@ model Invitation {
   createdAt   DateTime  @default(now())
 
   @@index([companyId])
+}
+
+// Kopplingar till Claude m.fl. via MCP (OAuth 2.1). Nycklar och koder sparas bara som hash.
+
+// Klient som registrerat sig själv (dynamisk registrering) eller via ett metadatadokument (client_id är en URL).
+model OAuthClient {
+  id           String       @id // client_id
+  name         String
+  redirectUris String[]
+  secretHash   String? // bara för klienter som valt autentisering med hemlighet
+  metadataUrl  Boolean      @default(false) // client_id är en URL till klientens metadatadokument
+  fetchedAt    DateTime?
+  createdAt    DateTime     @default(now())
+  codes        OAuthCode[]
+  grants       OAuthGrant[]
+}
+
+// Engångskod från godkännandet, byts mot nycklar inom en minut (PKCE krävs).
+model OAuthCode {
+  codeHash      String      @id
+  clientId      String
+  client        OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId        Int
+  companyId     Int
+  scope         String
+  redirectUri   String
+  codeChallenge String
+  resource      String
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime    @default(now())
+}
+
+// En koppling: en användare har gett en klient åtkomst till ett företag. Återkallas från appen.
+model OAuthGrant {
+  id         Int          @id @default(autoincrement())
+  clientId   String
+  client     OAuthClient  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId     Int
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId  Int
+  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  scope      String // read (senare: read write)
+  resource   String
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime     @default(now())
+  tokens     OAuthToken[]
+
+  @@index([companyId])
+}
+
+model OAuthToken {
+  tokenHash String     @id
+  grantId   Int
+  grant     OAuthGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  kind      String // access | refresh
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime   @default(now())
+
+  @@index([grantId])
 }

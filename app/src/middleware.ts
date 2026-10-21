@@ -6,7 +6,7 @@ const PUBLIC = ["/login", "/register"];
 
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
-  if (PUBLIC.some((p) => pathname === p) || pathname.startsWith("/api/") || pathname.startsWith("/invite/")) return NextResponse.next();
+  if (PUBLIC.some((p) => pathname === p) || pathname.startsWith("/api/") || pathname.startsWith("/invite/") || pathname.startsWith("/.well-known/")) return NextResponse.next();
   if (!req.cookies.has("hb_session")) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
