@@ -49,7 +49,7 @@ export default async function Uploads({ searchParams }: { searchParams: SP }) {
                     )}
                   </div>
                   <div className="min-w-0 text-sm">
-                    <p className="truncate font-medium">{u.fileName}</p>
+                    <p className="truncate font-medium">{u.description || u.fileName}</p>
                     <p className="text-muted">{u.amount != null ? kr(u.amount) : "Belopp saknas"}</p>
                     <p className="text-xs text-muted">
                       {u.verification

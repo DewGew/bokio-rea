@@ -185,6 +185,10 @@ model Upload {
   amount         Int?
   description    String        @default("")
   createdAt      DateTime      @default(now())
+  // AI-avläsning av kvittot (OpenRouter): status, tolkad data och ev. felmeddelande
+  aiStatus       String?       // done | error
+  aiData         Json?
+  aiError        String?
   verificationId Int?
   verification   Verification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
   expense        Expense?

@@ -3,6 +3,7 @@ import { requireCompany } from "@/lib/auth";
 import { Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { BookingWizard } from "@/components/BookingWizard";
 import { directUploadEnabled, serverUploadLimit } from "@/lib/storage";
+import { aiEnabled } from "@/lib/receipt-ai";
 import { createManualVerification } from "../actions";
 
 export default async function NewVerification({ searchParams }: { searchParams: SP }) {
@@ -23,6 +24,7 @@ export default async function NewVerification({ searchParams }: { searchParams: 
         manualAction={createManualVerification}
         uploader={{ blob: directUploadEnabled(), limit: serverUploadLimit(), companyId }}
         back="/verifications/new"
+        ai={aiEnabled()}
       />
     </>
   );

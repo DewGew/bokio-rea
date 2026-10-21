@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReceiptData } from "@/lib/receipt-ai";
 import { bookTemplateAction } from "@/app/(app)/verifications/book-actions";
 import { templateLines, type Country } from "@/lib/template-lines";
 import type { Uploaded } from "@/lib/upload-client";
@@ -72,6 +73,8 @@ export function BookingWizard({
   presetUploadIds,
   back,
   allowManual = true,
+  ai = false,
+  presetAi = null,
 }: {
   templates: WizardTemplate[];
   accounts: { number: number; name: string }[];
@@ -83,6 +86,10 @@ export function BookingWizard({
   presetUploadIds?: number[];
   back: string;
   allowManual?: boolean;
+  /** AI-avläsning av kvitton är aktiverad (OpenRouter). */
+  ai?: boolean;
+  /** Redan avläst data för förvalt underlag. */
+  presetAi?: ReceiptData | null;
 }) {
   const [step, setStep] = useState(1);
   const [tab, setTab] = useState<"search" | "all" | "manual">("search");
@@ -97,6 +104,61 @@ export function BookingWizard({
   const [attachments, setAttachments] = useState<Uploaded[]>([]);
   const [editRows, setEditRows] = useState<Row[] | null>(null);
   const names = useMemo(() => new Map(accounts.map((a) => [a.number, a.name])), [accounts]);
+  const [aiState, setAiState] = useState<"idle" | "reading" | "done" | "error">("idle");
+  const [aiError, setAiError] = useState("");
+  const [aiData, setAiData] = useState<ReceiptData | null>(null);
+
+  /** Fyller i guiden med det AI:n läst av. Mallen väljs om AI:n hittade en, annars blir beskrivningen en sökning. */
+  const applyAi = useCallback(
+    (d: ReceiptData) => {
+      setAiData(d);
+      setAiState("done");
+      const t = templates.find((x) => x.id === d.templateId) ?? null;
+      if (d.total && d.currency === "SEK") setGross(d.total.toFixed(2).replace(".", ","));
+      if (d.date) setDate(d.date);
+      setCountry(d.country === "EU" ? "eu" : d.country === "OUTSIDE_EU" ? "world" : "se");
+      const label = [d.supplier, d.description].filter(Boolean).join(" – ");
+      if (t) {
+        setTpl(t);
+        setTitle(label || t.name);
+        setStep(2);
+      } else {
+        setTitle(label);
+        setQuery(d.description || d.supplier || "");
+      }
+    },
+    [templates],
+  );
+
+  const readAi = useCallback(
+    async (uploadId: number) => {
+      setAiState("reading");
+      setAiError("");
+      try {
+        const res = await fetch(`/api/receipts/${uploadId}/read`, { method: "POST" });
+        const j = (await res.json()) as { status: string; data?: ReceiptData; error?: string };
+        if (j.status === "done" && j.data) applyAi(j.data);
+        else if (j.status === "disabled") setAiState("idle");
+        else {
+          setAiState("error");
+          setAiError(j.error ?? "Avläsningen misslyckades.");
+        }
+      } catch {
+        setAiState("error");
+        setAiError("Kunde inte nå servern.");
+      }
+    },
+    [applyAi],
+  );
+
+  // Förvalt underlag (från Uppladdat): använd sparad avläsning eller läs av direkt.
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    if (presetAi) applyAi(presetAi);
+    else if (ai && presetUploadIds?.length) void readAi(presetUploadIds[0]);
+  }, [ai, presetAi, presetUploadIds, applyAi, readAi]);
 
   const popular = useMemo(() => [...templates].sort((a, b) => b.usageCount - a.usageCount).slice(0, 6), [templates]);
   const searched = useMemo(() => {
@@ -165,6 +227,13 @@ export function BookingWizard({
         </div>
       </div>
 
+      {aiState === "reading" && (
+        <p role="status" className="flex items-center gap-2 rounded-xl bg-brand-soft px-4 py-3 text-[14px] font-medium text-brand">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" aria-hidden /> Läser av kvittot med AI…
+        </p>
+      )}
+      {aiState === "error" && <p className="rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">AI-avläsningen misslyckades: {aiError} Fyll i uppgifterna själv.</p>}
+
       {step === 1 && (
         <div className="space-y-4">
           <Segmented value={tab} onChange={(v) => setTab(v as typeof tab)} items={allowManual ? [["search", "Sök"], ["all", "Alla mallar"], ["manual", "Manuell"]] : [["search", "Sök"], ["all", "Alla mallar"]]} />
@@ -219,6 +288,22 @@ export function BookingWizard({
             </div>
           </div>
 
+          {aiData && (
+            <div className="rounded-xl bg-success-soft px-4 py-3 text-[13px] text-success">
+              <p className="font-semibold">
+                <Icon name="wand" className="mr-1 inline h-4 w-4" />
+                Avläst med AI{aiData.supplier ? ` – ${aiData.supplier}` : ""} · kontrollera uppgifterna
+              </p>
+              {aiData.currency !== "SEK" && aiData.total && (
+                <p className="mt-1 text-warn">
+                  Kvittot är i {aiData.currency} ({aiData.total.toLocaleString("sv-SE")} {aiData.currency}). Ange summan i kronor enligt kontoutdraget.
+                </p>
+              )}
+              {aiData.vat.length > 0 && (
+                <p className="mt-1 text-ink/70">Moms enligt kvittot: {aiData.vat.map((v) => `${v.rate} %: ${v.amount.toLocaleString("sv-SE", { minimumFractionDigits: 2 })}`).join(", ")}</p>
+              )}
+            </div>
+          )}
           <div>
             <label className="label" htmlFor="w-gross">{reverse ? "Summa (utan svensk moms)" : "Summa (inkl. moms)"}</label>
             <input id="w-gross" autoFocus value={gross} onChange={(e) => setGross(e.target.value)} inputMode="decimal" placeholder="0,00" className="input text-right text-[17px]" />
@@ -367,7 +452,17 @@ export function BookingWizard({
             ))}
           </ul>
         )}
-        <FileUploader blob={uploader.blob} limit={uploader.limit} companyId={uploader.companyId} onUploaded={(f) => setAttachments((p) => [...p, ...f])} />
+        <FileUploader
+          blob={uploader.blob}
+          limit={uploader.limit}
+          companyId={uploader.companyId}
+          onUploaded={(f) => {
+            setAttachments((p) => [...p, ...f]);
+            // Första kvittot läses av automatiskt om ingen mall är vald ännu.
+            if (ai && !tpl && f[0]) void readAi(f[0].id);
+          }}
+        />
+        {ai && <p className="mt-3 text-[12px] text-muted">Kvitton läses av automatiskt med AI – summa, datum, moms och mall fylls i.</p>}
       </aside>
     </div>
   );

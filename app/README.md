@@ -14,6 +14,8 @@ med eget namn, egen design och egen kod.
 - **Fakturering**: kunder, artiklar, utkast, bokföring, betalning och kreditering. **PDF-fakturor** genereras på servern (`/api/invoices/[id]/pdf`).
 - **Fakturadesign**: fyra mallar (Modern, Klassisk, Minimal, Elegant), valfri accentfärg, logotyp, bankgiro, plusgiro, IBAN/BIC,
   Swish-QR (förifyllt belopp och fakturanummer), klickbar betallänk och egen sidfot, med förhandsvisning i realtid.
+- **AI-avläsning av kvitton** (OpenRouter, `google/gemini-3.1-flash-lite`): leverantör, datum, belopp, moms, land och
+  föreslagen mall fylls i automatiskt i bokföringsguiden. Kräver `OPENROUTER_API_KEY`; resultatet sparas per underlag.
 - **Utseende**: ljust, mörkt eller automatiskt tema per användare.
 - **Räkenskapsår och moms**: företagsform, faktura-/kontantmetoden, moms per månad/kvartal/helår (eller ej momsregistrerad),
   brutet/förlängt räkenskapsår och deadlines enligt Skatteverket.
@@ -44,6 +46,7 @@ Lokalt sparas uppladdade filer i `uploads/`.
      Det sätter `DATABASE_URL` och oftast `DATABASE_URL_UNPOOLED`. Bara `DATABASE_URL` krävs. Om en direkt anslutning
      finns används den för migreringar (`scripts/migrate.mjs`).
    - Skapa en **Blob**-store med åtkomst **Private** och koppla den. Det sätter `BLOB_READ_WRITE_TOKEN`.
+   - Valfritt: lägg till miljövariabeln `OPENROUTER_API_KEY` (från openrouter.ai/keys) för AI-avläsning av kvitton.
 3. Deploya. Skriptet `vercel-build` kör migreringarna automatiskt, så databastabellerna skapas vid första deployen.
    Kopplade du databasen efter ett misslyckat bygge måste du göra **Redeploy**, eftersom miljövariablerna läses vid byggstart.
 4. Öppna sajten och registrera ditt företag.
