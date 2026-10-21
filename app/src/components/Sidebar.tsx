@@ -84,7 +84,7 @@ export function Sidebar({ company, companies, userName, readOnly = false }: { co
   return (
     <>
       {/* Mobil: genomskinlig toppmeny */}
-      <header className="no-print sticky top-0 z-30 flex h-12 items-center justify-between border-b border-line bg-[var(--sidebar)] px-4 backdrop-blur-xl backdrop-saturate-150 md:hidden">
+      <header className="no-print sticky top-0 z-30 flex h-12 items-center justify-between border-b border-[var(--sidebar-border)] bg-[var(--sidebar)] px-4 backdrop-blur-xl backdrop-saturate-150 md:hidden">
         <button onClick={() => setOpen(!open)} className="flex items-center gap-1.5 text-[15px] font-medium text-brand" aria-expanded={open}>
           <Icon name="sidebar" className="h-5 w-5" />
           Meny
@@ -96,7 +96,7 @@ export function Sidebar({ company, companies, userName, readOnly = false }: { co
       {open && <div className="fixed inset-0 z-30 bg-black/20 backdrop-blur-[2px] md:hidden" onClick={() => setOpen(false)} />}
 
       <aside
-        className={`no-print fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-line bg-[var(--sidebar)] backdrop-blur-2xl backdrop-saturate-150 transition-transform duration-300 ease-out md:sticky md:top-0 md:z-auto md:h-screen md:translate-x-0 ${open ? "translate-x-0 shadow-2xl" : "-translate-x-full"}`}
+        className={`no-print fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] backdrop-blur-2xl backdrop-saturate-150 transition-transform duration-300 ease-out md:sticky md:top-0 md:z-auto md:h-screen md:translate-x-0 ${open ? "translate-x-0 shadow-2xl" : "-translate-x-full"}`}
       >
         <div className="px-4 pb-3 pt-5">
           <Link href="/" className="mb-4 flex items-center gap-2.5 px-1">

@@ -3,18 +3,19 @@
 /* Designsystem inspirerat av Apples plattformar: systemtypsnitt, mjuka ytor, få linjer och tydlig hierarki. */
 :root {
   color-scheme: light;
-  /* Ljust tema: bakgrunden är tydligt grå så att vita kort och fält syns (kort/bakgrund ≈ 1,25:1 plus kant och skugga). */
-  --bg: #e8e9ed;
+  /* Ljust tema: ljus blågrå bakgrund med ett svagt blått sken upptill; vita kort avgränsas med kant och mjuk skugga. */
+  --bg: #f8fafc;
+  --bg-glow: radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, 0.075), transparent 55%);
   --surface: #ffffff;
-  --surface-2: #f2f3f6; /* fält, segmentkontroller */
-  --fill: rgba(120, 120, 128, 0.16); /* sekundära knappar */
-  --fill-hover: rgba(120, 120, 128, 0.26);
-  --ink: #1d1d1f;
-  --muted: #5f5f66; /* 6,3:1 mot vitt, 5,1:1 mot bakgrunden */
-  --line: rgba(0, 0, 0, 0.11);
-  --line-strong: rgba(0, 0, 0, 0.22); /* streckade ytor */
-  --input-border: #c3c4ca;
-  --card-border: rgba(0, 0, 0, 0.08);
+  --surface-2: #f3f6fa; /* fält, segmentkontroller */
+  --fill: rgba(100, 116, 139, 0.12); /* sekundära knappar */
+  --fill-hover: rgba(100, 116, 139, 0.2);
+  --ink: #0f172a;
+  --muted: #5b6577; /* 5,8:1 mot vitt, 5,5:1 mot bakgrunden */
+  --line: #e9edf3;
+  --line-strong: #cbd3df; /* streckade ytor */
+  --input-border: #d5dce6;
+  --card-border: #e9edf3;
   --brand: #0071e3;
   --brand-ink: #ffffff;
   --brand-soft: rgba(0, 113, 227, 0.1);
@@ -25,8 +26,9 @@
   --warn: #b25000;
   --warn-soft: rgba(255, 149, 0, 0.14);
   --chart-2: #ff9f0a;
-  --sidebar: rgba(244, 245, 248, 0.9);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 18px rgba(0, 0, 0, 0.06);
+  --sidebar: #ffffff;
+  --sidebar-border: #e9edf3;
+  --shadow: 0 2px 5px rgba(15, 23, 42, 0.025), 0 12px 28px rgba(15, 23, 42, 0.035);
   --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.14), 0 1px 1px rgba(0, 0, 0, 0.06);
 }
 
@@ -54,6 +56,8 @@
   --warn-soft: rgba(255, 159, 10, 0.18);
   --chart-2: #ffd60a;
   --sidebar: rgba(28, 28, 30, 0.72);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --bg-glow: radial-gradient(ellipse at 50% 0%, rgba(10, 132, 255, 0.09), transparent 55%);
   --shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
   --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
@@ -82,6 +86,8 @@
     --warn-soft: rgba(255, 159, 10, 0.18);
     --chart-2: #ffd60a;
     --sidebar: rgba(28, 28, 30, 0.72);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --bg-glow: radial-gradient(ellipse at 50% 0%, rgba(10, 132, 255, 0.09), transparent 55%);
     --shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
     --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.5);
   }
@@ -109,7 +115,9 @@
 }
 
 body {
-  background: var(--bg);
+  background: var(--bg-glow), var(--bg);
+  background-attachment: fixed;
+  min-height: 100vh;
   color: var(--ink);
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
