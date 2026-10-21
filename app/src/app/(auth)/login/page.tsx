@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { Flash, readParams, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { IDLE_MINUTES } from "@/lib/session-config";
 import { login } from "../actions";
 
 export default async function Login({ searchParams }: { searchParams: SP }) {
@@ -14,7 +15,7 @@ export default async function Login({ searchParams }: { searchParams: SP }) {
       <p className="mb-7 text-center text-[15px] text-muted">
         Inget konto? <Link href="/register" className="text-brand">Registrera ditt företag</Link>
       </p>
-      <Flash error={error} notice={notice} />
+      <Flash error={error} notice={get("expired") ? `Du loggades ut efter ${IDLE_MINUTES} minuter utan aktivitet. Logga in igen.` : notice} />
       <form action={login} className="space-y-4">
         <input type="hidden" name="next" value={get("next") ?? "/"} />
         <div>

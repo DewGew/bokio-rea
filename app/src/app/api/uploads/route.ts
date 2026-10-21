@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { apiCompany } from "@/lib/auth";
+import { READ_ONLY_MESSAGE, apiCompany } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkFile, storeFile, verifyBlob } from "@/lib/storage";
 
@@ -13,6 +13,7 @@ import { checkFile, storeFile, verifyBlob } from "@/lib/storage";
 export async function POST(req: Request) {
   const ctx = await apiCompany();
   if (!ctx) return NextResponse.json({ error: "Du är inte inloggad." }, { status: 401 });
+  if (ctx.role === "read") return NextResponse.json({ error: READ_ONLY_MESSAGE }, { status: 403 });
   const created: { id: number; fileName: string; mimeType: string }[] = [];
   try {
     const isJson = req.headers.get("content-type")?.includes("application/json");

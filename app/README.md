@@ -20,6 +20,11 @@ med eget namn, egen design och egen kod.
   Transaktionerna matchas mot obetalda kundfakturor, utlägg, obokförda kvitton och verifikat som redan finns på bankkontot,
   och säkra matchningar bokförs automatiskt. Övriga får förslag (mallar, ordlista, tidigare bokningar av samma motpart)
   och bokförs med ett klick. Redan importerade rader hoppas över, och en bokning kan ångras.
+- **Användare och behörighet**: bjud in revisor eller redovisningskonsult med en länk (giltig i 14 dagar) som
+  *Full behörighet* eller *Läsbehörighet*. Läsbehörighet stoppas på servern i alla åtgärder och API:er som ändrar data.
+  Bara ägaren hanterar användare, och företaget har alltid minst en ägare.
+- **Automatisk utloggning** efter 30 minuters inaktivitet per enhet, med varning två minuter innan (`IDLE_MINUTES` i
+  `src/lib/session-config.ts`).
 - **Utseende**: ljust, mörkt eller automatiskt tema per användare.
 - **Räkenskapsår och moms**: företagsform, faktura-/kontantmetoden, moms per månad/kvartal/helår (eller ej momsregistrerad),
   brutet/förlängt räkenskapsår och deadlines enligt Skatteverket.
@@ -80,4 +85,5 @@ Vercel Blob och pdf-lib. Lösenord hashas med scrypt, och sessioner lagras i dat
 - Ingen direkt bankkoppling (kontoutdrag importeras som CSV), inga löner och ingen årsredovisning.
 - Fakturor skickas som PDF (nedladdning), inte via e-post.
 - Ingen återställning av glömt lösenord och ingen begränsning av antalet inloggningsförsök ännu.
+- Inbjudningar skickas inte automatiskt med e-post; länken kopieras eller öppnas i ditt e-postprogram.
 - Underlaget för momsrapporten är förenklat. Kontrollera alltid mot Skatteverkets regler.

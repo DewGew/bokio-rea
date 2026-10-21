@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { endSession, getSession, hashPassword, requireUser, setActiveCompany, startSession, verifyPassword } from "@/lib/auth";
 import { createCompany, isCompanyType, isVatPeriod, validOrgNumber } from "@/lib/company-setup";
 import { str, withParam } from "@/lib/action";
+import { MemberError, acceptInvitation, findInvitation } from "@/lib/members";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -94,4 +95,46 @@ export async function switchCompany(fd: FormData) {
   await setActiveCompany(s.id, s.userId, Number(str(fd, "companyId")));
   revalidatePath("/", "layout");
   redirect("/");
+}
+
+/** Tar emot en inbjudan: som inloggad, genom att logga in eller genom att skapa ett konto. */
+export async function acceptInvite(fd: FormData) {
+  const token = str(fd, "token");
+  const back = (msg: string): never => redirect(withParam(`/invite/${encodeURIComponent(token)}`, "error", msg));
+  const inv = await findInvitation(token);
+  if (!inv) back("Inbjudan är ogiltig eller har gått ut.");
+  const invitation = inv!;
+  const mode = str(fd, "mode");
+  const password = String(fd.get("password") ?? "");
+
+  let user: { id: number; email: string };
+  let session = await getSession();
+  if (mode === "join") {
+    if (!session) back("Logga in först.");
+    user = session!.user;
+  } else if (mode === "login") {
+    const found = await db.user.findUnique({ where: { email: invitation.email } });
+    const ok = await verifyPassword(password, found?.passwordHash ?? "scrypt$00$00");
+    if (!found || !ok) back("Fel lösenord.");
+    user = found!;
+    session = null;
+  } else {
+    const name = str(fd, "name");
+    if (!name) back("Ange ditt namn.");
+    if (password.length < 10) back("Lösenordet måste vara minst 10 tecken.");
+    if (await db.user.findUnique({ where: { email: invitation.email } })) back("Det finns redan ett konto med den e-postadressen. Logga in istället.");
+    user = await db.user.create({ data: { name, email: invitation.email, passwordHash: await hashPassword(password) } });
+    session = null;
+  }
+
+  try {
+    await acceptInvitation(token, user);
+  } catch (e) {
+    if (e instanceof MemberError) back(e.message);
+    throw e;
+  }
+  if (session) await setActiveCompany(session.id, user.id, invitation.companyId);
+  else await startSession(user.id, invitation.companyId);
+  revalidatePath("/", "layout");
+  redirect("/?ok=" + encodeURIComponent(`Välkommen till ${invitation.company.name}!`));
 }

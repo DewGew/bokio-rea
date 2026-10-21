@@ -2,13 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireCompany } from "@/lib/auth";
+import { requireWriter } from "@/lib/auth";
 import { AccountingError, bookExpense, payExpenses } from "@/lib/accounting";
 import { attempt, str, withParam } from "@/lib/action";
 import { parseDate, parseKr } from "@/lib/money";
 
 export async function createExpense(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   await attempt(async () => {
     const date = parseDate(str(fd, "date"));
     const amount = parseKr(str(fd, "amount"));
@@ -34,13 +34,13 @@ export async function createExpense(fd: FormData) {
 }
 
 export async function bookExpenseAction(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   await attempt(() => bookExpense(companyId, Number(str(fd, "id"))), "/expenses");
   redirect(withParam("/expenses", "ok", "Utlägget är bokfört som skuld till den anställde."));
 }
 
 export async function payExpensesAction(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const ids = fd.getAll("ids").map(Number).filter(Boolean);
   const v = await attempt(async () => {
     const date = parseDate(str(fd, "date"));
@@ -52,7 +52,7 @@ export async function payExpensesAction(fd: FormData) {
 }
 
 export async function deleteExpense(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   await db.expense.deleteMany({ where: { id: Number(str(fd, "id")), companyId, status: "pending" } });
   redirect(withParam("/expenses", "ok", "Utlägget är borttaget."));
 }

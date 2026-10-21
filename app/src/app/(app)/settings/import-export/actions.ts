@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireCompany } from "@/lib/auth";
+import { requireWriter } from "@/lib/auth";
 import { AccountingError } from "@/lib/accounting";
 import { SieError, decodeSie, parseSie } from "@/lib/sie";
 import { planImport, runImport, type ImportPlan } from "@/lib/sie-import";
@@ -23,7 +23,7 @@ async function readFile(fd: FormData) {
 
 /** Steg 1: läs in filen och visa vad som kommer att hända. Steg 2 (confirm): importera. */
 export async function sieImportAction(_: ImportState, fd: FormData): Promise<ImportState> {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   if (fd.get("reset") === "1") return undefined;
   try {
     const { sie, name } = await readFile(fd);

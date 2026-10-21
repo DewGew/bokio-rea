@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireCompany } from "@/lib/auth";
+import { requireWriter } from "@/lib/auth";
 import { AccountingError, bookWithTemplate } from "@/lib/accounting";
 import { attempt, str } from "@/lib/action";
 import { parseDate, parseKr } from "@/lib/money";
@@ -9,7 +9,7 @@ import type { Country } from "@/lib/template-lines";
 
 /** Steg 3 i bokföringsguiden: bokför med vald mall. Raderna räknas om på servern, klientens förhandsvisning litas inte på. */
 export async function bookTemplateAction(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const back = str(fd, "back") || "/verifications/new";
   const v = await attempt(async () => {
     const templateId = Number(str(fd, "templateId"));

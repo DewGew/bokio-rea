@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireCompany } from "@/lib/auth";
+import { requireWriter } from "@/lib/auth";
 import { str } from "@/lib/action";
 import { isCompanyType, isVatPeriod } from "@/lib/company-setup";
 import { addMonths, fiscalYears, fyLabel, monthsBetween } from "@/lib/fiscal";
@@ -17,7 +17,7 @@ const done = (ok: string): SettingsState => {
 
 /** Företagsform, bokföringsmetod och moms. */
 export async function saveTaxSettings(_: SettingsState, fd: FormData): Promise<SettingsState> {
-  const { companyId, company } = await requireCompany();
+  const { companyId, company } = await requireWriter();
   const companyType = str(fd, "companyType");
   const accountingMethod = str(fd, "accountingMethod");
   const vatPeriod = str(fd, "vatPeriod");
@@ -44,7 +44,7 @@ export async function saveTaxSettings(_: SettingsState, fd: FormData): Promise<S
 
 /** Ändrar start/slut för ett räkenskapsår (t.ex. förlängt eller förkortat första år). */
 async function updateFiscalYear(fd: FormData): Promise<SettingsState> {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   const start = parseDate(str(fd, "start"));
   const end = parseDate(str(fd, "end"));
@@ -76,7 +76,7 @@ async function updateFiscalYear(fd: FormData): Promise<SettingsState> {
 
 /** Skapar nästa räkenskapsår (12 månader direkt efter det senaste). */
 async function addFiscalYear(): Promise<SettingsState> {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const all = await fiscalYears(companyId);
   const last = all[all.length - 1];
   if (!last) return { error: "Det finns inget räkenskapsår att fortsätta från." };
@@ -88,7 +88,7 @@ async function addFiscalYear(): Promise<SettingsState> {
 
 /** Tar bort det senaste räkenskapsåret om det är tomt. */
 async function removeFiscalYear(fd: FormData): Promise<SettingsState> {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const all = await fiscalYears(companyId);
   const last = all[all.length - 1];
   if (!last || last.id !== Number(str(fd, "id")) || all.length === 1) return { error: "Bara det senaste räkenskapsåret kan tas bort, och minst ett måste finnas." };

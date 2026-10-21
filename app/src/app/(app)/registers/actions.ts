@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireCompany } from "@/lib/auth";
+import { requireWriter } from "@/lib/auth";
 import { validOrgNumber } from "@/lib/company-setup";
 import { str, withParam } from "@/lib/action";
 import { parseKr } from "@/lib/money";
@@ -14,7 +14,7 @@ function done(path: string, msg: string): never {
 }
 
 export async function saveCustomer(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   const name = str(fd, "name");
   if (!name) redirect(withParam("/customers", "error", "Kunden måste ha ett namn."));
@@ -33,7 +33,7 @@ export async function saveCustomer(fd: FormData) {
 }
 
 export async function deleteCustomer(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   const used = await db.invoice.count({ where: { customerId: id, companyId } });
   if (used) redirect(withParam("/customers", "error", "Kunden har fakturor och kan inte tas bort."));
@@ -42,7 +42,7 @@ export async function deleteCustomer(fd: FormData) {
 }
 
 export async function saveArticle(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   const name = str(fd, "name");
   const price = parseKr(str(fd, "price"));
@@ -54,13 +54,13 @@ export async function saveArticle(fd: FormData) {
 }
 
 export async function deleteArticle(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   await db.article.deleteMany({ where: { id: Number(str(fd, "id")), companyId } });
   done("/articles", "Artikeln är borttagen.");
 }
 
 export async function saveCompany(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const name = str(fd, "name");
   const orgNumber = str(fd, "orgNumber");
   if (!name || !validOrgNumber(orgNumber)) redirect(withParam("/settings", "error", "Ange företagsnamn och ett giltigt organisationsnummer."));
@@ -82,7 +82,7 @@ export async function saveCompany(fd: FormData) {
 }
 
 export async function saveAccount(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const number = Number(str(fd, "number"));
   const name = str(fd, "name");
   if (!(number >= 1000 && number <= 8999) || !name) redirect(withParam("/settings/accounts", "error", "Ange ett kontonummer 1000–8999 och ett namn."));
@@ -95,7 +95,7 @@ export async function saveAccount(fd: FormData) {
 }
 
 export async function toggleAccount(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const number = Number(str(fd, "number"));
   const where = { companyId_number: { companyId, number } };
   const a = await db.account.findUnique({ where });
@@ -104,7 +104,7 @@ export async function toggleAccount(fd: FormData) {
 }
 
 export async function saveTemplate(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const name = str(fd, "name");
   const costAccount = Number(str(fd, "costAccount"));
   if (!name || !costAccount) redirect(withParam("/settings/templates", "error", "Ange namn och konto."));
@@ -126,7 +126,7 @@ export async function saveTemplate(fd: FormData) {
 }
 
 export async function deleteTemplate(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   await db.template.deleteMany({ where: { id: Number(str(fd, "id")), companyId } });
   done("/settings/templates", "Mallen är borttagen.");
 }

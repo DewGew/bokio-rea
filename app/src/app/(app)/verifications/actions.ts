@@ -2,13 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireCompany } from "@/lib/auth";
+import { requireWriter } from "@/lib/auth";
 import { AccountingError, createVerification, reverseVerification } from "@/lib/accounting";
 import { attempt, str } from "@/lib/action";
 import { parseDate, parseKr } from "@/lib/money";
 
 export async function createManualVerification(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const uploadId = parseInt(str(fd, "uploadId"), 10) || 0;
   // Underlag kan komma från en uppladdning (uploadId) eller bifogas direkt i formuläret (uploadIds).
   const uploadIds = [...new Set([uploadId, ...str(fd, "uploadIds").split(",").map((x) => parseInt(x, 10))].filter((x) => x > 0))];
@@ -39,7 +39,7 @@ export async function createManualVerification(fd: FormData) {
 }
 
 export async function reverse(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   const rev = await attempt(() => reverseVerification(companyId, id), `/verifications/${id}`);
   redirect(`/verifications/${rev.id}?ok=${encodeURIComponent("Verifikatet är makulerat med ett omvänt verifikat.")}`);

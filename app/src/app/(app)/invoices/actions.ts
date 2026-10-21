@@ -3,13 +3,13 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireCompany } from "@/lib/auth";
+import { requireWriter } from "@/lib/auth";
 import { AccountingError, creditInvoice, registerInvoicePayment, sendInvoice } from "@/lib/accounting";
 import { attempt, str, withParam } from "@/lib/action";
 import { parseDate, parseKr } from "@/lib/money";
 
 export async function createDraft(fd: FormData) {
-  const { companyId, company } = await requireCompany();
+  const { companyId, company } = await requireWriter();
   const customerId = Number(str(fd, "customerId"));
   const customer = customerId ? await db.customer.findFirst({ where: { id: customerId, companyId } }) : null;
   if (!customer) redirect(withParam("/invoices/new", "error", "Välj en kund."));
@@ -28,7 +28,7 @@ export async function createDraft(fd: FormData) {
 type LineIn = { description: string; quantity: string; unit: string; unitPrice: string; vatRate: string };
 
 async function persistDraft(fd: FormData, send: boolean) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   const back = `/invoices/${id}`;
   await attempt(async () => {
@@ -83,7 +83,7 @@ export async function saveAndSend(fd: FormData) {
 }
 
 export async function deleteDraft(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   await db.invoice.deleteMany({ where: { id, companyId, status: "draft" } });
   revalidatePath("/", "layout");
@@ -91,7 +91,7 @@ export async function deleteDraft(fd: FormData) {
 }
 
 export async function markPaid(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   const back = `/invoices/${id}`;
   await attempt(async () => {
@@ -104,7 +104,7 @@ export async function markPaid(fd: FormData) {
 }
 
 export async function credit(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   const back = `/invoices/${id}`;
   await attempt(() => creditInvoice(companyId, id), back);

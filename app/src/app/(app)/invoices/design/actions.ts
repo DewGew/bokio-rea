@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireCompany } from "@/lib/auth";
+import { requireWriter } from "@/lib/auth";
 import { str } from "@/lib/action";
 import { isTemplate, safeLink, swishDigits, validHex, validSwish } from "@/lib/invoice-design";
 
 export type DesignState = { ok?: string; error?: string } | undefined;
 
 export async function saveInvoiceDesign(_: DesignState, fd: FormData): Promise<DesignState> {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const template = str(fd, "template");
   const color = str(fd, "color");
   const swish = str(fd, "swishNumber");

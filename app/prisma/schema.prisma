@@ -28,6 +28,7 @@ model Session {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   activeCompanyId Int?
   expiresAt       DateTime
+  lastSeenAt      DateTime @default(now()) // för automatisk utloggning vid inaktivitet
   createdAt       DateTime @default(now())
 }
 
@@ -36,7 +37,7 @@ model Membership {
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   companyId Int
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  role      String  @default("owner")
+  role      String  @default("owner") // owner | full | read
 
   @@id([userId, companyId])
 }
@@ -89,6 +90,7 @@ model Company {
   vatPeriods    VatPeriod[]
   fiscalYears   FiscalYear[]
   bankTransactions BankTransaction[]
+  invitations   Invitation[]
 }
 
 model FiscalYear {
@@ -310,4 +312,20 @@ model BankTransaction {
 
   @@unique([companyId, hash])
   @@index([companyId, status, date])
+}
+
+// Inbjudan till ett företag (t.ex. revisor). Länken innehåller en token; bara dess hash sparas.
+model Invitation {
+  id          Int       @id @default(autoincrement())
+  companyId   Int
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email       String
+  role        String // full | read
+  tokenHash   String    @unique
+  invitedById Int?
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([companyId])
 }

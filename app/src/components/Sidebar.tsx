@@ -49,6 +49,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
       ["/settings/accounts", "Kontoplan", "grid"],
       ["/settings/templates", "Bokföringsmallar", "wand"],
       ["/settings/import-export", "Import och export", "upload"],
+      ["/settings/users", "Användare och behörighet", "people"],
       ["/settings/appearance", "Utseende", "sun"],
     ],
   },
@@ -63,7 +64,10 @@ function activeHref(path: string) {
 
 type C = { id: number; name: string };
 
-export function Sidebar({ company, companies, userName }: { company: C; companies: C[]; userName: string }) {
+// Sidor för att lägga till bokföring döljs för användare med läsbehörighet.
+const WRITE_ONLY = new Set(["/verifications/new"]);
+
+export function Sidebar({ company, companies, userName, readOnly = false }: { company: C; companies: C[]; userName: string; readOnly?: boolean }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   // Markera den klickade länken direkt, innan nästa sida hunnit laddas.
@@ -126,7 +130,7 @@ export function Sidebar({ company, companies, userName }: { company: C; companie
             <div key={i}>
               {group.title && <p className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted/80">{group.title}</p>}
               <ul className="space-y-px">
-                {group.items.map(([href, label, icon]) => {
+                {group.items.filter(([href]) => !(readOnly && WRITE_ONLY.has(href))).map(([href, label, icon]) => {
                   const on = active === href;
                   return (
                     <li key={href}>

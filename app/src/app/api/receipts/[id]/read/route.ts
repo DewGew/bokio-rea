@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
-import { apiCompany } from "@/lib/auth";
+import { READ_ONLY_MESSAGE, apiCompany } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { readStored } from "@/lib/storage";
 import { ReceiptAiError, aiEnabled, readReceipt, type ReceiptData } from "@/lib/receipt-ai";
@@ -22,6 +22,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const force = new URL(req.url).searchParams.has("force");
   if (upload.aiStatus === "done" && upload.aiData && !force) return NextResponse.json({ status: "done", data: upload.aiData });
+  if (ctx.role === "read") return NextResponse.json({ status: "error", error: READ_ONLY_MESSAGE }, { status: 403 });
   if (!aiEnabled()) return NextResponse.json({ status: "disabled" });
   if (!READABLE.includes(upload.mimeType)) return NextResponse.json({ status: "error", error: "Filtypen kan inte läsas av." });
 

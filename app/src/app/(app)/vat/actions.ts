@@ -1,13 +1,13 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireCompany } from "@/lib/auth";
+import { requireWriter } from "@/lib/auth";
 import { attempt, str, withParam } from "@/lib/action";
 import { parseDate } from "@/lib/money";
 import { closeVatPeriod } from "@/lib/vat";
 
 export async function lockPeriod(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const start = parseDate(str(fd, "start"));
   if (!start) redirect("/vat");
   const back = `/vat/${str(fd, "start")}`;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { apiCompany } from "@/lib/auth";
+import { READ_ONLY_MESSAGE, apiCompany } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { deleteStored, fileResponse, storeFile } from "@/lib/storage";
 
@@ -19,6 +19,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const ctx = await apiCompany();
   if (!ctx) return NextResponse.json({ error: "Du är inte inloggad." }, { status: 401 });
+  if (ctx.role === "read") return NextResponse.json({ error: READ_ONLY_MESSAGE }, { status: 403 });
   const file = (await req.formData()).get("logo");
   if (!(file instanceof File) || file.size === 0) return NextResponse.json({ error: "Välj en bild." }, { status: 400 });
   if (file.size > 2 * 1024 * 1024) return NextResponse.json({ error: "Logotypen får vara högst 2 MB." }, { status: 400 });
@@ -40,6 +41,7 @@ export async function POST(req: Request) {
 export async function DELETE() {
   const ctx = await apiCompany();
   if (!ctx) return NextResponse.json({ error: "Du är inte inloggad." }, { status: 401 });
+  if (ctx.role === "read") return NextResponse.json({ error: READ_ONLY_MESSAGE }, { status: 403 });
   const c = await db.company.findUniqueOrThrow({ where: { id: ctx.companyId } });
   await db.company.update({ where: { id: ctx.companyId }, data: { logoStoredName: null, logoBlobUrl: null, logoMime: null } });
   if (c.logoStoredName) await deleteStored({ storedName: c.logoStoredName, blobUrl: c.logoBlobUrl });

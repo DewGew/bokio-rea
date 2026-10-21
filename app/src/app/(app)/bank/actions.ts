@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireCompany } from "@/lib/auth";
+import { requireWriter } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { AccountingError } from "@/lib/accounting";
 import { attempt } from "@/lib/action";
@@ -32,7 +32,7 @@ const MAPPING_KEYS = ["date", "amount", "text", "reference", "balance", "credit"
 
 /** Steg 1: läs filen och visa vad som hittats. Steg 2 (confirm): importera och bokför säkra förslag. */
 export async function bankImportAction(_: BankImportState, fd: FormData): Promise<BankImportState> {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   if (fd.get("reset") === "1") return undefined;
   try {
     const file = fd.get("file");
@@ -82,7 +82,7 @@ export type BookResult = { booked: number; failed: { id: number; error: string }
 
 /** Bokför valda transaktioner (anropas direkt från listan). */
 export async function bookBankAction(items: { id: number; choice: Choice }[]): Promise<BookResult> {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const valid = items.flatMap((it) => {
     const choice = parseChoice(it.choice);
     return Number.isInteger(it.id) && choice ? [{ id: it.id, choice }] : [];
@@ -93,18 +93,18 @@ export async function bookBankAction(items: { id: number; choice: Choice }[]): P
 }
 
 export async function ignoreBankAction(ids: number[]) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   await db.bankTransaction.updateMany({ where: { companyId, id: { in: ids.filter(Number.isInteger) }, status: "new" }, data: { status: "ignored" } });
   revalidatePath("/", "layout");
 }
 
 export async function restoreBankAction(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   await db.bankTransaction.updateMany({ where: { companyId, id: Number(fd.get("id")) || -1, status: "ignored" }, data: { status: "new" } });
   revalidatePath("/", "layout");
 }
 
 export async function undoBankAction(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   await attempt(() => undoBankTransaction(companyId, Number(fd.get("id")) || -1), "/bank?tab=booked");
 }

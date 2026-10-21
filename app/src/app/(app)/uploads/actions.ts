@@ -3,14 +3,14 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireCompany } from "@/lib/auth";
+import { requireWriter } from "@/lib/auth";
 import { AccountingError } from "@/lib/accounting";
 import { attempt, str, withParam } from "@/lib/action";
 import { deleteStored } from "@/lib/storage";
 import { parseDate, parseKr } from "@/lib/money";
 
 export async function uploadAsExpense(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "uploadId"));
   const e = await attempt(async () => {
     const u = await db.upload.findFirst({ where: { id, companyId }, include: { expense: true } });
@@ -36,7 +36,7 @@ export async function uploadAsExpense(fd: FormData) {
 }
 
 export async function deleteUpload(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "uploadId"));
   const u = await db.upload.findFirst({ where: { id, companyId }, include: { expense: true } });
   if (!u) redirect("/uploads");

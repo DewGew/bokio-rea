@@ -1,14 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireCompany } from "@/lib/auth";
+import { requireWriter } from "@/lib/auth";
 import { AccountingError } from "@/lib/accounting";
 import { attempt, str, withParam } from "@/lib/action";
 import { closeFiscalYear, reopenFiscalYear, saveOpeningBalances } from "@/lib/closing";
 import { parseKr } from "@/lib/money";
 
 export async function closeYearAction(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   const back = `/closing/${id}`;
   const taxInput = str(fd, "tax");
@@ -21,7 +21,7 @@ export async function closeYearAction(fd: FormData) {
 }
 
 export async function reopenYearAction(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   const back = `/closing/${id}`;
   await attempt(() => reopenFiscalYear(companyId, id), back);
@@ -29,7 +29,7 @@ export async function reopenYearAction(fd: FormData) {
 }
 
 export async function saveOpeningBalancesAction(fd: FormData) {
-  const { companyId } = await requireCompany();
+  const { companyId } = await requireWriter();
   const back = "/closing/opening-balances";
   await attempt(async () => {
     const raw = JSON.parse(str(fd, "rows") || "[]") as { account: string; amount: string }[];
