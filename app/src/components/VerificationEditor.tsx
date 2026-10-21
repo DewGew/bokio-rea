@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Uploaded } from "@/lib/upload-client";
+import type { Suggestion } from "@/lib/suggest";
+import { AccountPicker } from "./AccountPicker";
 import { ConfirmButton } from "./ConfirmButton";
 import { FileUploader } from "./FileUploader";
 import { Icon } from "./Icon";
@@ -14,6 +16,52 @@ function toOre(s: string) {
   return Number.isFinite(n) ? Math.round(n * 100) : 0;
 }
 const fmt = (ore: number) => (ore / 100).toLocaleString("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const plain = (ore: number) => (ore / 100).toFixed(2).replace(".", ",");
+
+const OUTPUT_VAT: Record<number, number> = { 25: 2611, 12: 2621, 6: 2631 };
+const SOURCE_LABEL: Record<Suggestion["source"], string> = { history: "Tidigare", template: "Mall", keyword: "Förslag", account: "Konto" };
+const PAY_ACCOUNTS: [string, string][] = [
+  ["1930", "Företagskontot (1930)"],
+  ["1910", "Kassa (1910)"],
+  ["2893", "Privat – lån från ägare (2893)"],
+  ["2890", "Utlägg – skuld till anställd (2890)"],
+  ["2440", "Obetald leverantörsfaktura (2440)"],
+];
+
+/** Konteringsrader för ett förslag. Utan belopp fylls bara kontona i. */
+function linesFor(s: Suggestion, gross: number, pay: number): Row[] {
+  const row = (account: number, ore: number): Row => ({
+    account: String(account),
+    debit: gross && ore > 0 ? plain(ore) : "",
+    credit: gross && ore < 0 ? plain(-ore) : "",
+    text: "",
+  });
+  let parts: [number, number][];
+  if (s.pattern) {
+    // Samma kontering som tidigare, skalad till det nya beloppet. Öresavrundning läggs på största kreditraden.
+    parts = s.pattern.map((p) => [p.account, Math.round(p.share * gross)]);
+    const rest = parts.reduce((x, [, v]) => x + v, 0);
+    if (rest) {
+      const i = parts.reduce((best, [, v], j) => (v < parts[best][1] ? j : best), 0);
+      parts[i][1] -= rest;
+    }
+    if (!gross) return s.pattern.map((p) => ({ account: String(p.account), debit: "", credit: "", text: "" }));
+  } else if (s.direction === "sale") {
+    const vat = s.vatRate ? Math.round((gross * s.vatRate) / (100 + s.vatRate)) : 0;
+    parts = [[pay, gross], [s.account, -(gross - vat)]];
+    if (s.vatRate) parts.push([OUTPUT_VAT[s.vatRate] ?? 2611, -vat]);
+  } else if (s.direction === "reverse") {
+    const vat = Math.round((gross * s.vatRate) / 100);
+    parts = [[s.account, gross], [2645, vat], [2614, -vat], [pay, -gross]];
+  } else {
+    const vat = s.vatRate ? Math.round((gross * s.vatRate) / (100 + s.vatRate)) : 0;
+    parts = [[s.account, gross - vat]];
+    if (s.vatRate) parts.push([2641, vat]);
+    parts.push([pay, -gross]);
+  }
+  // Utan belopp: behåll alla konton (även momsraden) så att användaren ser konteringen.
+  return parts.map(([a, v]) => row(a, v));
+}
 
 export function VerificationEditor({
   accounts,
@@ -30,10 +78,44 @@ export function VerificationEditor({
   const [rows, setRows] = useState<Row[]>([empty(), empty(), empty()]);
   const [attachments, setAttachments] = useState<Uploaded[]>([]);
   const [problem, setProblem] = useState("");
+  const [desc, setDesc] = useState(defaults?.description ?? "");
+  const [gross, setGross] = useState("");
+  const [pay, setPay] = useState("1930");
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [applied, setApplied] = useState<Suggestion | null>(null);
+  const typed = useRef(false);
   const names = useMemo(() => new Map(accounts.map((a) => [String(a.number), a.name])), [accounts]);
   const debit = rows.reduce((s, r) => s + toOre(r.debit), 0);
   const credit = rows.reduce((s, r) => s + toOre(r.credit), 0);
   const diff = debit - credit;
+
+  // Hämta förslag medan man skriver beskrivningen (med en kort fördröjning).
+  useEffect(() => {
+    if (!typed.current) return;
+    const q = desc.trim();
+    if (q.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/suggest?q=${encodeURIComponent(q)}`, { signal: ctrl.signal });
+        if (res.ok) setSuggestions(((await res.json()) as { suggestions: Suggestion[] }).suggestions);
+      } catch {
+        // avbrutet eller nätverksfel – inga förslag
+      }
+    }, 250);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [desc]);
+
+  const apply = (s: Suggestion, amount = gross, payAccount = pay) => {
+    setApplied(s);
+    setRows([...linesFor(s, toOre(amount), Number(payAccount)), empty()]);
+  };
 
   const set = (i: number, patch: Partial<Row>) => {
     const next = rows.map((r, j) => (j === i ? { ...r, ...patch } : r));
@@ -45,7 +127,7 @@ export function VerificationEditor({
   const balance = (i: number) => {
     const r = rows[i];
     const rest = diff - (toOre(r.debit) - toOre(r.credit));
-    set(i, rest > 0 ? { credit: fmt(rest).replace(/\s/g, ""), debit: "" } : { debit: fmt(-rest).replace(/\s/g, ""), credit: "" });
+    set(i, rest > 0 ? { credit: plain(rest), debit: "" } : { debit: plain(-rest), credit: "" });
   };
 
   return (
@@ -53,7 +135,14 @@ export function VerificationEditor({
       action={action}
       className="space-y-5"
       onSubmit={(e) => {
-        const msg = debit === 0 ? "Fyll i minst en debet- och en kreditrad." : diff !== 0 ? `Verifikatet balanserar inte, differens ${fmt(diff)}.` : rows.some((r) => (r.debit || r.credit) && !names.has(r.account)) ? "Någon rad har ett konto som inte finns." : "";
+        const msg =
+          debit === 0
+            ? "Fyll i minst en debet- och en kreditrad."
+            : diff !== 0
+              ? `Verifikatet balanserar inte, differens ${fmt(diff)}.`
+              : rows.some((r) => (r.debit || r.credit) && !names.has(r.account))
+                ? "Någon rad har ett konto som inte finns."
+                : "";
         setProblem(msg);
         if (msg) e.preventDefault();
       }}
@@ -61,28 +150,97 @@ export function VerificationEditor({
       <input type="hidden" name="lines" value={JSON.stringify(rows)} />
       {defaults?.uploadId && <input type="hidden" name="uploadId" value={defaults.uploadId} />}
       <input type="hidden" name="uploadIds" value={attachments.map((a) => a.id).join(",")} />
-      <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
+
+      <div className="grid gap-4 sm:grid-cols-[170px_minmax(0,1fr)] lg:grid-cols-[170px_minmax(0,1fr)_170px_220px]">
         <div>
           <label className="label" htmlFor="date">Datum</label>
           <input id="date" type="date" name="date" required defaultValue={defaults?.date ?? new Date().toISOString().slice(0, 10)} className="input" />
         </div>
         <div>
-          <label className="label" htmlFor="description">Beskrivning</label>
-          <input id="description" name="description" required defaultValue={defaults?.description} placeholder="T.ex. Inköp av dator" className="input" />
+          <label className="label" htmlFor="description">Vad gäller det?</label>
+          <input
+            id="description"
+            name="description"
+            required
+            value={desc}
+            autoComplete="off"
+            onChange={(e) => {
+              typed.current = true;
+              setDesc(e.target.value);
+            }}
+            placeholder="T.ex. Telia mobil oktober, lunch med kund, Adobe"
+            className="input"
+          />
+        </div>
+        <div>
+          <label className="label" htmlFor="gross">Belopp inkl. moms</label>
+          <input
+            id="gross"
+            value={gross}
+            inputMode="decimal"
+            placeholder="0,00"
+            onChange={(e) => {
+              setGross(e.target.value);
+              if (applied) apply(applied, e.target.value);
+            }}
+            className="input text-right"
+          />
+        </div>
+        <div>
+          <label className="label" htmlFor="pay">Betalt från / till</label>
+          <select
+            id="pay"
+            value={pay}
+            onChange={(e) => {
+              setPay(e.target.value);
+              if (applied) apply(applied, gross, e.target.value);
+            }}
+            className="input"
+          >
+            {PAY_ACCOUNTS.map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      <datalist id="accounts">
-        {accounts.map((a) => (
-          <option key={a.number} value={a.number}>{a.name}</option>
-        ))}
-      </datalist>
+      {suggestions.length > 0 && (
+        <section aria-label="Konteringsförslag" className="-mt-1">
+          <p className="mb-2 flex items-center gap-1.5 text-[13px] font-medium text-muted">
+            <Icon name="wand" className="h-4 w-4 text-brand" />
+            Förslag på kontering – klicka för att fylla i
+          </p>
+          <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {suggestions.map((s) => {
+              const on = applied?.key === s.key;
+              return (
+                <li key={s.key}>
+                  <button
+                    type="button"
+                    onClick={() => apply(s)}
+                    aria-pressed={on}
+                    className={`flex w-full items-start gap-3 rounded-xl p-3 text-left transition ${on ? "bg-brand-soft ring-2 ring-brand" : "bg-surface-2 hover:bg-fill"}`}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-semibold">{s.title}</span>
+                      <span className="block truncate text-[12px] text-muted">{s.subtitle}</span>
+                    </span>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${s.source === "history" ? "bg-success-soft text-success" : "bg-fill text-muted"}`}>
+                      {SOURCE_LABEL[s.source]}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <div className="overflow-x-auto rounded-2xl border border-line">
         <table className="table table-edit">
           <thead>
             <tr>
-              <th className="w-32">Konto</th>
+              <th className="w-36">Konto</th>
               <th>Benämning / radtext</th>
               <th className="num w-36">Debet</th>
               <th className="num w-36">Kredit</th>
@@ -93,10 +251,10 @@ export function VerificationEditor({
             {rows.map((r, i) => (
               <tr key={i}>
                 <td>
-                  <input list="accounts" aria-label="Konto" value={r.account} onChange={(e) => set(i, { account: e.target.value })} className="input" inputMode="numeric" />
+                  <AccountPicker accounts={accounts} value={r.account} onChange={(v) => set(i, { account: v })} />
                 </td>
                 <td>
-                  <span className="block text-xs text-muted">{names.get(r.account) ?? (r.account ? "Okänt konto" : "")}</span>
+                  <span className="block truncate text-xs text-muted">{names.get(r.account) ?? (r.account ? "Okänt konto" : "")}</span>
                   <input aria-label="Radtext" value={r.text} onChange={(e) => set(i, { text: e.target.value })} className="input mt-1 py-1" placeholder="Valfri text" />
                 </td>
                 <td>
