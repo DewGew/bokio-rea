@@ -49,6 +49,11 @@ export default async function VerificationPage({ params, searchParams }: { param
         }
       />
       <Flash error={error} notice={notice} />
+      {v.comment && (
+        <p className="mb-4 rounded-xl bg-surface-2 px-4 py-3 text-[14px]">
+          <span className="font-medium">Kommentar:</span> {v.comment}
+        </p>
+      )}
       {v.reversedBy && (
         <div className="mb-4 flex items-center gap-2 text-sm">
           <Badge status="reversed" /> Makulerad av{" "}

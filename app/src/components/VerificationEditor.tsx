@@ -8,7 +8,7 @@ import { ConfirmButton } from "./ConfirmButton";
 import { FileUploader } from "./FileUploader";
 import { Icon } from "./Icon";
 
-type Row = { account: string; debit: string; credit: string; text: string };
+export type Row = { account: string; debit: string; credit: string; text: string };
 const empty = (): Row => ({ account: "", debit: "", credit: "", text: "" });
 
 function toOre(s: string) {
@@ -68,15 +68,20 @@ export function VerificationEditor({
   action,
   defaults,
   uploader,
+  initialRows,
+  initialAttachments,
 }: {
   accounts: { number: number; name: string }[];
   action: (fd: FormData) => Promise<void>;
   defaults?: { date?: string; description?: string; uploadId?: number };
   /** Visar en sektion för att bifoga underlag (foto eller PDF) direkt i verifikatet. */
   uploader?: { blob: boolean; limit?: number | null; companyId: number };
+  /** Förifyllda rader, t.ex. från bokföringsguidens "Redigera verifikat". */
+  initialRows?: Row[];
+  initialAttachments?: Uploaded[];
 }) {
-  const [rows, setRows] = useState<Row[]>([empty(), empty(), empty()]);
-  const [attachments, setAttachments] = useState<Uploaded[]>([]);
+  const [rows, setRows] = useState<Row[]>(initialRows?.length ? [...initialRows, empty()] : [empty(), empty(), empty()]);
+  const [attachments, setAttachments] = useState<Uploaded[]>(initialAttachments ?? []);
   const [problem, setProblem] = useState("");
   const [desc, setDesc] = useState(defaults?.description ?? "");
   const [gross, setGross] = useState("");

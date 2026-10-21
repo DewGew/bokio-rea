@@ -4,12 +4,12 @@ import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
 import { Card, Flash, PageHeader, readParams, Segmented, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { TemplateBooker } from "@/components/TemplateBooker";
+import { BookingWizard } from "@/components/BookingWizard";
 import { PdfPreview } from "@/components/PdfPreview";
 import { VerificationEditor } from "@/components/VerificationEditor";
 import { ExpenseFields } from "@/components/ExpenseFields";
 import { createManualVerification } from "@/app/(app)/verifications/actions";
-import { bookUpload, deleteUpload, uploadAsExpense } from "../actions";
+import { deleteUpload, uploadAsExpense } from "../actions";
 
 const TABS = [
   ["template", "Bokför med mall"],
@@ -18,7 +18,7 @@ const TABS = [
 ] as const;
 
 export default async function UploadPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
-  const { companyId } = await requireCompany();
+  const { companyId, company } = await requireCompany();
   const { id } = await params;
   const { get, error, notice } = await readParams(searchParams);
   const tab = get("tab") ?? "template";
@@ -84,11 +84,14 @@ export default async function UploadPage({ params, searchParams }: { params: Pro
               </div>
               <div className="p-4">
                 {tab === "template" && (
-                  <TemplateBooker
+                  <BookingWizard
                     templates={templates}
-                    accountNames={Object.fromEntries(accounts.map((a) => [a.number, a.name]))}
-                    action={bookUpload}
-                    uploadId={u.id}
+                    accounts={accounts}
+                    noVat={company.vatPeriod === "none"}
+                    manualAction={createManualVerification}
+                    presetUploadIds={[u.id]}
+                    back={`/uploads/${u.id}`}
+                    allowManual={false}
                   />
                 )}
                 {tab === "manual" && (

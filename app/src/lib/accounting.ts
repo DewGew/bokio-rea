@@ -2,6 +2,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "./db";
 import { BANK_ACCOUNT, INPUT_VAT, OUTPUT_VAT, PAYABLE_EXPENSES, RECEIVABLES, SALES_ACCOUNT, VAT_SETTLEMENT } from "./bas";
 import { vatFromGross } from "./money";
+import { templateLines, type Country } from "./template-lines";
 import { FiscalError, ensureFiscalYearFor } from "./fiscal";
 
 type Tx = Prisma.TransactionClient | PrismaClient;
@@ -109,56 +110,43 @@ export async function reverseVerification(companyId: number, id: number, date?: 
   });
 }
 
-/** Bokför ett uppladdat underlag med hjälp av en bokföringsmall. */
+/** Bokför med en bokföringsmall: beloppet inkl. moms räknas om till konteringsrader (se template-lines.ts). */
 export async function bookWithTemplate(
   companyId: number,
-  input: { uploadId?: number; templateId: number; date: Date; gross: number; paymentAccount: number; description: string },
+  input: {
+    templateId: number;
+    date: Date;
+    gross: number;
+    paymentAccount: number;
+    description: string;
+    country?: Country;
+    comment?: string;
+    uploadId?: number;
+    uploadIds?: number[];
+  },
 ) {
   return tx(async (t) => {
-    const found = await t.template.findFirst({ where: { id: input.templateId, companyId } });
-    if (!found) throw new AccountingError("Mallen finns inte.");
-    // Ett företag som inte är momsregistrerat drar ingen moms: hela beloppet blir kostnad/intäkt.
-    const company = await t.company.findUniqueOrThrow({ where: { id: companyId }, select: { vatPeriod: true } });
-    const tpl = company.vatPeriod === "none" ? { ...found, vatRate: 0, direction: found.direction === "reverse" ? "purchase" : found.direction } : found;
+    const tpl = await t.template.findFirst({ where: { id: input.templateId, companyId } });
+    if (!tpl) throw new AccountingError("Mallen finns inte.");
     if (input.gross <= 0) throw new AccountingError("Beloppet måste vara större än noll.");
-    const lines: LineInput[] = [];
+    const company = await t.company.findUniqueOrThrow({ where: { id: companyId }, select: { vatPeriod: true } });
+    const lines = templateLines(tpl, input.gross, {
+      country: input.country,
+      payAccount: input.paymentAccount,
+      noVat: company.vatPeriod === "none", // ej momsregistrerat: hela beloppet blir kostnad/intäkt
+    });
 
-    if (tpl.direction === "reverse") {
-      // Omvänd skattskyldighet: beloppet saknar svensk moms, moms beräknas på nettot.
-      const vat = Math.round((input.gross * tpl.vatRate) / 100);
-      lines.push(
-        { account: tpl.costAccount, debit: input.gross },
-        { account: 2645, debit: vat },
-        { account: 2614, credit: vat },
-        { account: input.paymentAccount, credit: input.gross },
-      );
-    } else {
-      const vat = vatFromGross(input.gross, tpl.vatRate);
-      const net = input.gross - vat;
-      if (tpl.direction === "sale") {
-        lines.push(
-          { account: input.paymentAccount, debit: input.gross },
-          { account: tpl.costAccount, credit: net },
-          { account: tpl.vatAccount ?? OUTPUT_VAT[tpl.vatRate], credit: vat },
-        );
-      } else {
-        lines.push(
-          { account: tpl.costAccount, debit: net },
-          { account: tpl.vatAccount ?? INPUT_VAT, debit: vat },
-          { account: input.paymentAccount, credit: input.gross },
-        );
-      }
-    }
-
-    if (input.uploadId) {
-      const u = await t.upload.findFirst({ where: { id: input.uploadId, companyId } });
-      if (!u) throw new AccountingError("Underlaget finns inte.");
-      if (u.verificationId) throw new AccountingError("Underlaget är redan bokfört.");
+    const uploadIds = [...new Set([...(input.uploadIds ?? []), ...(input.uploadId ? [input.uploadId] : [])])];
+    if (uploadIds.length) {
+      const found = await t.upload.findMany({ where: { id: { in: uploadIds }, companyId, verificationId: null } });
+      if (found.length !== uploadIds.length) throw new AccountingError("Något underlag finns inte eller är redan bokfört.");
     }
     const v = await createVerification(t, companyId, { date: input.date, description: input.description || tpl.name, lines });
-    if (input.uploadId) {
-      await t.upload.update({ where: { id: input.uploadId }, data: { verificationId: v.id, date: input.date, amount: input.gross } });
+    if (input.comment) await t.verification.update({ where: { id: v.id }, data: { comment: input.comment.slice(0, 1000) } });
+    if (uploadIds.length) {
+      await t.upload.updateMany({ where: { id: { in: uploadIds } }, data: { verificationId: v.id, date: input.date, amount: input.gross } });
     }
+    await t.template.update({ where: { id: tpl.id }, data: { usageCount: { increment: 1 } } });
     return v;
   });
 }

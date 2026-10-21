@@ -4,32 +4,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
-import { AccountingError, bookWithTemplate } from "@/lib/accounting";
+import { AccountingError } from "@/lib/accounting";
 import { attempt, str, withParam } from "@/lib/action";
 import { deleteStored } from "@/lib/storage";
 import { parseDate, parseKr } from "@/lib/money";
-
-export async function bookUpload(fd: FormData) {
-  const { companyId } = await requireCompany();
-  const id = Number(str(fd, "uploadId"));
-  const v = await attempt(async () => {
-    const date = parseDate(str(fd, "date"));
-    const gross = parseKr(str(fd, "amount"));
-    const templateId = Number(str(fd, "templateId"));
-    if (!templateId) throw new AccountingError("Välj en bokföringsmall.");
-    if (!date) throw new AccountingError("Ange ett giltigt datum.");
-    if (!gross) throw new AccountingError("Ange belopp inklusive moms.");
-    return bookWithTemplate(companyId, {
-      uploadId: id,
-      templateId,
-      date,
-      gross,
-      paymentAccount: Number(str(fd, "paymentAccount")) || 1930,
-      description: str(fd, "description"),
-    });
-  }, `/uploads/${id}`);
-  redirect(`/verifications/${v.id}?ok=${encodeURIComponent(`Bokfört som ${v.series}${v.number}.`)}`);
-}
 
 export async function uploadAsExpense(fd: FormData) {
   const { companyId } = await requireCompany();

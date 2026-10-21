@@ -127,6 +127,7 @@ model Verification {
   number       Int
   date         DateTime
   description  String
+  comment      String        @default("")
   createdAt    DateTime      @default(now())
   reversedById Int?          @unique
   reversedBy   Verification? @relation("Reversal", fields: [reversedById], references: [id])
@@ -167,6 +168,8 @@ model Template {
   vatAccount  Int?
   direction   String  @default("purchase") // purchase | sale | reverse
   keywords    String  @default("")
+  description String  @default("") // förklaring som visas när man väljer mall
+  usageCount  Int     @default(0) // för "Dina vanligaste mallar"
 }
 
 model Upload {
