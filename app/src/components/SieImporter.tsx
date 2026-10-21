@@ -81,7 +81,9 @@ export function SieImporter() {
             className="btn-secondary"
             onClick={() => {
               setFile(null);
-              startTransition(() => dispatch(new FormData()));
+              const fd = new FormData();
+              fd.append("reset", "1");
+              startTransition(() => dispatch(fd));
             }}
           >
             Importera fler år

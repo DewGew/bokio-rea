@@ -15,6 +15,11 @@ med eget namn, egen design och egen kod.
 - **Fakturadesign**: fyra mallar (Modern, Klassisk, Minimal, Elegant), valfri accentfärg, logotyp, bankgiro, plusgiro, IBAN/BIC,
   Swish-QR (förifyllt belopp och fakturanummer), klickbar betallänk och egen sidfot, med förhandsvisning i realtid.
 - **Utseende**: ljust, mörkt eller automatiskt tema per användare.
+- **Räkenskapsår och moms**: företagsform, faktura-/kontantmetoden, moms per månad/kvartal/helår (eller ej momsregistrerad),
+  brutet/förlängt räkenskapsår och deadlines enligt Skatteverket.
+- **Bokslut**: bolagsskatt, årets resultat, omföring till nästa år och ingående balanser; kan ångras.
+- **Import och export (SIE 4)**: exportera ett räkenskapsår eller importera från Fortnox, Visma, Bokio m.fl. med
+  kontoplan, ingående balanser och verifikat (originalserier och nummer).
 - **Utlägg**, **rapporter** (resultat, balans, huvudbok) och **inställningar** (företag, kontoplan, mallar).
 
 ## Lokal utveckling

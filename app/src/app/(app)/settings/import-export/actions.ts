@@ -24,6 +24,7 @@ async function readFile(fd: FormData) {
 /** Steg 1: läs in filen och visa vad som kommer att hända. Steg 2 (confirm): importera. */
 export async function sieImportAction(_: ImportState, fd: FormData): Promise<ImportState> {
   const { companyId } = await requireCompany();
+  if (fd.get("reset") === "1") return undefined;
   try {
     const { sie, name } = await readFile(fd);
     if (fd.get("confirm") !== "1") {

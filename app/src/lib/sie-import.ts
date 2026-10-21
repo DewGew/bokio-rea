@@ -171,6 +171,8 @@ export async function runImport(companyId: number, sie: SieFile, opts: ImportOpt
           return n;
         };
         for (const v of [...sie.vers].sort((a, b) => a.date.getTime() - b.date.getTime() || (a.number ?? 0) - (b.number ?? 0))) {
+          const lines = v.lines.filter((l) => l.amount !== 0);
+          if (lines.length === 0) continue; // verifikat utan belopp (t.ex. nollade) importeras inte
           const series = cleanSeries(v.series);
           const set = taken.get(series) ?? new Set<number>();
           taken.set(series, set);
@@ -185,9 +187,7 @@ export async function runImport(companyId: number, sie: SieFile, opts: ImportOpt
               date: v.date,
               description: v.text || `Verifikat ${series}${number}`,
               lines: {
-                create: v.lines
-                  .filter((l) => l.amount !== 0)
-                  .map((l) => ({ companyId, accountNumber: l.account, debit: Math.max(l.amount, 0), credit: Math.max(-l.amount, 0), text: l.text })),
+                create: lines.map((l) => ({ companyId, accountNumber: l.account, debit: Math.max(l.amount, 0), credit: Math.max(-l.amount, 0), text: l.text })),
               },
             },
           });

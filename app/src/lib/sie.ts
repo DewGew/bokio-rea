@@ -6,7 +6,11 @@ const CP437_HIGH =
   "ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■\u00a0";
 const CP437_REVERSE = new Map([...CP437_HIGH].map((ch, i) => [ch, 0x80 + i]));
 
-export function encodeCp437(text: string): Uint8Array {
+/** Typografiska tecken som saknas i CP437 ersätts med närmaste motsvarighet. */
+const TRANSLIT: Record<string, string> = { "–": "-", "—": "-", "‘": "'", "’": "'", "‚": "'", "“": '"', "”": '"', "„": '"', "…": "...", "€": "EUR", "•": "*", " ": " ", " ": " " };
+
+export function encodeCp437(input: string): Uint8Array {
+  const text = input.replace(/[–—‘’‚“”„…€•  ]/g, (c) => TRANSLIT[c]);
   const out = new Uint8Array(text.length);
   let n = 0;
   for (const ch of text) {
