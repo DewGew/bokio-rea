@@ -84,7 +84,7 @@ export function FileUploader({
           setDrag(false);
           send([...e.dataTransfer.files]);
         }}
-        className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition ${compact ? "px-4 py-5" : "px-4 py-9"} ${drag ? "border-brand bg-brand-soft" : "border-line"} ${busy ? "opacity-70" : ""}`}
+        className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition ${compact ? "px-4 py-5" : "px-4 py-9"} ${drag ? "border-brand bg-brand-soft" : "border-[var(--line-strong)]"} ${busy ? "opacity-70" : ""}`}
       >
         {!compact && (
           <span className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-brand">

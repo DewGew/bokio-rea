@@ -95,7 +95,7 @@ export function SieImporter() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-dashed border-line p-5">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-dashed border-[var(--line-strong)] p-5">
         <span className="grid h-11 w-11 place-items-center rounded-full bg-brand-soft text-brand">
           <Icon name="upload" className="h-5 w-5" />
         </span>
