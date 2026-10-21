@@ -1,9 +1,10 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
 import { invoiceTotals } from "@/lib/accounting";
-import { kr } from "@/lib/money";
 import { Card, Empty, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { CustomerTable } from "@/components/CustomerTable";
 import { deleteCustomer, saveCustomer } from "../registers/actions";
 
 const FIELDS: [string, string, string?][] = [
@@ -32,34 +33,22 @@ export default async function Customers({ searchParams }: { searchParams: SP }) 
           {customers.length === 0 ? (
             <Empty>Inga kunder ännu.</Empty>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Namn</th>
-                    <th className="hidden md:table-cell">Org.nr</th>
-                    <th className="hidden md:table-cell">E-post</th>
-                    <th className="num">Fakturerat</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {customers.map((c) => (
-                    <tr key={c.id}>
-                      <td className="font-medium">{c.name}</td>
-                      <td className="hidden md:table-cell">{c.orgNumber}</td>
-                      <td className="hidden md:table-cell">{c.email}</td>
-                      <td className="num">
-                        {kr(c.invoices.filter((i) => i.status === "sent" || i.status === "paid").reduce((s, i) => s + invoiceTotals(i.lines).total, 0))}
-                      </td>
-                      <td className="text-right">
-                        <a href={`/customers?edit=${c.id}`} className="text-sm text-brand">Ändra</a>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <CustomerTable
+              rows={customers.map((c) => {
+                const booked = c.invoices.filter((i) => i.status === "sent" || i.status === "paid");
+                return {
+                  id: c.id,
+                  name: c.name,
+                  orgNumber: c.orgNumber,
+                  email: c.email,
+                  city: c.city,
+                  reference: c.reference,
+                  invoices: c.invoices.filter((i) => i.status !== "draft").length,
+                  invoiced: booked.reduce((s, i) => s + invoiceTotals(i.lines).total, 0),
+                  unpaid: c.invoices.filter((i) => i.status === "sent").reduce((s, i) => s + invoiceTotals(i.lines).total, 0),
+                };
+              })}
+            />
           )}
         </Card>
         <Card title={editing ? `Ändra ${editing.name}` : "Ny kund"}>
@@ -79,7 +68,7 @@ export default async function Customers({ searchParams }: { searchParams: SP }) 
               </div>
             ))}
             <div className="flex justify-between gap-2">
-              {editing ? <a href="/customers" className="btn-secondary">Avbryt</a> : <span />}
+              {editing ? <Link href="/customers" className="btn-secondary">Avbryt</Link> : <span />}
               <ConfirmButton>{editing ? "Spara" : "Lägg till kund"}</ConfirmButton>
             </div>
           </form>

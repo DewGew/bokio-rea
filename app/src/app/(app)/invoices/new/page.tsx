@@ -7,7 +7,7 @@ import { createDraft } from "../actions";
 
 export default async function NewInvoice({ searchParams }: { searchParams: SP }) {
   const { companyId } = await requireCompany();
-  const { error } = await readParams(searchParams);
+  const { get, error } = await readParams(searchParams);
   const customers = await db.customer.findMany({ where: { companyId }, orderBy: { name: "asc" } });
   return (
     <>
@@ -20,7 +20,7 @@ export default async function NewInvoice({ searchParams }: { searchParams: SP })
           <form action={createDraft} className="space-y-4">
             <div>
               <label className="label" htmlFor="customerId">Kund</label>
-              <select id="customerId" name="customerId" className="input">
+              <select id="customerId" name="customerId" className="input" defaultValue={get("customer")}>
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
