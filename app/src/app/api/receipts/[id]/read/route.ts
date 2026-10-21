@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { READ_ONLY_MESSAGE, apiCompany } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { readStored } from "@/lib/storage";
-import { ReceiptAiError, aiEnabled, readReceipt, type ReceiptData } from "@/lib/receipt-ai";
+import { AI_VERSION, ReceiptAiError, aiEnabled, readReceipt, type ReceiptData } from "@/lib/receipt-ai";
 
 export const maxDuration = 60;
 
@@ -21,14 +21,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!upload) return NextResponse.json({ error: "Underlaget finns inte." }, { status: 404 });
 
   const force = new URL(req.url).searchParams.has("force");
-  if (upload.aiStatus === "done" && upload.aiData && !force) return NextResponse.json({ status: "done", data: upload.aiData });
+  const cached = upload.aiData as ReceiptData | null;
+  // Äldre avläsningar (före AI_VERSION) görs om, så att de får en mall.
+  const outdated = !!cached && (cached.version ?? 1) < AI_VERSION;
+  if (upload.aiStatus === "done" && cached && !force && !outdated) return NextResponse.json({ status: "done", data: cached });
   if (ctx.role === "read") return NextResponse.json({ status: "error", error: READ_ONLY_MESSAGE }, { status: 403 });
   if (!aiEnabled()) return NextResponse.json({ status: "disabled" });
   if (!READABLE.includes(upload.mimeType)) return NextResponse.json({ status: "error", error: "Filtypen kan inte läsas av." });
 
   const bytes = await readStored(upload);
   if (!bytes) return NextResponse.json({ status: "error", error: "Filen kunde inte läsas." }, { status: 404 });
-  const templates = await db.template.findMany({ where: { companyId: ctx.companyId }, select: { id: true, name: true, description: true } });
+  // Underlag är inköp: försäljningsmallar ska aldrig föreslås.
+  const templates = await db.template.findMany({ where: { companyId: ctx.companyId, direction: { not: "sale" } }, select: { id: true, name: true, description: true } });
 
   try {
     const data: ReceiptData = await readReceipt({ bytes, mime: upload.mimeType, name: upload.fileName }, templates);
@@ -42,7 +46,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         // Belopp sparas bara i kronor; utländsk valuta får räknas om manuellt.
         amount: upload.amount ?? (data.total && data.currency === "SEK" ? Math.round(data.total * 100) : null),
         date: upload.date ?? date,
-        description: upload.description || [data.supplier, data.description].filter(Boolean).join(" – ").slice(0, 200),
+        description: (force || outdated ? "" : upload.description) || [data.supplier, data.description].filter(Boolean).join(" – ").slice(0, 200),
       },
     });
     return NextResponse.json({ status: "done", data });

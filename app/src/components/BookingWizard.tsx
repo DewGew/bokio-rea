@@ -32,7 +32,7 @@ const words = (s: string) => norm(s).split(/[^a-z0-9åäöéü]+/i).filter(Boole
 /** Kort ord måste börja ett ord ("tåg" → "tågbiljett"), längre ord får finnas inuti sammansatta ord. */
 function hits(query: string, hay: string) {
   const hw = words(hay);
-  return words(query).filter((q) => q.length >= 2 && hw.some((w) => w.startsWith(q) || (q.length >= 5 && w.includes(q)))).length;
+  return words(query).filter((q) => q.length >= 3 && hw.some((w) => w.startsWith(q) || (q.length >= 5 && w.includes(q)))).length;
 }
 
 const PAY_ACCOUNTS: [string, string][] = [
@@ -123,8 +123,9 @@ export function BookingWizard({
         setTitle(label || t.name);
         setStep(2);
       } else {
+        // Ingen mall: produktnamnet blir ingen bra sökning ("Pärlbox" säger inget om kontot). Användaren väljer typ av köp.
         setTitle(label);
-        setQuery(d.description || d.supplier || "");
+        setQuery("");
       }
     },
     [templates],
@@ -237,6 +238,13 @@ export function BookingWizard({
       {step === 1 && (
         <div className="space-y-4">
           <Segmented value={tab} onChange={(v) => setTab(v as typeof tab)} items={allowManual ? [["search", "Sök"], ["all", "Alla mallar"], ["manual", "Manuell"]] : [["search", "Sök"], ["all", "Alla mallar"]]} />
+          {aiData && (
+            <p className="rounded-xl bg-brand-soft px-4 py-3 text-[14px] text-brand">
+              <Icon name="wand" className="mr-1 inline h-4 w-4" />
+              Avläst med AI: <strong>{[aiData.supplier, aiData.description].filter(Boolean).join(" – ") || "kvitto"}</strong>
+              {aiData.total ? `, ${aiData.total.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} ${aiData.currency}` : ""}. Välj vilken sorts köp det är.
+            </p>
+          )}
           {tab === "search" && (
             <>
               <div className="relative">
@@ -428,9 +436,9 @@ export function BookingWizard({
   if (!uploader) return main;
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
-      <div className="card p-5">{main}</div>
-      <aside className="card p-5 lg:sticky lg:top-8">
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
+      <div className="card min-w-0 p-5">{main}</div>
+      <aside className="card min-w-0 p-5 lg:sticky lg:top-8">
         <h2 className="mb-3 text-[17px] font-semibold">Lägg till underlag</h2>
         {attachments.length > 0 && (
           <ul className="mb-3 space-y-2">

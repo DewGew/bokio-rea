@@ -12,6 +12,9 @@ const ENDPOINT = `${(process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/a
 
 export const aiEnabled = () => !!process.env.OPENROUTER_API_KEY;
 
+/** Höjs när avläsningen förbättras, så att sparade avläsningar från en äldre version görs om. */
+export const AI_VERSION = 2;
+
 export type ReceiptData = {
   supplier: string | null;
   supplierOrgNumber: string | null;
@@ -25,11 +28,15 @@ export type ReceiptData = {
   description: string;
   templateId: number | null;
   confidence: number;
+  version?: number;
 };
 
 export class ReceiptAiError extends Error {}
 
-const SCHEMA = {
+type TemplateInfo = { id: number; name: string; description: string };
+
+function schema(templates: TemplateInfo[]) {
+  return {
   type: "object",
   additionalProperties: false,
   required: ["supplier", "supplierOrgNumber", "documentType", "date", "dueDate", "total", "currency", "vat", "country", "description", "templateId", "confidence"],
@@ -48,25 +55,33 @@ const SCHEMA = {
     },
     country: { type: "string", enum: ["SE", "EU", "OUTSIDE_EU"], description: "Säljarens land: Sverige, annat EU-land eller utanför EU" },
     description: { type: "string", description: "Kort beskrivning på svenska av vad som köpts, högst 60 tecken" },
-    templateId: { type: ["integer", "null"], description: "Id för den bokföringsmall som passar bäst, eller null" },
+    // Måste vara en av mallarna, så att guiden alltid kan gå direkt till beloppet.
+    templateId: templates.length
+      ? { type: "integer", enum: templates.map((t) => t.id), description: "Id för den bokföringsmall som passar bäst" }
+      : { type: "null" },
     confidence: { type: "number", description: "Hur säker avläsningen är, 0–1" },
   },
-} as const;
+  };
+}
 
-function prompt(templates: { id: number; name: string; description: string }[]) {
+function prompt(templates: TemplateInfo[]) {
   return [
     "Du läser av svenska och utländska kvitton och leverantörsfakturor för bokföring i ett svenskt företag.",
-    "Svara bara med data enligt JSON-schemat. Gissa inte: sätt null om en uppgift inte går att läsa.",
+    "Underlaget är ett inköp som företaget gjort. Svara bara med data enligt JSON-schemat. Gissa inte: sätt null om en uppgift inte går att läsa (gäller inte templateId).",
     "Belopp anges som tal med punkt som decimaltecken (t.ex. 1249.50), totalen inklusive moms.",
     "Om momsen inte står uttryckligen men det är ett svenskt kvitto, beräkna den inte – lämna vat tom.",
     "country: SE om säljaren är svensk, EU om säljaren finns i ett annat EU-land (t.ex. Irland för Google/Meta/Adobe/Microsoft), OUTSIDE_EU annars (t.ex. USA).",
-    "Välj templateId bland mallarna nedan (den som bäst beskriver köpet), annars null:",
+    "description: vad som köpts, på svenska och generellt (t.ex. 'Pärlor och pyssel', 'Kontorsstol', 'Lunch') – inte bara produktnamnet.",
+    "templateId: välj ALLTID den mall som bäst beskriver vilken sorts kostnad det är. Utgå från vad som köpts, inte från produktens eller butikens namn.",
+    "Tumregler: varor och prylar som används i verksamheten (inredning, elektronik, verktyg, möbler, pyssel- och hantverksmaterial) är förbrukningsinventarier eller förbrukningsmaterial;",
+    "varor som säljs vidare är inköp av varor; mat och dryck med kunder är representation; resor, hotell, drivmedel, programvara, telefoni och tjänster har egna mallar.",
+    "Mallar (id: namn – beskrivning):",
     ...templates.map((t) => `${t.id}: ${t.name}${t.description ? ` – ${t.description}` : ""}`),
   ].join("\n");
 }
 
 /** Läser av ett kvitto (bild eller PDF) och returnerar strukturerad data. */
-export async function readReceipt(file: { bytes: Uint8Array; mime: string; name: string }, templates: { id: number; name: string; description: string }[]): Promise<ReceiptData> {
+export async function readReceipt(file: { bytes: Uint8Array; mime: string; name: string }, templates: TemplateInfo[]): Promise<ReceiptData> {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new ReceiptAiError("AI-avläsning är inte aktiverad (OPENROUTER_API_KEY saknas).");
   const dataUrl = `data:${file.mime};base64,${Buffer.from(file.bytes).toString("base64")}`;
@@ -90,7 +105,7 @@ export async function readReceipt(file: { bytes: Uint8Array; mime: string; name:
       provider: { require_parameters: true },
       temperature: 0,
       max_tokens: 1200,
-      response_format: { type: "json_schema", json_schema: { name: "receipt", strict: true, schema: SCHEMA } },
+      response_format: { type: "json_schema", json_schema: { name: "receipt", strict: true, schema: schema(templates) } },
       messages: [
         { role: "system", content: prompt(templates) },
         { role: "user", content: [{ type: "text", text: "Läs av det här underlaget." }, attachment] },
@@ -138,5 +153,6 @@ export function normalize(raw: Record<string, unknown>, templates: { id: number 
     description: typeof raw.description === "string" ? raw.description.trim().slice(0, 80) : "",
     templateId,
     confidence: Math.min(1, Math.max(0, num(raw.confidence) ?? 0)),
+    version: AI_VERSION,
   };
 }

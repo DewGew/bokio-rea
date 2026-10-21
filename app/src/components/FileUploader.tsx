@@ -91,14 +91,14 @@ export function FileUploader({
             <Icon name="upload" className="h-6 w-6" />
           </span>
         )}
-        {!compact && <span className="mb-1 text-[17px] font-semibold text-ink">{busy ? status : "Lägg till kvitton och fakturor"}</span>}
+        {!compact && <span className="mb-1 text-[17px] font-semibold text-ink [overflow-wrap:anywhere]">{busy ? status : "Lägg till kvitton och fakturor"}</span>}
         {!compact && !busy && <span className="mb-4 text-[14px] text-muted">Dra och släpp filer här, fota kvittot eller välj en fil.</span>}
         {compact && busy ? <span className="text-[14px] text-muted">{status}</span> : buttons}
         {!compact && busy && <span className="sr-only">{status}</span>}
         <span className={`text-[12px] text-muted ${compact ? "mt-2" : "mt-4"}`}>PDF, JPG, PNG, WEBP eller HEIC · max 20 MB per fil</span>
       </div>
       {error && <p role="alert" className="mt-2 text-[14px] font-medium text-danger">{error}</p>}
-      {!busy && status && !error && <p role="status" className="mt-2 text-[14px] text-success">{status}</p>}
+      {!busy && status && !error && <p role="status" className="mt-2 text-[14px] text-success [overflow-wrap:anywhere]">{status}</p>}
     </div>
   );
 }

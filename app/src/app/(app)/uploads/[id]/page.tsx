@@ -5,7 +5,7 @@ import { requireCompany } from "@/lib/auth";
 import { Card, Flash, PageHeader, readParams, Segmented, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { BookingWizard } from "@/components/BookingWizard";
-import { aiEnabled, type ReceiptData } from "@/lib/receipt-ai";
+import { AI_VERSION, aiEnabled, type ReceiptData } from "@/lib/receipt-ai";
 import { PdfPreview } from "@/components/PdfPreview";
 import { VerificationEditor } from "@/components/VerificationEditor";
 import { ExpenseFields } from "@/components/ExpenseFields";
@@ -94,7 +94,7 @@ export default async function UploadPage({ params, searchParams }: { params: Pro
                     back={`/uploads/${u.id}`}
                     allowManual={false}
                     ai={aiEnabled()}
-                    presetAi={u.aiStatus === "done" ? (u.aiData as unknown as ReceiptData) : null}
+                    presetAi={u.aiStatus === "done" && ((u.aiData as unknown as ReceiptData)?.version ?? 1) >= AI_VERSION ? (u.aiData as unknown as ReceiptData) : null}
                   />
                 )}
                 {tab === "manual" && (
