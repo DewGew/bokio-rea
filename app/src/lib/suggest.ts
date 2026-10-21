@@ -110,8 +110,22 @@ export async function suggest(companyId: number, q: string): Promise<Suggestion[
         })
       : Promise.resolve([]),
   ]);
+  return rankSuggestions(q, { templates, accounts, history, noVat: company.vatPeriod === "none" });
+}
+
+type HistoryVerification = { description: string; lines: { accountNumber: number; debit: number; credit: number }[] };
+type TemplateRow = { id: number; name: string; category: string; keywords: string; costAccount: number; vatRate: number; direction: string };
+
+/** Rangordnar förslag utifrån redan hämtade data (används även av bankimporten för många rader i taget). */
+export function rankSuggestions(
+  q: string,
+  ctx: { templates: TemplateRow[]; accounts: { number: number; name: string }[]; history: HistoryVerification[]; noVat: boolean },
+): Suggestion[] {
+  const text = norm(q).trim();
+  const words = tokens(q);
+  if (text.length < 2) return [];
+  const { templates, accounts, history, noVat } = ctx;
   const name = new Map(accounts.map((a) => [a.number, a.name]));
-  const noVat = company.vatPeriod === "none";
   const out: Suggestion[] = [];
 
   // 1. Historik: gruppera på konteringsmönster (vilka konton på vilken sida).

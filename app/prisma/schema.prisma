@@ -88,6 +88,7 @@ model Company {
   expenses      Expense[]
   vatPeriods    VatPeriod[]
   fiscalYears   FiscalYear[]
+  bankTransactions BankTransaction[]
 }
 
 model FiscalYear {
@@ -138,6 +139,7 @@ model Verification {
   invoicePays  Invoice[]     @relation("InvoicePayment")
   expenses     Expense[]     @relation("ExpenseVerification")
   expensePays  Expense[]     @relation("ExpensePayment")
+  bankTransactions BankTransaction[]
 
   @@unique([companyId, series, fiscalYearId, number])
   @@index([companyId, date])
@@ -285,4 +287,27 @@ model VatPeriod {
   verificationId Int?
 
   @@unique([companyId, start, end])
+}
+
+// Transaktioner som importerats från bankens kontoutdrag (CSV) och som bokförs en och en.
+model BankTransaction {
+  id             Int           @id @default(autoincrement())
+  companyId      Int
+  company        Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  bankAccount    Int           @default(1930)
+  date           DateTime
+  amount         Int // öre: positivt = insättning, negativt = uttag
+  text           String
+  reference      String        @default("")
+  balance        Int?
+  hash           String // för att känna igen rader som redan importerats
+  matchKey       String        @default("") // normaliserad text, för att lära sig hur motparten bokförs
+  status         String        @default("new") // new | booking | booked | ignored
+  choice         Json? // hur raden bokfördes
+  verificationId Int?
+  verification   Verification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+
+  @@unique([companyId, hash])
+  @@index([companyId, status, date])
 }

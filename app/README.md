@@ -16,6 +16,10 @@ med eget namn, egen design och egen kod.
   Swish-QR (förifyllt belopp och fakturanummer), klickbar betallänk och egen sidfot, med förhandsvisning i realtid.
 - **AI-avläsning av kvitton** (OpenRouter, `google/gemini-3.1-flash-lite`): leverantör, datum, belopp, moms, land och
   föreslagen mall fylls i automatiskt i bokföringsguiden. Kräver `OPENROUTER_API_KEY`; resultatet sparas per underlag.
+- **Bankimport (CSV)**: läs in kontoutdrag från Swedbank, SEB, Handelsbanken, Nordea, Länsförsäkringar, Danske Bank m.fl.
+  Transaktionerna matchas mot obetalda kundfakturor, utlägg, obokförda kvitton och verifikat som redan finns på bankkontot,
+  och säkra matchningar bokförs automatiskt. Övriga får förslag (mallar, ordlista, tidigare bokningar av samma motpart)
+  och bokförs med ett klick. Redan importerade rader hoppas över, och en bokning kan ångras.
 - **Utseende**: ljust, mörkt eller automatiskt tema per användare.
 - **Räkenskapsår och moms**: företagsform, faktura-/kontantmetoden, moms per månad/kvartal/helår (eller ej momsregistrerad),
   brutet/förlängt räkenskapsår och deadlines enligt Skatteverket.
@@ -73,8 +77,7 @@ Vercel Blob och pdf-lib. Lösenord hashas med scrypt, och sessioner lagras i dat
 
 ## Begränsningar
 
-- Kalenderår som räkenskapsår och kvartalsmoms.
-- Ingen bankkoppling, inga löner och inget bokslut eller årsredovisning.
+- Ingen direkt bankkoppling (kontoutdrag importeras som CSV), inga löner och ingen årsredovisning.
 - Fakturor skickas som PDF (nedladdning), inte via e-post.
 - Ingen återställning av glömt lösenord och ingen begränsning av antalet inloggningsförsök ännu.
 - Underlaget för momsrapporten är förenklat. Kontrollera alltid mot Skatteverkets regler.

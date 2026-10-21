@@ -18,7 +18,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const vatPeriod = periods.find((p) => p.current) ?? null;
   const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
   // Alla frågor körs parallellt; varje databasrundresa kostar tid, särskilt i serverless.
-  const [yearBal, allBal, openInvoices, toBook, pendingExpenses, drafts, vat, lines] = await Promise.all([
+  const [yearBal, allBal, openInvoices, toBook, pendingExpenses, drafts, vat, lines, bankToBook] = await Promise.all([
     balances(companyId, { from: yearStart, to: now }),
     balances(companyId),
     db.invoice.findMany({ where: { companyId, status: "sent" }, include: { lines: true } }),
@@ -31,6 +31,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
       where: { companyId, accountNumber: { gte: 3000, lte: 8989 }, verification: { date: { gte: from } } },
       select: { debit: true, credit: true, accountNumber: true, verification: { select: { date: true } }, account: { select: { name: true } } },
     }),
+    db.bankTransaction.count({ where: { companyId, status: "new" } }),
   ]);
   const result = -sumRange(yearBal, 3000, 8989);
   const bank = sumRange(allBal, 1900, 1999);
@@ -57,6 +58,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const cost12 = months.reduce((s, m) => s + m.cost, 0);
 
   const todos = [
+    bankToBook > 0 && { href: "/bank", text: `${bankToBook} banktransaktioner att bokföra` },
     toBook > 0 && { href: "/uploads", text: `${toBook} underlag att bokföra` },
     pendingExpenses > 0 && { href: "/expenses", text: `${pendingExpenses} utlägg att bokföra` },
     drafts > 0 && { href: "/invoices?status=draft", text: `${drafts} fakturautkast` },

@@ -257,7 +257,7 @@ export async function bookExpense(companyId: number, id: number) {
   });
 }
 
-export async function payExpenses(companyId: number, ids: number[], date: Date) {
+export async function payExpenses(companyId: number, ids: number[], date: Date, account = BANK_ACCOUNT) {
   return tx(async (t) => {
     const list = await t.expense.findMany({ where: { companyId, id: { in: ids }, status: "booked" } });
     if (list.length === 0) throw new AccountingError("Inga bokförda utlägg att betala ut.");
@@ -268,7 +268,7 @@ export async function payExpenses(companyId: number, ids: number[], date: Date) 
       description: `Utbetalning av utlägg till ${people}`,
       lines: [
         { account: PAYABLE_EXPENSES, debit: total },
-        { account: BANK_ACCOUNT, credit: total },
+        { account, credit: total },
       ],
     });
     await t.expense.updateMany({ where: { id: { in: list.map((e) => e.id) } }, data: { status: "paid", paymentVerificationId: v.id } });

@@ -18,6 +18,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
     items: [
       ["/verifications", "Bokfört", "book"],
       ["/verifications/new", "Bokför", "plus"],
+      ["/bank", "Bank", "bank"],
       ["/vat", "Momsredovisning", "percent"],
       ["/closing", "Bokslut", "check"],
     ],
