@@ -29,7 +29,8 @@ med eget namn, egen design och egen kod.
   dynamisk registrering, korta nycklar som byts vid förnyelse). Bara ägare och användare med full behörighet kan koppla,
   och kopplingar syns och kopplas från under *Inställningar → Kopplingar*. Vid godkännandet väljer man *Läsa* eller
   *Läsa och bokföra*; med det senare kan Claude bokföra med mall (med förhandsgranskning och kvitto), bokföra bankrader,
-  skapa fakturautkast och registrera betalningar. Allt märks med "Skapad via …" och inget kan raderas.
+  skapa fakturautkast, registrera betalningar och lägga till kunder och artiklar (med dubblettkontroll). Allt märks
+  med "Skapad via …" och inget kan raderas.
 - **Automatisk utloggning** efter 30 minuters inaktivitet per enhet, med varning två minuter innan (`IDLE_MINUTES` i
   `src/lib/session-config.ts`).
 - **Utseende**: ljust, mörkt eller automatiskt tema per användare.

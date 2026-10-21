@@ -6,6 +6,7 @@ import { AccountingError, bookWithTemplate, invoiceTotals, registerInvoicePaymen
 import { templateLines, type Country } from "./template-lines";
 import { bookBankTransaction, proposalsFor, type Choice } from "./bank";
 import { displayStatus } from "./invoice-status";
+import { validOrgNumber } from "./company-setup";
 import type { McpContext } from "./oauth";
 
 /**
@@ -85,6 +86,20 @@ export function registerHelpers(server: McpServer, ctx: McpContext) {
   );
 
   server.registerTool(
+    "artiklar",
+    {
+      title: "Artiklar",
+      description: "Företagets artiklar (produkter och tjänster) med pris exklusive moms.",
+      inputSchema: { sok: z.string().max(100).optional() },
+      annotations: READ,
+    },
+    async ({ sok }) => {
+      const list = await db.article.findMany({ where: { companyId, ...(sok ? { name: { contains: sok, mode: "insensitive" } } : {}) }, orderBy: { name: "asc" } });
+      return ok(list.map((a) => ({ artikel_id: a.id, namn: a.name, pris_exkl_moms: sek(a.price), moms: a.vatRate, enhet: a.unit, typ: a.type === "goods" ? "vara" : "tjänst" })));
+    },
+  );
+
+  server.registerTool(
     "kunder",
     {
       title: "Kunder",
@@ -113,6 +128,143 @@ export function registerHelpers(server: McpServer, ctx: McpContext) {
 
 export function registerWriteTools(server: McpServer, ctx: McpContext) {
   const { companyId } = ctx;
+
+  server.registerTool(
+    "skapa_kunder",
+    {
+      title: "Lägg till kunder",
+      description:
+        "Lägger till en eller flera kunder (högst 100 per anrop) i kundregistret, t.ex. från en lista användaren klistrat in. " +
+        "Kunder som redan finns (samma organisationsnummer, eller samma namn om nummer saknas) hoppas över. " +
+        "Kör först med forhandsgranska: true och visa resultatet för användaren.",
+      inputSchema: {
+        kunder: z
+          .array(
+            z.object({
+              namn: z.string().max(200),
+              organisationsnummer: z.string().max(30).optional().describe("Organisations- eller personnummer, eller utländskt momsnummer"),
+              epost: z.string().max(200).optional(),
+              adress: z.string().max(200).optional(),
+              postnummer: z.string().max(20).optional(),
+              ort: z.string().max(100).optional(),
+              referens: z.string().max(100).optional().describe("Kundens referens/kontaktperson"),
+            }),
+          )
+          .min(1)
+          .max(100),
+        forhandsgranska: z.boolean().optional(),
+      },
+      annotations: WRITE,
+    },
+    async ({ kunder, forhandsgranska }) => {
+      const existing = await db.customer.findMany({ where: { companyId }, select: { id: true, name: true, orgNumber: true } });
+      // Jämför svenska nummer på de tio sista siffrorna (556677-8899 = 5566778899 = 165566778899).
+      const key = (s: string) => s.replace(/\D/g, "").slice(-10);
+      const isSwedish = (s: string) => /^[\d\s-]+$/.test(s) && [10, 12].includes(s.replace(/\D/g, "").length);
+      const byOrg = new Map(existing.filter((c) => isSwedish(c.orgNumber)).map((c) => [key(c.orgNumber), c]));
+      const byName = new Map(existing.map((c) => [c.name.trim().toLowerCase(), c]));
+      const created: { kund_id?: number; namn: string }[] = [];
+      const skipped: { namn: string; kund_id?: number; orsak: string }[] = [];
+      const errors: { rad: number; namn: string; fel: string }[] = [];
+
+      for (const [i, k] of kunder.entries()) {
+        const name = k.namn.trim();
+        const org = (k.organisationsnummer ?? "").trim();
+        const email = (k.epost ?? "").trim();
+        const err = (fel: string) => errors.push({ rad: i + 1, namn: name || "(utan namn)", fel });
+        if (!name) {
+          err("Namn saknas.");
+          continue;
+        }
+        // Svenska nummer kontrolleras med kontrollsiffran; utländska momsnummer (med bokstäver) sparas som de är.
+        const swedish = isSwedish(org);
+        if (org && /^[\d\s-]+$/.test(org) && (!swedish || !validOrgNumber(org))) {
+          err(`Ogiltigt organisationsnummer: ${org}`);
+          continue;
+        }
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          err(`Ogiltig e-postadress: ${email}`);
+          continue;
+        }
+        const dup = swedish ? byOrg.get(key(org)) : byName.get(name.toLowerCase());
+        if (dup) {
+          skipped.push({ namn: name, ...(dup.id ? { kund_id: dup.id } : {}), orsak: swedish ? `Organisationsnumret finns redan (${dup.name})` : "Namnet finns redan" });
+          continue;
+        }
+        const data = { name, orgNumber: org, email, address: (k.adress ?? "").trim(), postalCode: (k.postnummer ?? "").trim(), city: (k.ort ?? "").trim(), reference: (k.referens ?? "").trim() };
+        const c = forhandsgranska ? { id: 0, name, orgNumber: org } : await db.customer.create({ data: { ...data, companyId } });
+        // Fångar även dubbletter inom samma lista.
+        if (swedish) byOrg.set(key(org), c);
+        byName.set(name.toLowerCase(), c);
+        created.push({ ...(forhandsgranska ? {} : { kund_id: c.id }), namn: name });
+      }
+      return ok({
+        ...(forhandsgranska ? { forhandsgranskning: true, skulle_skapas: created } : { skapade: created }),
+        fanns_redan: skipped,
+        fel: errors,
+        ...(forhandsgranska ? { obs: "Inget är sparat ännu. Anropa igen utan forhandsgranska för att lägga till kunderna." } : {}),
+      });
+    },
+  );
+
+  server.registerTool(
+    "skapa_artiklar",
+    {
+      title: "Lägg till artiklar",
+      description:
+        "Lägger till en eller flera artiklar (produkter och tjänster, högst 100 per anrop) som används på fakturor. Pris anges exklusive moms. " +
+        "Artiklar med samma namn som en befintlig hoppas över. Kör först med forhandsgranska: true.",
+      inputSchema: {
+        artiklar: z
+          .array(
+            z.object({
+              namn: z.string().max(200),
+              pris: z.number().min(0).max(100_000_000).describe("Pris per enhet exklusive moms, kronor"),
+              moms_sats: z.union([z.literal(0), z.literal(6), z.literal(12), z.literal(25)]).optional().describe("Standard 25"),
+              enhet: z.string().max(10).optional().describe("T.ex. st, tim, mån, km. Standard st"),
+              typ: z.enum(["tjanst", "vara"]).optional().describe("Standard tjanst"),
+            }),
+          )
+          .min(1)
+          .max(100),
+        forhandsgranska: z.boolean().optional(),
+      },
+      annotations: WRITE,
+    },
+    async ({ artiklar, forhandsgranska }) => {
+      const [existing, company] = await Promise.all([
+        db.article.findMany({ where: { companyId }, select: { id: true, name: true } }),
+        db.company.findUniqueOrThrow({ where: { id: companyId }, select: { vatPeriod: true } }),
+      ]);
+      const noVat = company.vatPeriod === "none";
+      const byName = new Map(existing.map((a) => [a.name.trim().toLowerCase(), a.id]));
+      const created: { artikel_id?: number; namn: string; pris: number; moms: number; enhet: string }[] = [];
+      const skipped: { namn: string; artikel_id?: number }[] = [];
+      const errors: { rad: number; fel: string }[] = [];
+      for (const [i, a] of artiklar.entries()) {
+        const name = a.namn.trim();
+        if (!name) {
+          errors.push({ rad: i + 1, fel: "Namn saknas." });
+          continue;
+        }
+        const dup = byName.get(name.toLowerCase());
+        if (dup !== undefined) {
+          skipped.push({ namn: name, ...(dup ? { artikel_id: dup } : {}) });
+          continue;
+        }
+        const data = { name, price: ore(a.pris), vatRate: noVat ? 0 : (a.moms_sats ?? 25), unit: (a.enhet ?? "").trim() || "st", type: a.typ === "vara" ? "goods" : "service" };
+        const id = forhandsgranska ? 0 : (await db.article.create({ data: { ...data, companyId } })).id;
+        byName.set(name.toLowerCase(), id);
+        created.push({ ...(forhandsgranska ? {} : { artikel_id: id }), namn: name, pris: sek(data.price), moms: data.vatRate, enhet: data.unit });
+      }
+      return ok({
+        ...(forhandsgranska ? { forhandsgranskning: true, skulle_skapas: created } : { skapade: created }),
+        fanns_redan: skipped,
+        fel: errors,
+        ...(noVat ? { obs_moms: "Företaget är inte momsregistrerat – artiklarna får 0 % moms." } : {}),
+      });
+    },
+  );
 
   server.registerTool(
     "bokfor_med_mall",

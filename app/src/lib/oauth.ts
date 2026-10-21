@@ -20,7 +20,7 @@ export const MCP_ROLES = ["owner", "full"];
 export const SCOPES = ["read", "write"] as const;
 export const SCOPE_LABEL: Record<string, string> = {
   read: "Läsa bokföring, rapporter, fakturor och moms",
-  write: "Bokföra med mall, bokföra bankrader, skapa fakturautkast och registrera betalningar",
+  write: "Bokföra med mall, bokföra bankrader, skapa fakturautkast, registrera betalningar och lägga till kunder och artiklar",
 };
 
 export class OAuthError extends Error {
