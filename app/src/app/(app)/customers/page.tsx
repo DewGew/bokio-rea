@@ -5,13 +5,15 @@ import { invoiceTotals } from "@/lib/accounting";
 import { Card, Empty, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CustomerTable } from "@/components/CustomerTable";
+import { COUNTRIES } from "@/lib/invoice-doc";
 import { deleteCustomer, saveCustomer } from "../registers/actions";
 
 const FIELDS: [string, string, string?][] = [
   ["name", "Namn *"],
   ["orgNumber", "Org.nr / personnr"],
-  ["email", "E-post", "email"],
-  ["reference", "Referens"],
+  ["vatNumber", "Momsreg.nr (krävs vid EU-handel)"],
+  ["email", "E-post för fakturor", "email"],
+  ["reference", "Kontaktperson / er referens"],
   ["address", "Adress"],
   ["postalCode", "Postnummer"],
   ["city", "Ort"],
@@ -43,7 +45,7 @@ export default async function Customers({ searchParams }: { searchParams: SP }) 
                   email: c.email,
                   city: c.city,
                   reference: c.reference,
-                  invoices: c.invoices.filter((i) => i.status !== "draft").length,
+                  invoices: c.invoices.filter((i) => i.status !== "draft" && i.kind !== "credit").length,
                   invoiced: booked.reduce((s, i) => s + invoiceTotals(i.lines).total, 0),
                   unpaid: c.invoices.filter((i) => i.status === "sent").reduce((s, i) => s + invoiceTotals(i.lines).total, 0),
                 };
@@ -67,6 +69,14 @@ export default async function Customers({ searchParams }: { searchParams: SP }) 
                 />
               </div>
             ))}
+            <div>
+              <label className="label" htmlFor="country">Land</label>
+              <select id="country" name="country" defaultValue={editing?.country ?? "SE"} className="input">
+                {Object.entries(COUNTRIES).map(([code, name]) => (
+                  <option key={code} value={code}>{name}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex justify-between gap-2">
               {editing ? <Link href="/customers" className="btn-secondary">Avbryt</Link> : <span />}
               <ConfirmButton>{editing ? "Spara" : "Lägg till kund"}</ConfirmButton>

@@ -5,6 +5,7 @@ import { requireCompany } from "@/lib/auth";
 import { invoiceTotals } from "@/lib/accounting";
 import { dateStr, kr } from "@/lib/money";
 import { displayStatus } from "@/lib/invoice-status";
+import { countryName } from "@/lib/invoice-doc";
 import { Badge, Card, Empty, Money, PageHeader, Stat } from "@/components/ui";
 
 type Link_ = { key: string; date: Date; title: string; detail: string; href: string; amount: number };
@@ -54,6 +55,8 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
 
   const info: [string, React.ReactNode][] = [
     ["Org.nr / personnr", customer.orgNumber],
+    ["Momsreg.nr", customer.vatNumber],
+    ["Land", countryName(customer.country)],
     ["E-post", customer.email && <a href={`mailto:${customer.email}`} className="text-brand">{customer.email}</a>],
     ["Referens", customer.reference],
     ["Adress", [customer.address, [customer.postalCode, customer.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")],
@@ -76,8 +79,8 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
       />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Fakturor" value={String(issued.length)} hint={invoices.length > issued.length ? `+ ${invoices.length - issued.length} utkast` : undefined} />
-        <Stat label="Fakturerat (inkl. moms)" value={kr(sum(issued.filter((i) => i.status !== "credited")))} />
+        <Stat label="Fakturor" value={String(issued.filter((i) => i.kind !== "credit").length)} hint={invoices.length > issued.length ? `+ ${invoices.length - issued.length} utkast` : undefined} />
+        <Stat label="Fakturerat (inkl. moms)" value={kr(sum(issued.filter((i) => i.status !== "credited" && i.kind !== "credit")))} />
         <Stat label="Obetalt" value={kr(sum(unpaid))} tone={unpaid.length ? "warn" : undefined} hint={unpaid.length ? `${unpaid.length} ${unpaid.length === 1 ? "faktura" : "fakturor"}` : "Inget obetalt"} />
         <Stat label="Förfallet" value={kr(sum(overdue))} tone={overdue.length ? "danger" : undefined} />
       </div>
@@ -104,7 +107,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
                       <tr key={i.id}>
                         <td>
                           <Link href={`/invoices/${i.id}`} className="font-medium text-brand">
-                            {i.number ? `#${i.number}` : "Utkast"}
+                            {i.number ? `${i.kind === "credit" ? "Kredit " : ""}#${i.number}` : "Utkast"}
                           </Link>
                         </td>
                         <td className="whitespace-nowrap tabular-nums">{dateStr(i.date)}</td>

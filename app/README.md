@@ -11,7 +11,16 @@ med eget namn, egen design och egen kod.
 - **Uppladdat**: dra och släpp, välj PDF/bild eller ta en bild direkt med mobilkameran (JPG, PNG, WEBP, HEIC eller PDF, max 20 MB) och bokför dem med *mall*, *manuellt* eller som *utlägg*.
 - **Bokfört**: verifikat numrerade per företag och år, sök, underlag och makulering via omvänt verifikat.
 - **Momsredovisning**: kvartalsperioder, rutor enligt Skatteverkets blankett, avstämning mot 2650 med öresutjämning och låsning.
-- **Fakturering**: kunder, artiklar, utkast, bokföring, betalning och kreditering. **PDF-fakturor** genereras på servern (`/api/invoices/[id]/pdf`).
+- **Fakturering enligt svenska krav** (mervärdesskattelagen 17 kap., aktiebolagslagen 28 kap. 5 §):
+  - fullständig faktura med säljarens och köparens namn, adress och organisations-/momsnummer, styrelsens säte för
+    aktiebolag, F-skatt (bara om företaget är godkänt), leveransdatum, tjänsteperiod, rabatt och moms per momssats
+  - momshantering: 25/12/6/0 %, omvänd betalningsskyldighet, EU-försäljning, export och momsundantag med fakturatext
+  - förenklad faktura (högst 4 000 kr inkl. moms) som eget val
+  - validering före utfärdande (samma regler i formuläret och på servern, `src/lib/invoice-rules.ts`)
+  - nummerserie per företag som räknas upp atomiskt; utfärdade fakturor får en oföränderlig ögonblicksbild
+  - rättelse med kreditfaktura (eget nummer, hänvisning till originalet, omvänd bokföring) och historik per faktura
+  - dröjsmålsränta (räntelagen eller avtalad) och påminnelseavgift (högst 60 kr, bara om avtalad) som fakturatext
+  - **PDF-fakturor** (A4, flera sidor) genereras på servern (`/api/invoices/[id]/pdf`); fakturaregistret kan exporteras som CSV
 - **Fakturadesign**: fyra mallar (Modern, Klassisk, Minimal, Elegant), valfri accentfärg, logotyp, bankgiro, plusgiro, IBAN/BIC,
   Swish-QR (förifyllt belopp och fakturanummer), klickbar betallänk och egen sidfot, med förhandsvisning i realtid.
 - **AI-avläsning av kvitton** (OpenRouter, `google/gemini-3.1-flash-lite`): leverantör, datum, belopp, moms, land och
@@ -82,6 +91,12 @@ Kör inte `db:seed` mot produktionsdatabasen.
 Vercel begränsar anrop till 4,5 MB, så webbläsaren laddar upp filerna direkt till Vercel Blob med en kortlivad token
 (`/api/blob`), som bara ges till inloggade användare och bara för det egna företagets mapp. Därefter registreras
 filen (`/api/uploads`). Filerna är privata och visas via `/api/files/[id]` efter behörighetskontroll.
+
+## Tester
+
+```bash
+npm test   # fakturaregler, PDF-layout och (med databas) nummerserie, kreditfakturor och behörighet
+```
 
 ## Teknik
 

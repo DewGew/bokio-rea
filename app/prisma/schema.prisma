@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
   // Migreringar körs via scripts/migrate.mjs, som väljer en direkt anslutning om en sådan finns.
 }
@@ -44,26 +44,26 @@ model Membership {
 }
 
 model Company {
-  id          Int      @id @default(autoincrement())
+  id          Int    @id @default(autoincrement())
   name        String
   orgNumber   String
-  vatNumber   String   @default("")
-  address     String   @default("")
-  postalCode  String   @default("")
-  city        String   @default("")
-  email       String   @default("")
-  bankgiro    String   @default("")
-  invoiceDays Int      @default(30)
+  vatNumber   String @default("")
+  address     String @default("")
+  postalCode  String @default("")
+  city        String @default("")
+  email       String @default("")
+  bankgiro    String @default("")
+  invoiceDays Int    @default(30)
 
   // Bokföring och moms
-  companyType      String @default("ab") // ab | ef | hb | ek
-  accountingMethod String @default("invoice") // invoice (fakturametoden) | cash (kontantmetoden)
-  vatPeriod        String @default("quarter") // month | quarter | year | none (ej momsregistrerad)
-  euTrade          Boolean @default(false) // påverkar sista dag för helårsmoms
-  fiscalStartMonth Int    @default(1) // startmånad för kommande räkenskapsår (1-12)
-  phone       String   @default("")
-  website     String   @default("")
-  createdAt   DateTime @default(now())
+  companyType      String   @default("ab") // ab | ef | hb | ek
+  accountingMethod String   @default("invoice") // invoice (fakturametoden) | cash (kontantmetoden)
+  vatPeriod        String   @default("quarter") // month | quarter | year | none (ej momsregistrerad)
+  euTrade          Boolean  @default(false) // påverkar sista dag för helårsmoms
+  fiscalStartMonth Int      @default(1) // startmånad för kommande räkenskapsår (1-12)
+  phone            String   @default("")
+  website          String   @default("")
+  createdAt        DateTime @default(now())
 
   // Fakturadesign och betalningsuppgifter på fakturan
   invoiceTemplate String  @default("modern") // modern | klassisk | minimal | elegant
@@ -79,32 +79,40 @@ model Company {
   swishQr         Boolean @default(false)
   paymentLink     String  @default("")
 
-  memberships   Membership[]
-  accounts      Account[]
-  verifications Verification[]
-  templates     Template[]
-  uploads       Upload[]
-  customers     Customer[]
-  articles      Article[]
-  invoices      Invoice[]
-  expenses      Expense[]
-  vatPeriods    VatPeriod[]
-  fiscalYears   FiscalYear[]
+  // Uppgifter som krävs eller rekommenderas på fakturor
+  tradeName        String  @default("") // särskilt företagsnamn/varumärke (det registrerade namnet är "name")
+  seat             String  @default("") // styrelsens säte (kommun), krävs på aktiebolags fakturor
+  fSkatt           Boolean @default(false) // godkänd för F-skatt – visas bara om det stämmer
+  lateInterestRate Float? // dröjsmålsränta i procent per år; null = enligt räntelagen
+  reminderFee      Int     @default(0) // påminnelseavgift i öre (högst 60 kr och bara om den är avtalad); 0 = ingen
+  invoiceCounter   Int     @default(0) // senast utdelade fakturanummer (räknas upp atomiskt)
+
+  memberships      Membership[]
+  accounts         Account[]
+  verifications    Verification[]
+  templates        Template[]
+  uploads          Upload[]
+  customers        Customer[]
+  articles         Article[]
+  invoices         Invoice[]
+  expenses         Expense[]
+  vatPeriods       VatPeriod[]
+  fiscalYears      FiscalYear[]
   bankTransactions BankTransaction[]
-  invitations   Invitation[]
-  oauthGrants   OAuthGrant[]
+  invitations      Invitation[]
+  oauthGrants      OAuthGrant[]
 }
 
 model FiscalYear {
-  id            Int            @id @default(autoincrement())
-  companyId     Int
-  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  start         DateTime
-  end           DateTime
-  closedAt      DateTime?
+  id                     Int            @id @default(autoincrement())
+  companyId              Int
+  company                Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  start                  DateTime
+  end                    DateTime
+  closedAt               DateTime?
   // Verifikat som skapades av bokslutet (skatt, årets resultat, omföring), så att bokslutet kan ångras.
-  closingVerificationIds Int[] @default([])
-  verifications Verification[]
+  closingVerificationIds Int[]          @default([])
+  verifications          Verification[]
 
   @@unique([companyId, start])
 }
@@ -123,26 +131,26 @@ model Account {
 }
 
 model Verification {
-  id           Int           @id @default(autoincrement())
-  companyId    Int
-  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  series       String        @default("V")
-  fiscalYearId Int
-  fiscalYear   FiscalYear    @relation(fields: [fiscalYearId], references: [id])
-  number       Int
-  date         DateTime
-  description  String
-  comment      String        @default("")
-  createdAt    DateTime      @default(now())
-  reversedById Int?          @unique
-  reversedBy   Verification? @relation("Reversal", fields: [reversedById], references: [id])
-  reverses     Verification? @relation("Reversal")
-  lines        VerificationLine[]
-  uploads      Upload[]
-  invoices     Invoice[]     @relation("InvoiceVerification")
-  invoicePays  Invoice[]     @relation("InvoicePayment")
-  expenses     Expense[]     @relation("ExpenseVerification")
-  expensePays  Expense[]     @relation("ExpensePayment")
+  id               Int                @id @default(autoincrement())
+  companyId        Int
+  company          Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  series           String             @default("V")
+  fiscalYearId     Int
+  fiscalYear       FiscalYear         @relation(fields: [fiscalYearId], references: [id])
+  number           Int
+  date             DateTime
+  description      String
+  comment          String             @default("")
+  createdAt        DateTime           @default(now())
+  reversedById     Int?               @unique
+  reversedBy       Verification?      @relation("Reversal", fields: [reversedById], references: [id])
+  reverses         Verification?      @relation("Reversal")
+  lines            VerificationLine[]
+  uploads          Upload[]
+  invoices         Invoice[]          @relation("InvoiceVerification")
+  invoicePays      Invoice[]          @relation("InvoicePayment")
+  expenses         Expense[]          @relation("ExpenseVerification")
+  expensePays      Expense[]          @relation("ExpensePayment")
   bankTransactions BankTransaction[]
 
   @@unique([companyId, series, fiscalYearId, number])
@@ -183,7 +191,7 @@ model Upload {
   companyId      Int
   company        Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   fileName       String
-  storedName     String        // lokalt filnamn eller sökväg i Vercel Blob
+  storedName     String // lokalt filnamn eller sökväg i Vercel Blob
   blobUrl        String?
   mimeType       String
   size           Int           @default(0)
@@ -192,7 +200,7 @@ model Upload {
   description    String        @default("")
   createdAt      DateTime      @default(now())
   // AI-avläsning av kvittot (OpenRouter): status, tolkad data och ev. felmeddelande
-  aiStatus       String?       // done | error
+  aiStatus       String? // done | error
   aiData         Json?
   aiError        String?
   verificationId Int?
@@ -210,7 +218,9 @@ model Customer {
   address    String    @default("")
   postalCode String    @default("")
   city       String    @default("")
-  reference  String    @default("")
+  reference  String    @default("") // kontaktperson/kundens referens
+  country    String    @default("SE") // landskod (ISO 3166-1 alfa-2)
+  vatNumber  String    @default("") // köparens momsregistreringsnummer (krävs vid omvänd betalningsskyldighet och EU-handel)
   invoices   Invoice[]
 }
 
@@ -226,39 +236,69 @@ model Article {
 }
 
 model Invoice {
-  id                    Int           @id @default(autoincrement())
+  id                    Int            @id @default(autoincrement())
   companyId             Int
-  company               Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company               Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   number                Int?
   customerId            Int
-  customer              Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade) // appen tillåter inte att kunder med fakturor tas bort
+  customer              Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade) // appen tillåter inte att kunder med fakturor tas bort
   date                  DateTime
   dueDate               DateTime
-  status                String        @default("draft") // draft | sent | paid | credited
-  ourReference          String        @default("")
-  theirReference        String        @default("")
-  notes                 String        @default("")
+  status                String         @default("draft") // draft | sent | paid | credited (originalet) | credit (kreditfakturan)
+  kind                  String         @default("invoice") // invoice | credit
+  creditOfId            Int? // kreditfakturan avser denna faktura
+  creditOf              Invoice?       @relation("CreditNote", fields: [creditOfId], references: [id])
+  creditNotes           Invoice[]      @relation("CreditNote")
+  ourReference          String         @default("")
+  theirReference        String         @default("")
+  notes                 String         @default("")
+  deliveryDate          DateTime? // leveransdatum / datum då tjänsten tillhandahölls (om annat än fakturadatum)
+  vatTreatment          String         @default("standard") // standard | reverse_domestic | eu | export | exempt
+  vatNote               String         @default("") // hänvisning vid momsfrihet eller omvänd betalningsskyldighet
+  simplified            Boolean        @default(false) // förenklad faktura (högst 4 000 kr inkl. moms)
+  currency              String         @default("SEK")
+  issuedAt              DateTime? // när fakturan utfärdades (fick nummer)
+  snapshot              Json? // oföränderlig kopia av fakturans innehåll vid utfärdandet
   paidDate              DateTime?
-  createdAt             DateTime      @default(now())
+  createdAt             DateTime       @default(now())
   verificationId        Int?
-  verification          Verification? @relation("InvoiceVerification", fields: [verificationId], references: [id])
+  verification          Verification?  @relation("InvoiceVerification", fields: [verificationId], references: [id])
   paymentVerificationId Int?
-  paymentVerification   Verification? @relation("InvoicePayment", fields: [paymentVerificationId], references: [id])
+  paymentVerification   Verification?  @relation("InvoicePayment", fields: [paymentVerificationId], references: [id])
   lines                 InvoiceLine[]
+  events                InvoiceEvent[]
 
   @@unique([companyId, number])
 }
 
+// Historik för en faktura: skapad, utfärdad, betald, krediterad m.m. Raderas aldrig.
+model InvoiceEvent {
+  id        Int      @id @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  companyId Int
+  type      String // created | issued | paid | payment_undone | credited | credit_issued
+  text      String   @default("")
+  userId    Int?
+  via       String   @default("") // t.ex. "Claude" när händelsen kom via en MCP-koppling
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
 model InvoiceLine {
-  id          Int     @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   invoiceId   Int
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice     Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   description String
   quantity    Float
-  unit        String  @default("st")
+  unit        String    @default("st")
   unitPrice   Int
-  vatRate     Int     @default(25)
-  type        String  @default("service")
+  vatRate     Int       @default(25)
+  type        String    @default("service")
+  discountBp  Int       @default(0) // rabatt i hundradels procent (1250 = 12,5 %)
+  periodStart DateTime? // tjänsteperiod, t.ex. för abonnemang
+  periodEnd   DateTime?
 }
 
 model Expense {

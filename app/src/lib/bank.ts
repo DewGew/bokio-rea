@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
-import { AccountingError, bookWithTemplate, createVerification, invoiceTotals, payExpenses, registerInvoicePayment, reverseVerification } from "./accounting";
+import { AccountingError, bookWithTemplate, createVerification, invoiceTotals, logInvoiceEvent, payExpenses, registerInvoicePayment, reverseVerification } from "./accounting";
 import { rankSuggestions } from "./suggest";
 import { templateLines, type Country } from "./template-lines";
 import type { BankRow } from "./bank-csv";
@@ -437,7 +437,9 @@ export async function undoBankTransaction(companyId: number, id: number) {
     const v = await db.verification.findFirst({ where: { id: vId, companyId } });
     if (v && !v.reversedById) await reverseVerification(companyId, vId);
     if (choice?.kind === "invoice") {
+      const paid = await db.invoice.findMany({ where: { companyId, paymentVerificationId: vId }, select: { id: true } });
       await db.invoice.updateMany({ where: { companyId, paymentVerificationId: vId }, data: { status: "sent", paidDate: null, paymentVerificationId: null } });
+      for (const p of paid) await logInvoiceEvent(db, companyId, p.id, "payment_undone", "Betalningen från banken ångrades och verifikatet makulerades");
     } else if (choice?.kind === "expense") {
       await db.expense.updateMany({ where: { companyId, paymentVerificationId: vId }, data: { status: "booked", paymentVerificationId: null } });
     } else {

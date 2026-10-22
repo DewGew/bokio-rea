@@ -26,11 +26,18 @@ export default async function Invoices({ searchParams }: { searchParams: SP }) {
   });
   const rows = all.map((i) => ({ ...i, total: invoiceTotals(i.lines).total, shown: displayStatus(i) }));
   const sum = (s: string[]) => rows.filter((r) => s.includes(r.shown)).reduce((a, r) => a + r.total, 0);
-  const list = rows.filter((r) => filter === "all" || r.shown === filter || (filter === "sent" && r.shown === "overdue"));
+  const list = rows.filter(
+    (r) => filter === "all" || r.shown === filter || (filter === "sent" && r.shown === "overdue") || (filter === "credited" && r.shown === "credit"),
+  );
 
   return (
     <>
-      <PageHeader title="Fakturor" actions={<Link href="/invoices/new" className="btn-primary">Ny faktura</Link>} />
+      <PageHeader title="Fakturor" actions={
+          <>
+            <a href="/api/invoices/export" className="btn-secondary">Exportera fakturaregister</a>
+            <Link href="/invoices/new" className="btn-primary">Ny faktura</Link>
+          </>
+        } />
       <Flash error={error} notice={notice} />
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <Stat label="Obetalt (inkl. moms)" value={kr(sum(["sent", "overdue"]))} />

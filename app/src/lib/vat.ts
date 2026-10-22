@@ -96,6 +96,7 @@ export async function vatReport(companyId: number, start: Date, end: Date) {
     { box: "35", label: "Försäljning av varor till annat EU-land", amount: credit(3108) },
     { box: "39", label: "Försäljning av tjänster till annat EU-land", amount: credit(3308) },
     { box: "40", label: "Övrig försäljning av tjänster utanför Sverige", amount: credit(3305) + credit(3105) },
+    { box: "41", label: "Försäljning när köparen är betalningsskyldig i Sverige", amount: credit(3231) },
     { box: "42", label: "Övrig försäljning m.m.", amount: credit(3004) },
     { box: "48", label: "Ingående moms att dra av", amount: debit(2641) + debit(2645) },
   ];

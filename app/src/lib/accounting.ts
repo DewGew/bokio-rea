@@ -1,9 +1,11 @@
-import { Prisma, type PrismaClient } from "@prisma/client";
+import { Prisma, type Company, type Customer, type Invoice, type InvoiceLine, type PrismaClient } from "@prisma/client";
 import { db } from "./db";
-import { BANK_ACCOUNT, INPUT_VAT, OUTPUT_VAT, PAYABLE_EXPENSES, RECEIVABLES, SALES_ACCOUNT, VAT_SETTLEMENT } from "./bas";
+import { BANK_ACCOUNT, INPUT_VAT, OUTPUT_VAT, PAYABLE_EXPENSES, RECEIVABLES, VAT_SETTLEMENT } from "./bas";
 import { vatFromGross } from "./money";
 import { templateLines, type Country } from "./template-lines";
 import { FiscalError, ensureFiscalYearFor } from "./fiscal";
+import { blocking, invoiceTotals, isVatTreatment, lineNet, salesAccount, validateInvoice, type ValidationInput, type VatTreatment } from "./invoice-rules";
+import { buildInvoiceDoc } from "./invoice-doc";
 
 type Tx = Prisma.TransactionClient | PrismaClient;
 
@@ -151,67 +153,115 @@ export async function bookWithTemplate(
   });
 }
 
-export function invoiceTotals(lines: { quantity: number; unitPrice: number; vatRate: number }[]) {
-  const byRate = new Map<number, { net: number; vat: number }>();
+export { invoiceTotals };
+
+/** Vem som gjorde en ändring (för fakturahistoriken). */
+export type Actor = { userId?: number | null; via?: string };
+
+export async function logInvoiceEvent(t: Tx, companyId: number, invoiceId: number, type: string, text: string, actor: Actor = {}) {
+  await t.invoiceEvent.create({ data: { companyId, invoiceId, type, text, userId: actor.userId ?? null, via: actor.via ?? "" } });
+}
+
+const SALES_ACCOUNT_NAMES: Record<number, string> = {
+  3231: "Försäljning inom byggsektorn, omvänd betalningsskyldighet",
+};
+
+/** Intäkts- och momsrader för en faktura. Intäktskontot beror på momshantering och om raden är vara eller tjänst. */
+async function salesLines(t: Tx, companyId: number, lines: Pick<InvoiceLine, "quantity" | "unitPrice" | "vatRate" | "discountBp" | "type">[], treatment: string): Promise<LineInput[]> {
+  const vt: VatTreatment = isVatTreatment(treatment) ? treatment : "standard";
+  const totals = invoiceTotals(lines);
+  const byAccount = new Map<number, number>();
   for (const l of lines) {
-    const net = Math.round(l.quantity * l.unitPrice);
-    const cur = byRate.get(l.vatRate) ?? { net: 0, vat: 0 };
-    cur.net += net;
-    byRate.set(l.vatRate, cur);
+    const acc = salesAccount(vt, l);
+    byAccount.set(acc, (byAccount.get(acc) ?? 0) + lineNet(l));
   }
-  for (const [rate, v] of byRate) v.vat = Math.round((v.net * rate) / 100);
-  const net = [...byRate.values()].reduce((s, v) => s + v.net, 0);
-  const vat = [...byRate.values()].reduce((s, v) => s + v.vat, 0);
-  return { byRate, net, vat, total: net + vat };
+  // Konton som saknas i äldre kontoplaner (t.ex. 3231) läggs till.
+  const existing = new Set((await t.account.findMany({ where: { companyId, number: { in: [...byAccount.keys()] } }, select: { number: true } })).map((a) => a.number));
+  for (const n of byAccount.keys()) {
+    if (!existing.has(n)) await t.account.create({ data: { companyId, number: n, name: SALES_ACCOUNT_NAMES[n] ?? `Försäljning ${n}`, vatCode: "0" } });
+  }
+  const out: LineInput[] = [];
+  // Kredit för intäkter (positiva belopp) och debet för kreditfakturor (negativa belopp).
+  for (const [acc, amount] of byAccount) out.push(amount >= 0 ? { account: acc, credit: amount } : { account: acc, debit: -amount });
+  for (const [rate, v] of totals.byRate) if (v.vat) out.push(v.vat >= 0 ? { account: OUTPUT_VAT[rate], credit: v.vat } : { account: OUTPUT_VAT[rate], debit: -v.vat });
+  return out;
 }
 
-/** Intäkts- och momsrader för en faktura, grupperat per momssats. */
-function salesLines(totals: ReturnType<typeof invoiceTotals>): LineInput[] {
-  const lines: LineInput[] = [];
-  for (const [rate, v] of totals.byRate) {
-    lines.push({ account: SALES_ACCOUNT[rate] ?? 3004, credit: v.net });
-    if (v.vat) lines.push({ account: OUTPUT_VAT[rate], credit: v.vat });
-  }
-  return lines;
+/** Valideringsunderlag från databasens uppgifter (samma kontroller som formuläret visar). */
+export function validationInput(company: Company, customer: Customer | null, inv: Pick<Invoice, "kind" | "date" | "dueDate" | "deliveryDate" | "vatTreatment" | "vatNote" | "simplified">, lines: InvoiceLine[]): ValidationInput {
+  const d = (x: Date | null) => (x ? x.toISOString().slice(0, 10) : null);
+  return {
+    kind: inv.kind === "credit" ? "credit" : "invoice",
+    seller: {
+      name: company.name,
+      orgNumber: company.orgNumber,
+      vatNumber: company.vatNumber,
+      address: company.address,
+      postalCode: company.postalCode,
+      city: company.city,
+      companyType: company.companyType,
+      seat: company.seat,
+      vatRegistered: company.vatPeriod !== "none",
+      bankgiro: company.bankgiro,
+      plusgiro: company.plusgiro,
+      iban: company.iban,
+      swishNumber: company.swishNumber,
+    },
+    buyer: customer && { name: customer.name, orgNumber: customer.orgNumber, vatNumber: customer.vatNumber, address: customer.address, postalCode: customer.postalCode, city: customer.city, country: customer.country },
+    invoice: { date: d(inv.date)!, dueDate: d(inv.dueDate)!, deliveryDate: d(inv.deliveryDate), vatTreatment: isVatTreatment(inv.vatTreatment) ? inv.vatTreatment : "standard", vatNote: inv.vatNote, simplified: inv.simplified },
+    lines,
+  };
 }
 
-/** Bokför ett fakturautkast: tilldelar fakturanummer och bokför kundfordran. */
-export async function sendInvoice(companyId: number, id: number) {
+/** Nästa fakturanummer. Räknaren på företagsraden räknas upp i samma transaktion, så samtidiga utfärdanden köas och får olika nummer. */
+async function nextInvoiceNumber(t: Tx, companyId: number) {
+  const c = await t.company.update({ where: { id: companyId }, data: { invoiceCounter: { increment: 1 } }, select: { invoiceCounter: true } });
+  return c.invoiceCounter;
+}
+
+/**
+ * Utfärdar ett fakturautkast: validerar, tilldelar nästa nummer, sparar en oföränderlig ögonblicksbild och bokför
+ * kundfordran (fakturametoden). Efter utfärdandet kan fakturan inte ändras, bara krediteras.
+ */
+export async function sendInvoice(companyId: number, id: number, actor: Actor = {}) {
   return tx(async (t) => {
-    const inv = await t.invoice.findFirst({ where: { id, companyId }, include: { lines: true, customer: true } });
+    const inv = await t.invoice.findFirst({ where: { id, companyId }, include: { lines: { orderBy: { id: "asc" } }, customer: true } });
     if (!inv) throw new AccountingError("Fakturan finns inte.");
-    if (inv.status !== "draft") throw new AccountingError("Fakturan är redan skickad.");
-    if (inv.lines.length === 0) throw new AccountingError("Fakturan saknar rader.");
-    const totals = invoiceTotals(inv.lines);
-    if (totals.total <= 0) throw new AccountingError("Fakturans belopp måste vara större än noll.");
+    if (inv.status !== "draft") throw new AccountingError("Fakturan är redan utfärdad.");
     const company = await t.company.findUniqueOrThrow({ where: { id: companyId } });
-    if (company.vatPeriod === "none" && totals.vat !== 0) {
-      throw new AccountingError("Företaget är inte momsregistrerat och får inte ta ut moms. Sätt momsen till 0 % på alla rader.");
-    }
+    const errors = blocking(validateInvoice(validationInput(company, inv.customer, inv, inv.lines)));
+    if (errors.length) throw new AccountingError(`Fakturan kan inte utfärdas: ${errors.map((e) => e.message).join(" ")}`);
+    const totals = invoiceTotals(inv.lines);
 
-    const last = await t.invoice.findFirst({ where: { companyId, number: { not: null } }, orderBy: { number: "desc" } });
-    const number = (last?.number ?? 0) + 1;
-
+    const number = await nextInvoiceNumber(t, companyId);
+    const issuedAt = new Date();
+    const snapshot = buildInvoiceDoc({ ...inv, number, status: "sent", issuedAt }, company);
+    let verificationId: number | null = null;
     // Kontantmetoden: fakturan bokförs först när den betalas.
-    if (company.accountingMethod === "cash") {
-      return t.invoice.update({ where: { id }, data: { number, status: "sent" } });
+    if (company.accountingMethod !== "cash") {
+      const v = await createVerification(t, companyId, {
+        date: inv.date,
+        description: `Faktura #${number} till ${inv.customer.name}`,
+        lines: [{ account: RECEIVABLES, debit: totals.total }, ...(await salesLines(t, companyId, inv.lines, inv.vatTreatment))],
+      });
+      verificationId = v.id;
     }
-    const v = await createVerification(t, companyId, {
-      date: inv.date,
-      description: `Faktura #${number} till ${inv.customer.name}`,
-      lines: [{ account: RECEIVABLES, debit: totals.total }, ...salesLines(totals)],
+    const updated = await t.invoice.update({
+      where: { id },
+      data: { number, status: "sent", issuedAt, snapshot: snapshot as unknown as Prisma.InputJsonValue, verificationId },
     });
-    return t.invoice.update({ where: { id }, data: { number, status: "sent", verificationId: v.id } });
+    await logInvoiceEvent(t, companyId, id, "issued", `Utfärdad som faktura #${number} på ${(totals.total / 100).toFixed(2)} kr`, actor);
+    return updated;
   });
 }
 
-export async function registerInvoicePayment(companyId: number, id: number, date: Date, account = BANK_ACCOUNT) {
+export async function registerInvoicePayment(companyId: number, id: number, date: Date, account = BANK_ACCOUNT, actor: Actor = {}) {
   return tx(async (t) => {
     const inv = await t.invoice.findFirst({ where: { id, companyId }, include: { lines: true, customer: true } });
     if (!inv) throw new AccountingError("Fakturan finns inte.");
-    if (inv.status !== "sent") throw new AccountingError("Endast skickade, obetalda fakturor kan registreras som betalda.");
+    if (inv.status !== "sent" || inv.kind !== "invoice") throw new AccountingError("Endast utfärdade, obetalda fakturor kan registreras som betalda.");
     const totals = invoiceTotals(inv.lines);
-    // Bokförd vid utskick (fakturametoden): betalningen nollar kundfordran.
+    // Bokförd vid utfärdandet (fakturametoden): betalningen nollar kundfordran.
     // Ej bokförd (kontantmetoden): intäkt och moms bokförs nu, på betaldagen.
     const v = await createVerification(t, companyId, {
       date,
@@ -221,19 +271,82 @@ export async function registerInvoicePayment(companyId: number, id: number, date
             { account, debit: totals.total },
             { account: RECEIVABLES, credit: totals.total },
           ]
-        : [{ account, debit: totals.total }, ...salesLines(totals)],
+        : [{ account, debit: totals.total }, ...(await salesLines(t, companyId, inv.lines, inv.vatTreatment))],
     });
-    return t.invoice.update({ where: { id }, data: { status: "paid", paidDate: date, paymentVerificationId: v.id } });
+    const updated = await t.invoice.update({ where: { id }, data: { status: "paid", paidDate: date, paymentVerificationId: v.id } });
+    await logInvoiceEvent(t, companyId, id, "paid", `Betalning registrerad ${date.toISOString().slice(0, 10)} (${v.series}${v.number})`, actor);
+    return updated;
   });
 }
 
-export async function creditInvoice(companyId: number, id: number) {
-  const inv = await db.invoice.findFirst({ where: { id, companyId } });
-  if (!inv) throw new AccountingError("Fakturan finns inte.");
-  if (inv.status !== "sent") throw new AccountingError("Endast obetalda fakturor kan krediteras.");
-  // Med kontantmetoden finns inget verifikat att vända förrän fakturan betalats.
-  if (inv.verificationId) await reverseVerification(companyId, inv.verificationId);
-  return db.invoice.update({ where: { id }, data: { status: "credited" } });
+/**
+ * Krediterar en obetald faktura genom att utfärda en kreditfaktura med eget nummer, negativa belopp och hänvisning
+ * till originalet. Originalet ändras inte, utom att dess status blir "krediterad".
+ */
+export async function creditInvoice(companyId: number, id: number, actor: Actor = {}) {
+  return tx(async (t) => {
+    const inv = await t.invoice.findFirst({ where: { id, companyId }, include: { lines: { orderBy: { id: "asc" } }, customer: true, verification: { include: { lines: true } } } });
+    if (!inv) throw new AccountingError("Fakturan finns inte.");
+    if (inv.kind !== "invoice" || inv.status !== "sent") throw new AccountingError("Endast utfärdade, obetalda fakturor kan krediteras.");
+    const company = await t.company.findUniqueOrThrow({ where: { id: companyId } });
+    const today = new Date(new Date().toISOString().slice(0, 10));
+    const draft = await t.invoice.create({
+      data: {
+        companyId,
+        customerId: inv.customerId,
+        kind: "credit",
+        status: "draft",
+        creditOfId: inv.id,
+        date: today,
+        dueDate: today,
+        ourReference: inv.ourReference,
+        theirReference: inv.theirReference,
+        notes: `Kreditering av faktura #${inv.number} daterad ${inv.date.toISOString().slice(0, 10)}.`,
+        deliveryDate: inv.deliveryDate,
+        vatTreatment: inv.vatTreatment,
+        vatNote: inv.vatNote,
+        currency: inv.currency,
+        lines: {
+          create: inv.lines.map((l) => ({
+            description: l.description,
+            quantity: -l.quantity,
+            unit: l.unit,
+            unitPrice: l.unitPrice,
+            vatRate: l.vatRate,
+            type: l.type,
+            discountBp: l.discountBp,
+            periodStart: l.periodStart,
+            periodEnd: l.periodEnd,
+          })),
+        },
+      },
+      include: { lines: { orderBy: { id: "asc" } }, customer: true },
+    });
+    const errors = blocking(validateInvoice(validationInput(company, inv.customer, draft, draft.lines)));
+    if (errors.length) throw new AccountingError(`Kreditfakturan kan inte utfärdas: ${errors.map((e) => e.message).join(" ")}`);
+
+    const number = await nextInvoiceNumber(t, companyId);
+    const issuedAt = new Date();
+    const snapshot = buildInvoiceDoc({ ...draft, number, status: "credit", issuedAt, creditOf: inv }, company);
+    let verificationId: number | null = null;
+    // Fakturametoden: originalets bokföring vänds i ett eget verifikat för kreditfakturan.
+    if (inv.verification) {
+      const v = await createVerification(t, companyId, {
+        date: today,
+        description: `Kreditfaktura #${number} (avser faktura #${inv.number}) till ${inv.customer.name}`,
+        lines: inv.verification.lines.map((l) => ({ account: l.accountNumber, debit: l.credit, credit: l.debit, text: l.text })),
+      });
+      verificationId = v.id;
+    }
+    const credit = await t.invoice.update({
+      where: { id: draft.id },
+      data: { number, status: "credit", issuedAt, snapshot: snapshot as unknown as Prisma.InputJsonValue, verificationId },
+    });
+    await t.invoice.update({ where: { id: inv.id }, data: { status: "credited" } });
+    await logInvoiceEvent(t, companyId, credit.id, "issued", `Kreditfaktura #${number} utfärdad, avser faktura #${inv.number}`, actor);
+    await logInvoiceEvent(t, companyId, inv.id, "credited", `Krediterad med kreditfaktura #${number}`, actor);
+    return credit;
+  });
 }
 
 export async function bookExpense(companyId: number, id: number) {

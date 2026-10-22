@@ -2,7 +2,7 @@ import "server-only";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { db } from "./db";
-import { AccountingError, bookWithTemplate, invoiceTotals, registerInvoicePayment } from "./accounting";
+import { AccountingError, bookWithTemplate, invoiceTotals, logInvoiceEvent, registerInvoicePayment } from "./accounting";
 import { templateLines, type Country } from "./template-lines";
 import { bookBankTransaction, proposalsFor, type Choice } from "./bank";
 import { displayStatus } from "./invoice-status";
@@ -428,6 +428,7 @@ export function registerWriteTools(server: McpServer, ctx: McpContext) {
           },
           include: { lines: true },
         });
+        await logInvoiceEvent(db, companyId, inv.id, "created", "Utkast skapat", { userId: ctx.userId, via: ctx.clientName });
         const t = invoiceTotals(inv.lines);
         return ok({
           skapat: true,
@@ -461,9 +462,10 @@ export function registerWriteTools(server: McpServer, ctx: McpContext) {
         const inv = await db.invoice.findFirst({ where: { companyId, number: fakturanummer }, include: { lines: true, customer: { select: { name: true } } } });
         if (!inv) return fail(`Faktura #${fakturanummer} finns inte.`);
         const status = displayStatus(inv);
+        if (inv.kind === "credit") return fail(`#${fakturanummer} är en kreditfaktura och ska inte betalas.`);
         if (inv.status !== "sent") return fail(`Faktura #${fakturanummer} är ${status === "paid" ? "redan betald" : status === "draft" ? "ett utkast" : "krediterad"}.`);
         if (!(await db.account.findFirst({ where: { companyId, number: konto } }))) return fail(`Kontot ${konto} finns inte.`);
-        const paid = await registerInvoicePayment(companyId, inv.id, datum ? toDate(datum) : today(), konto);
+        const paid = await registerInvoicePayment(companyId, inv.id, datum ? toDate(datum) : today(), konto, { userId: ctx.userId, via: ctx.clientName });
         await tag(ctx, paid.paymentVerificationId!);
         return ok({ registrerad: true, faktura: fakturanummer, kund: inv.customer.name, belopp_inkl_moms: sek(invoiceTotals(inv.lines).total), ...(await verificationSummary(paid.paymentVerificationId!)) });
       }),

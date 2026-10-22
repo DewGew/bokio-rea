@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { loadLogo } from "@/lib/company-logo";
 import { isTemplate, validHex } from "@/lib/invoice-design";
 import { designFromCompany, invoicePdf } from "@/lib/invoice-pdf";
+import { buildInvoiceDoc } from "@/lib/invoice-doc";
 
 /**
  * Förhandsvisning av fakturadesignen. Designen kan skrivas över via query-parametrar så att
@@ -37,13 +38,16 @@ export async function GET(req: Request) {
   };
 
   const latest = await db.invoice.findFirst({
-    where: { companyId: ctx.companyId, number: { not: null } },
+    where: { companyId: ctx.companyId, number: { not: null }, kind: "invoice" },
     orderBy: { id: "desc" },
     include: { customer: true, lines: { orderBy: { id: "asc" } } },
   });
-  const invoice = latest ?? sampleInvoice(ctx.companyId, company.invoiceDays);
+  // Förhandsvisningen visar alltid aktuella (och ännu inte sparade) uppgifter, inte en ögonblicksbild.
+  const doc = buildInvoiceDoc(latest ?? sampleInvoice(ctx.companyId, company.invoiceDays), preview);
+  doc.footer = design.footer;
+  doc.payment = { ...doc.payment, swishNumber: design.swishNumber, swishQr: design.swishQr, paymentLink: design.paymentLink };
 
-  const bytes = await invoicePdf(invoice, preview, design, await loadLogo(company));
+  const bytes = await invoicePdf(doc, design, await loadLogo(company));
   return new Response(new Uint8Array(bytes), {
     headers: { "Content-Type": "application/pdf", "Cache-Control": "private, no-store" },
   });
@@ -51,7 +55,7 @@ export async function GET(req: Request) {
 
 function sampleInvoice(companyId: number, days: number): Invoice & { customer: Customer; lines: InvoiceLine[] } {
   const date = new Date(new Date().toISOString().slice(0, 10));
-  const base = { invoiceId: 0, unit: "tim", type: "service" };
+  const base = { invoiceId: 0, unit: "tim", type: "service", discountBp: 0, periodStart: null, periodEnd: null };
   return {
     id: 0,
     companyId,
@@ -60,6 +64,15 @@ function sampleInvoice(companyId: number, days: number): Invoice & { customer: C
     date,
     dueDate: new Date(date.getTime() + days * 86400000),
     status: "sent",
+    kind: "invoice",
+    creditOfId: null,
+    deliveryDate: null,
+    vatTreatment: "standard",
+    vatNote: "",
+    simplified: false,
+    currency: "SEK",
+    issuedAt: null,
+    snapshot: null,
     ourReference: "Anna Exempel",
     theirReference: "Erik Kund",
     notes: "Tack för förtroendet!",
@@ -70,13 +83,15 @@ function sampleInvoice(companyId: number, days: number): Invoice & { customer: C
     customer: {
       id: 0,
       companyId,
-      name: "Exempelkunden AB",
-      orgNumber: "556677-8899",
+      name: "Exempelkund (förhandsvisning)",
+      orgNumber: "",
       email: "",
       address: "Storgatan 1",
       postalCode: "111 22",
       city: "Stockholm",
       reference: "",
+      country: "SE",
+      vatNumber: "",
     },
     lines: [
       { ...base, id: 1, description: "Konsulttjänster, oktober", quantity: 24, unitPrice: 95000, vatRate: 25 },

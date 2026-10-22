@@ -40,6 +40,8 @@ async function main() {
     }),
   );
   const companyId = company.id;
+  // Fiktiva uppgifter som krävs på fakturor (demoföretaget, inte ett riktigt bolag).
+  await db.company.update({ where: { id: companyId }, data: { seat: "Stockholm", fSkatt: true } });
 
   await db.customer.createMany({
     data: [

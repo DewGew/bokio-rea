@@ -288,7 +288,7 @@ export function buildMcpServer(ctx: McpContext) {
         orderBy: [{ date: "desc" }, { id: "desc" }],
         take: 500,
       });
-      const label: Record<string, string> = { draft: "utkast", sent: "obetald", overdue: "förfallen", paid: "betald", credited: "krediterad" };
+      const label: Record<string, string> = { draft: "utkast", sent: "obetald", overdue: "förfallen", paid: "betald", credited: "krediterad", credit: "kreditfaktura" };
       const rows = list
         .map((i) => ({ i, s: displayStatus(i) }))
         .filter(({ s }) => (status === "forfallen" ? s === "overdue" : status === "obetald" ? s === "sent" || s === "overdue" : true))

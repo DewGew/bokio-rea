@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireWriter } from "@/lib/auth";
 import { validOrgNumber } from "@/lib/company-setup";
+import { MAX_REMINDER_FEE, formatVatNumber, validSwedishVatNumber, validVatNumberFormat, vatMatchesOrg } from "@/lib/invoice-rules";
 import { str, withParam } from "@/lib/action";
 import { parseKr } from "@/lib/money";
 
@@ -17,10 +18,20 @@ export async function saveCustomer(fd: FormData) {
   const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   const name = str(fd, "name");
-  if (!name) redirect(withParam("/customers", "error", "Kunden måste ha ett namn."));
+  const back = id ? `/customers?edit=${id}` : "/customers";
+  if (!name) redirect(withParam(back, "error", "Kunden måste ha ett namn."));
+  const orgNumber = str(fd, "orgNumber");
+  const vatNumber = formatVatNumber(str(fd, "vatNumber"));
+  const country = str(fd, "country").toUpperCase() || "SE";
+  // Svenska organisations-/personnummer kontrolleras med kontrollsiffran; utländska nummer sparas som de är.
+  if (/^[\d\s-]+$/.test(orgNumber) && orgNumber && !validOrgNumber(orgNumber)) redirect(withParam(back, "error", `Organisations-/personnumret ${orgNumber} är inte giltigt.`));
+  if (vatNumber && !validVatNumberFormat(vatNumber)) redirect(withParam(back, "error", `Momsregistreringsnumret ${vatNumber} har fel format (t.ex. SE556677889901 eller DE123456789).`));
+  if (!/^[A-Z]{2}$/.test(country)) redirect(withParam(back, "error", "Välj land."));
   const data = {
     name,
-    orgNumber: str(fd, "orgNumber"),
+    orgNumber,
+    vatNumber,
+    country,
     email: str(fd, "email"),
     address: str(fd, "address"),
     postalCode: str(fd, "postalCode"),
@@ -63,19 +74,37 @@ export async function saveCompany(fd: FormData) {
   const { companyId } = await requireWriter();
   const name = str(fd, "name");
   const orgNumber = str(fd, "orgNumber");
-  if (!name || !validOrgNumber(orgNumber)) redirect(withParam("/settings", "error", "Ange företagsnamn och ett giltigt organisationsnummer."));
+  const fail = (msg: string): never => redirect(withParam("/settings", "error", msg));
+  if (!name || !validOrgNumber(orgNumber)) fail("Ange företagsnamn och ett giltigt organisationsnummer.");
+  // Formatkontroll – säger inte att numret faktiskt är registrerat hos Skatteverket.
+  const vatNumber = formatVatNumber(str(fd, "vatNumber"));
+  if (vatNumber && !validSwedishVatNumber(vatNumber)) fail("Momsregistreringsnumret ska ha formatet SE + 10 siffror + 01, t.ex. SE556677889901.");
+  if (vatNumber && !vatMatchesOrg(vatNumber, orgNumber)) fail("Momsregistreringsnumret ska innehålla samma siffror som organisationsnumret.");
+  const rateRaw = str(fd, "lateInterestRate").replace(",", ".").replace("%", "");
+  const lateInterestRate = rateRaw ? Number(rateRaw) : null;
+  if (lateInterestRate !== null && (!Number.isFinite(lateInterestRate) || lateInterestRate < 0 || lateInterestRate > 100)) fail("Dröjsmålsräntan ska anges i procent, t.ex. 12.");
+  const feeRaw = parseKr(str(fd, "reminderFee"));
+  const reminderFee = feeRaw ?? 0;
+  if (reminderFee < 0 || reminderFee > MAX_REMINDER_FEE) fail("Påminnelseavgiften får vara högst 60 kr.");
   await db.company.update({
     where: { id: companyId },
     data: {
       name,
+      tradeName: str(fd, "tradeName"),
       orgNumber,
-      vatNumber: str(fd, "vatNumber"),
+      vatNumber,
+      seat: str(fd, "seat"),
+      fSkatt: fd.get("fSkatt") === "on",
       address: str(fd, "address"),
       postalCode: str(fd, "postalCode"),
       city: str(fd, "city"),
       email: str(fd, "email"),
+      phone: str(fd, "phone"),
+      website: str(fd, "website"),
       bankgiro: str(fd, "bankgiro"),
-      invoiceDays: Math.min(365, Math.max(0, Number(str(fd, "invoiceDays")) || 30)),
+      invoiceDays: Math.min(365, Math.max(0, Number(str(fd, "invoiceDays")) || 0)),
+      lateInterestRate,
+      reminderFee,
     },
   });
   done("/settings", "Företagsuppgifterna är sparade.");

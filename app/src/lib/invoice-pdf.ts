@@ -1,32 +1,31 @@
 import "server-only";
 import { PDFDocument, PDFString, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from "pdf-lib";
 import QRCode from "qrcode";
-import type { Company, Customer, Invoice, InvoiceLine } from "@prisma/client";
-import { invoiceTotals } from "./accounting";
+import type { Company } from "@prisma/client";
 import { safeLink, swishDigits, validSwish, type InvoiceDesign, type InvoiceTemplate } from "./invoice-design";
-import { dateStr } from "./money";
+import { countryName, type InvoiceDoc } from "./invoice-doc";
+import { swishPayload } from "./invoice-rules";
 
-// Standardtypsnitten använder WinAnsi, som klarar å, ä, ö och é men inte t.ex. U+2212 eller smala mellanslag.
+// Standardtypsnitten använder WinAnsi: å, ä, ö, é, tankstreck, typografiska citattecken och € fungerar,
+// men inte t.ex. minustecknet U+2212, pilar eller smala mellanslag.
 const clean = (s: string) =>
   s
-    .replace(/[  ]/g, " ")
-    .replace(/−/g, "-")
-    .replace(/[–—]/g, "-")
-    .replace(/[‘’]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/[^\x20-\x7e\xa0-\xff\n]/g, "?");
+    .replace(/[\u00a0\u202f\u2009]/g, " ")
+    .replace(/\u2212/g, "-")
+    .replace(/[^\x20-\x7e\xa0-\xff\n\u2013\u2014\u2018\u2019\u201c\u201d\u2022\u2026\u20ac]/g, "?");
 
-const money = (ore: number) => clean((ore / 100).toLocaleString("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const money = (ore: number) => clean((ore / 100 || 0).toLocaleString("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const qty = (n: number) => clean(n.toLocaleString("sv-SE", { maximumFractionDigits: 2 }));
 
-type Full = Invoice & { customer: Customer; lines: InvoiceLine[] };
 export type Logo = { bytes: Uint8Array; mime: string } | null;
 
-const W = 595.28;
+const W = 595.28; // A4
 const H = 841.89;
 const M = 48;
+const FOOT = 74; // höjd som sidfoten behöver
 const INK = rgb(0.11, 0.11, 0.12);
-const MUTED = rgb(0.43, 0.43, 0.45);
-const HAIR = rgb(0.88, 0.88, 0.9);
+const MUTED = rgb(0.4, 0.42, 0.46);
+const HAIR = rgb(0.87, 0.88, 0.9);
 const WHITE = rgb(1, 1, 1);
 
 function hexToRgb(hex: string): RGB {
@@ -37,10 +36,18 @@ const mix = (c: RGB, t: number): RGB => rgb(c.red + (1 - c.red) * t, c.green + (
 const darken = (c: RGB, k: number): RGB => rgb(c.red * k, c.green * k, c.blue * k);
 const luminance = (c: RGB) => 0.2126 * c.red + 0.7152 * c.green + 0.0722 * c.blue;
 
-export async function invoicePdf(invoice: Full, company: Company, design: InvoiceDesign, logo: Logo) {
+/**
+ * Skapar fakturans PDF (A4) från ett fakturadokument. Innehållet kommer från ögonblicksbilden för utfärdade fakturor;
+ * bara utseendet (mall, färg, logotyp) följer de aktuella inställningarna.
+ */
+export async function invoicePdf(doc: InvoiceDoc, design: InvoiceDesign, logo: Logo) {
   const pdf = await PDFDocument.create();
-  pdf.setTitle(`Faktura ${invoice.number ?? "utkast"} - ${company.name}`);
-  pdf.setAuthor(company.name);
+  const credit = doc.kind === "credit";
+  const draft = doc.number == null;
+  const title = credit ? "Kreditfaktura" : "Faktura";
+  const numberText = draft ? "Utkast" : String(doc.number);
+  pdf.setTitle(`${title} ${numberText} - ${doc.seller.name}`);
+  pdf.setAuthor(doc.seller.name);
   pdf.setCreator("Huvudbok");
   pdf.setLanguage("sv-SE");
 
@@ -58,6 +65,9 @@ export async function invoicePdf(invoice: Full, company: Company, design: Invoic
   // För mycket ljusa färger används en mörkare variant till text och linjer.
   const accentText = luminance(accent) > 0.62 ? darken(accent, 0.55) : accent;
   const heading = tpl === "elegant" ? f.serifBold : f.bold;
+  const left = tpl === "elegant" ? M + 6 : M;
+  const right = W - M;
+  const cur = doc.currency === "SEK" ? "kr" : doc.currency;
 
   let logoImg: PDFImage | null = null;
   if (logo && design.showLogo) {
@@ -69,18 +79,19 @@ export async function invoicePdf(invoice: Full, company: Company, design: Invoic
   }
 
   const pages: PDFPage[] = [];
-  const newPage = () => {
-    const p = pdf.addPage([W, H]);
-    pages.push(p);
-    if (tpl === "elegant") p.drawRectangle({ x: 0, y: 0, width: 10, height: H, color: accent });
-    return p;
+  let page = undefined as unknown as PDFPage; // sätts av addPage() nedan
+  const addPage = () => {
+    page = pdf.addPage([W, H]);
+    pages.push(page);
+    if (tpl === "elegant") page.drawRectangle({ x: 0, y: 0, width: 10, height: H, color: accent });
+    return page;
   };
-  let page = newPage();
+  addPage();
 
   // ---------- Ritverktyg ----------
   type TextOpt = { size?: number; font?: PDFFont; color?: RGB; align?: "left" | "right" | "center"; p?: PDFPage };
   const text = (s: string, x: number, y: number, o: TextOpt = {}) => {
-    const size = o.size ?? 9.5;
+    const size = o.size ?? 9;
     const font = o.font ?? f.sans;
     const str = clean(s);
     const w = font.widthOfTextAtSize(str, size);
@@ -88,11 +99,20 @@ export async function invoicePdf(invoice: Full, company: Company, design: Invoic
     (o.p ?? page).drawText(str, { x: x + dx, y, size, font, color: o.color ?? INK });
     return w;
   };
-  const wrap = (s: string, width: number, size = 9.5, font = f.sans) => {
+  /** Radbryter text till en bredd; ord som är längre än bredden (t.ex. länkar) delas. */
+  const wrap = (s: string, width: number, size = 9, font = f.sans) => {
     const out: string[] = [];
     for (const para of clean(s).split("\n")) {
       let line = "";
-      for (const word of para.split(" ")) {
+      for (let word of para.split(" ")) {
+        while (font.widthOfTextAtSize(word, size) > width && word.length > 1) {
+          let cut = word.length - 1;
+          while (cut > 1 && font.widthOfTextAtSize(word.slice(0, cut), size) > width) cut--;
+          if (line) out.push(line);
+          out.push(word.slice(0, cut));
+          line = "";
+          word = word.slice(cut);
+        }
         const test = line ? `${line} ${word}` : word;
         if (font.widthOfTextAtSize(test, size) > width && line) {
           out.push(line);
@@ -103,320 +123,329 @@ export async function invoicePdf(invoice: Full, company: Company, design: Invoic
     }
     return out;
   };
-  const roundRect = (x: number, y: number, w: number, h: number, r: number, color: RGB, p = page) => {
+  const roundRect = (x: number, y: number, w: number, h: number, r: number, color: RGB) => {
     r = Math.min(r, h / 2, w / 2);
     const path = `M ${r} 0 H ${w - r} Q ${w} 0 ${w} ${r} V ${h - r} Q ${w} ${h} ${w - r} ${h} H ${r} Q 0 ${h} 0 ${h - r} V ${r} Q 0 0 ${r} 0 Z`;
-    p.drawSvgPath(path, { x, y: y + h, color, borderWidth: 0 });
+    page.drawSvgPath(path, { x, y: y + h, color, borderWidth: 0 });
   };
-  const hair = (x1: number, x2: number, y: number, color = HAIR, thickness = 0.6) =>
-    page.drawLine({ start: { x: x1, y }, end: { x: x2, y }, thickness, color });
+  const hair = (x1: number, x2: number, y: number, color = HAIR, thickness = 0.6) => page.drawLine({ start: { x: x1, y }, end: { x: x2, y }, thickness, color });
   const label = (s: string, x: number, y: number, align: "left" | "right" = "left") =>
-    text(tpl === "minimal" ? s.toUpperCase() : s, x, y, { size: tpl === "minimal" ? 7 : 8, color: MUTED, align, font: tpl === "minimal" ? f.bold : f.sans });
-  const drawLogo = (x: number, yTop: number, maxW: number, maxH: number, p = page) => {
+    text(tpl === "minimal" ? s.toUpperCase() : s, x, y, { size: tpl === "minimal" ? 6.8 : 7.8, color: MUTED, align, font: tpl === "minimal" || tpl === "modern" ? f.bold : tpl === "elegant" ? f.serifItalic : f.sans });
+  const drawLogo = (x: number, yTop: number, maxW: number, maxH: number) => {
     if (!logoImg) return 0;
     const scale = Math.min(maxW / logoImg.width, maxH / logoImg.height, 1);
-    const w = logoImg.width * scale;
-    const h = logoImg.height * scale;
-    p.drawImage(logoImg, { x, y: yTop - h, width: w, height: h });
-    return h;
+    page.drawImage(logoImg, { x, y: yTop - logoImg.height * scale, width: logoImg.width * scale, height: logoImg.height * scale });
+    return logoImg.height * scale;
   };
   const link = (url: string, x: number, y: number, w: number, h: number) => {
-    const annot = pdf.context.obj({
-      Type: "Annot",
-      Subtype: "Link",
-      Rect: [x, y, x + w, y + h],
-      Border: [0, 0, 0],
-      A: { Type: "Action", S: "URI", URI: PDFString.of(url) },
-    });
+    const annot = pdf.context.obj({ Type: "Annot", Subtype: "Link", Rect: [x, y, x + w, y + h], Border: [0, 0, 0], A: { Type: "Action", S: "URI", URI: PDFString.of(url) } });
     page.node.addAnnot(pdf.context.register(annot));
   };
 
-  const t = invoiceTotals(invoice.lines);
-  const c = invoice.customer;
-  const number = invoice.number ? String(invoice.number) : "Utkast";
-  const title = invoice.status === "credited" ? "Kreditfaktura" : "Faktura";
-  const companyLines = [company.address, `${company.postalCode} ${company.city}`.trim(), company.phone, company.email, company.website].filter(Boolean);
-  const customerLines = [c.address, `${c.postalCode} ${c.city}`.trim(), c.orgNumber ? `Org.nr ${c.orgNumber}` : "", c.reference ? `Att: ${c.reference}` : ""].filter(Boolean);
-  const meta: [string, string][] = [
-    ["Fakturanummer", number],
-    ["Fakturadatum", dateStr(invoice.date)],
-    ["Förfallodatum", dateStr(invoice.dueDate)],
-  ];
-  if (invoice.ourReference) meta.push(["Vår referens", invoice.ourReference]);
-  if (invoice.theirReference) meta.push(["Er referens", invoice.theirReference]);
-
+  const s = doc.seller;
+  const b = doc.buyer;
+  const brand = s.tradeName.trim() || s.name;
   let y = H - M;
 
-  // ---------- Sidhuvud ----------
+  // ---------- Sidhuvud (första sidan) ----------
+  const headerTitle = `${title.toUpperCase()}${draft ? " (UTKAST)" : ""}`;
   if (tpl === "modern") {
-    const bandH = 118;
+    const bandH = 104;
     page.drawRectangle({ x: 0, y: H - bandH, width: W, height: bandH, color: accent });
     if (logoImg) {
-      const maxW = 150;
-      const maxH = 46;
-      const scale = Math.min(maxW / logoImg.width, maxH / logoImg.height, 1);
-      roundRect(M - 10, H - 40 - logoImg.height * scale - 10, logoImg.width * scale + 20, logoImg.height * scale + 20, 10, WHITE);
-      drawLogo(M, H - 40, maxW, maxH);
-    } else {
-      text(company.name, M, H - 64, { size: 18, font: f.bold, color: onAccent });
-    }
-    text(title.toUpperCase(), W - M, H - 58, { size: 22, font: f.bold, color: onAccent, align: "right" });
-    text(`Nr ${number}`, W - M, H - 78, { size: 11, color: onAccent, align: "right" });
-    y = H - bandH - 34;
-    // Nyckeltal i en rad
-    const cols: [string, string][] = [
-      ["Fakturadatum", dateStr(invoice.date)],
-      ["Förfallodatum", dateStr(invoice.dueDate)],
-      ["Att betala", `${money(t.total)} kr`],
-    ];
-    const cw = (W - 2 * M) / cols.length;
-    cols.forEach(([k, v], i) => {
-      label(k, M + i * cw, y);
-      text(v, M + i * cw, y - 16, { size: 13, font: f.bold, color: i === 2 ? accentText : INK });
-    });
-    y -= 42;
-    hair(M, W - M, y);
-    y -= 26;
-    // Från / Till
-    const half = (W - 2 * M) / 2;
-    label("Från", M, y);
-    label("Faktureras till", M + half, y);
-    text(company.name, M, y - 15, { font: f.bold, size: 10.5 });
-    text(c.name, M + half, y - 15, { font: f.bold, size: 10.5 });
-    companyLines.forEach((l, i) => text(l, M, y - 29 - i * 12.5, { color: MUTED }));
-    customerLines.forEach((l, i) => text(l, M + half, y - 29 - i * 12.5));
-    y -= 29 + Math.max(companyLines.length, customerLines.length) * 12.5 + 6;
-    const refs = meta.slice(3);
-    if (refs.length) {
-      y -= 6;
-      refs.forEach(([k, v], i) => {
-        label(k, M + i * half, y);
-        text(v, M + i * half, y - 13);
-      });
-      y -= 40;
-    }
+      const scale = Math.min(150 / logoImg.width, 44 / logoImg.height, 1);
+      roundRect(M - 10, H - 36 - logoImg.height * scale - 10, logoImg.width * scale + 20, logoImg.height * scale + 20, 10, WHITE);
+      drawLogo(M, H - 36, 150, 44);
+    } else text(brand, M, H - 60, { size: 17, font: f.bold, color: onAccent });
+    text(headerTitle, right, H - 54, { size: 20, font: f.bold, color: onAccent, align: "right" });
+    text(`Nr ${numberText}`, right, H - 72, { size: 10.5, color: onAccent, align: "right" });
+    y = H - bandH - 30;
   } else if (tpl === "klassisk") {
-    const logoH = drawLogo(M, y, 170, 58);
-    if (!logoH) text(company.name, M, y - 18, { size: 18, font: f.bold });
-    let ly = y - (logoH || 22) - 14;
-    if (logoH) {
-      text(company.name, M, ly, { font: f.bold });
-      ly -= 12.5;
-    }
-    companyLines.forEach((l) => {
-      text(l, M, ly, { color: MUTED, size: 8.5 });
-      ly -= 11.5;
-    });
-    text(title, W - M, y - 22, { size: 26, font: f.bold, color: accentText, align: "right" });
-    let my = y - 46;
-    for (const [k, v] of meta) {
-      text(k, W - M - 110, my, { color: MUTED, size: 8.5, align: "right" });
-      text(v, W - M, my, { font: f.bold, size: 9, align: "right" });
-      my -= 13;
-    }
-    y = Math.min(ly, my) - 10;
+    const logoH = drawLogo(M, y, 170, 54);
+    if (!logoH) text(brand, M, y - 18, { size: 17, font: f.bold });
+    text(headerTitle, right, y - 20, { size: 22, font: f.bold, color: accentText, align: "right" });
+    text(`Nr ${numberText}`, right, y - 38, { size: 10.5, color: MUTED, align: "right" });
+    y -= Math.max(logoH, 44) + 14;
     page.drawRectangle({ x: M, y, width: W - 2 * M, height: 2, color: accent });
-    y -= 28;
-    label("Faktureras till", M, y);
-    text(c.name, M, y - 15, { font: f.bold, size: 11 });
-    customerLines.forEach((l, i) => text(l, M, y - 29 - i * 12.5));
-    y -= 29 + customerLines.length * 12.5 + 14;
+    y -= 26;
   } else if (tpl === "minimal") {
     page.drawRectangle({ x: M, y: y - 3, width: 28, height: 3, color: accent });
-    y -= 22;
+    y -= 20;
     const logoH = drawLogo(M, y, 120, 40);
-    if (!logoH) text(company.name, M, y - 12, { size: 13, font: f.bold });
-    text(`${title} ${number}`, W - M, y - 12, { size: 13, color: MUTED, align: "right" });
-    y -= Math.max(logoH, 16) + 30;
-    const third = (W - 2 * M) / 3;
-    label("Från", M, y);
-    label("Till", M + third, y);
-    label("Detaljer", M + 2 * third, y);
-    text(company.name, M, y - 15, { font: f.bold });
-    text(c.name, M + third, y - 15, { font: f.bold });
-    companyLines.forEach((l, i) => text(l, M, y - 28 - i * 12, { color: MUTED, size: 8.5 }));
-    customerLines.forEach((l, i) => text(l, M + third, y - 28 - i * 12, { size: 8.5 }));
-    meta.forEach(([k, v], i) => {
-      text(k, M + 2 * third, y - 15 - i * 12, { color: MUTED, size: 8.5 });
-      text(v, W - M, y - 15 - i * 12, { size: 8.5, align: "right" });
-    });
-    y -= 28 + Math.max(companyLines.length, customerLines.length, meta.length) * 12 + 22;
+    if (!logoH) text(brand, M, y - 12, { size: 13, font: f.bold });
+    text(`${headerTitle} ${numberText}`, right, y - 12, { size: 12, color: MUTED, align: "right" });
+    y -= Math.max(logoH, 16) + 28;
   } else {
-    // elegant
-    const logoH = drawLogo(M + 6, y, 160, 56);
-    text(title, W - M, y - 26, { size: 32, font: f.serifBold, align: "right" });
-    text(`Nummer ${number}`, W - M, y - 44, { size: 10.5, font: f.serifItalic, color: MUTED, align: "right" });
-    y -= Math.max(logoH, 52) + 22;
-    if (!logoH) {
-      text(company.name, M + 6, y + 30, { size: 16, font: f.serifBold, color: accentText });
+    const logoH = drawLogo(left, y, 160, 54);
+    text(title + (draft ? " (utkast)" : ""), right, y - 26, { size: 30, font: f.serifBold, align: "right" });
+    text(`Nummer ${numberText}`, right, y - 44, { size: 10.5, font: f.serifItalic, color: MUTED, align: "right" });
+    if (!logoH) text(brand, left, y - 26, { size: 16, font: f.serifBold, color: accentText });
+    y -= Math.max(logoH, 52) + 18;
+    hair(left, right, y, accent, 0.8);
+    y -= 24;
+  }
+
+  // ---------- Säljare, köpare och fakturauppgifter i tre kolumner ----------
+  const colW = (right - left - 24) / 3;
+  const cx = [left, left + colW + 12, left + 2 * (colW + 12)];
+  const sellerLines = [
+    ...(s.tradeName.trim() && s.tradeName.trim() !== s.name ? [s.name] : []),
+    s.address,
+    `${s.postalCode} ${s.city}`.trim(),
+    s.phone ? `Tel ${s.phone}` : "",
+    s.email,
+    s.website,
+  ].filter(Boolean);
+  const buyerLines = [
+    b.address,
+    `${b.postalCode} ${b.city}`.trim(),
+    b.country && b.country !== "SE" ? countryName(b.country) : "",
+    b.orgNumber ? `Org.nr ${b.orgNumber}` : "",
+    b.vatNumber ? `Momsreg.nr ${b.vatNumber}` : "",
+    b.reference ? `Att: ${b.reference}` : "",
+  ].filter(Boolean);
+  const meta: [string, string][] = [
+    [credit ? "Kreditfakturanr" : "Fakturanummer", numberText],
+    ["Fakturadatum", doc.date],
+    ...(credit && doc.creditOf ? ([["Avser faktura", `${doc.creditOf.number ?? "-"} (${doc.creditOf.date})`]] as [string, string][]) : []),
+    ...(!credit ? ([["Förfallodatum", doc.dueDate]] as [string, string][]) : []),
+    ...(doc.deliveryDate && doc.deliveryDate !== doc.date ? ([["Leveransdatum", doc.deliveryDate]] as [string, string][]) : []),
+    ...(!credit ? ([["Betalningsvillkor", `${doc.payment.termsDays} dagar`]] as [string, string][]) : []),
+    ...(doc.ourReference ? ([["Vår referens", doc.ourReference]] as [string, string][]) : []),
+    ...(doc.theirReference ? ([["Er referens", doc.theirReference]] as [string, string][]) : []),
+    ...(doc.currency !== "SEK" ? ([["Valuta", doc.currency]] as [string, string][]) : []),
+  ];
+  const nameFont = tpl === "elegant" ? f.serifBold : f.bold;
+  const block = (x: number, heading: string, name: string, lines: string[]) => {
+    label(heading, x, y);
+    let yy = y - 14;
+    for (const l of wrap(name, colW, 10, nameFont)) {
+      text(l, x, yy, { font: nameFont, size: 10 });
+      yy -= 12.5;
     }
-    hair(M + 6, W - M, y, accent, 0.8);
-    y -= 26;
-    const half = (W - 2 * M - 6) / 2;
-    const x0 = M + 6;
-    text("Från", x0, y, { font: f.serifItalic, size: 10, color: MUTED });
-    text("Till", x0 + half, y, { font: f.serifItalic, size: 10, color: MUTED });
-    text(company.name, x0, y - 16, { font: f.serifBold, size: 12 });
-    text(c.name, x0 + half, y - 16, { font: f.serifBold, size: 12 });
-    companyLines.forEach((l, i) => text(l, x0, y - 30 - i * 12.5, { color: MUTED }));
-    customerLines.forEach((l, i) => text(l, x0 + half, y - 30 - i * 12.5));
-    y -= 30 + Math.max(companyLines.length, customerLines.length) * 12.5 + 12;
-    meta.slice(1).forEach(([k, v], i) => {
-      const x = x0 + (i % 2) * half;
-      const yy = y - Math.floor(i / 2) * 15;
-      text(`${k}:`, x, yy, { font: f.serifItalic, color: MUTED });
-      text(v, x + 78, yy, { font: f.sans });
-    });
-    y -= Math.ceil((meta.length - 1) / 2) * 15 + 16;
+    for (const line of lines) {
+      for (const l of wrap(line, colW, 8.6)) {
+        text(l, x, yy, { size: 8.6, color: heading === "Från" ? MUTED : INK });
+        yy -= 11.5;
+      }
+    }
+    return yy;
+  };
+  const y1 = block(cx[0], "Från", s.name === brand ? s.name : brand, sellerLines);
+  const y2 = block(cx[1], credit ? "Kreditfaktura till" : "Faktureras till", b.name, buyerLines);
+  label(credit ? "Kreditfakturauppgifter" : "Fakturauppgifter", cx[2], y);
+  let y3 = y - 14;
+  for (const [k, v] of meta) {
+    text(k, cx[2], y3, { size: 8.6, color: MUTED });
+    const lines = wrap(v, colW - 78, 8.6, f.bold);
+    lines.forEach((l, i) => text(l, right, y3 - i * 11, { size: 8.6, font: f.bold, align: "right" }));
+    y3 -= 11.5 + (lines.length - 1) * 11;
+  }
+  y = Math.min(y1, y2, y3) - 14;
+  if (tpl === "modern" || tpl === "minimal") {
+    hair(left, right, y + 4);
+    y -= 14;
   }
 
   // ---------- Fakturarader ----------
-  const left = tpl === "elegant" ? M + 6 : M;
-  const cols = { desc: left + (tpl === "modern" ? 10 : 0), qty: 352, price: 432, vat: 478, sum: W - M - (tpl === "modern" ? 10 : 0) };
-  const header = () => {
+  const anyDiscount = doc.lines.some((l) => l.discountBp > 0);
+  const pad = tpl === "modern" ? 8 : 0;
+  const colSum = right - pad;
+  const colVat = colSum - 74;
+  const colDisc = colVat - 40;
+  const colPrice = (anyDiscount ? colDisc : colVat) - 44;
+  const colQty = colPrice - 72;
+  const descX = left + pad;
+  const descW = colQty - 58 - descX;
+  const tableHeader = () => {
     const color = tpl === "modern" ? accentText : tpl === "minimal" ? MUTED : INK;
     const font = tpl === "elegant" ? f.serifBold : f.bold;
-    const size = tpl === "minimal" ? 7 : 8.5;
-    const up = (s: string) => (tpl === "minimal" ? s.toUpperCase() : s);
-    if (tpl === "modern") roundRect(left, y - 8, W - M - left, 24, 6, tint);
-    text(up("Beskrivning"), cols.desc, y, { font, size, color });
-    text(up("Antal"), cols.qty, y, { font, size, color, align: "right" });
-    text(up("À-pris"), cols.price, y, { font, size, color, align: "right" });
-    text(up("Moms"), cols.vat, y, { font, size, color, align: "right" });
-    text(up("Belopp"), cols.sum, y, { font, size, color, align: "right" });
+    const size = tpl === "minimal" ? 7 : 8.2;
+    const up = (t: string) => (tpl === "minimal" ? t.toUpperCase() : t);
+    if (tpl === "modern") roundRect(left, y - 8, right - left, 23, 6, tint);
+    text(up("Beskrivning"), descX, y, { font, size, color });
+    text(up("Antal"), colQty, y, { font, size, color, align: "right" });
+    text(up("À-pris"), colPrice, y, { font, size, color, align: "right" });
+    if (anyDiscount) text(up("Rabatt"), colDisc, y, { font, size, color, align: "right" });
+    text(up("Moms"), colVat, y, { font, size, color, align: "right" });
+    text(up(`Belopp (${cur})`), colSum, y, { font, size, color, align: "right" });
     y -= 10;
-    if (tpl === "klassisk") page.drawRectangle({ x: left, y, width: W - M - left, height: 1.2, color: accent });
-    else if (tpl !== "modern") hair(left, W - M, y);
-    y -= 16;
+    if (tpl === "klassisk") page.drawRectangle({ x: left, y, width: right - left, height: 1.2, color: accent });
+    else if (tpl !== "modern") hair(left, right, y);
+    y -= 15;
   };
-  header();
-  for (const l of invoice.lines) {
-    const desc = wrap(l.description, cols.qty - cols.desc - 70);
-    if (y - desc.length * 12 < 200) {
-      page = newPage();
-      y = H - M - 10;
-      header();
-    }
-    text(desc[0], cols.desc, y);
-    text(`${l.quantity.toLocaleString("sv-SE")} ${l.unit}`, cols.qty, y, { align: "right" });
-    text(money(l.unitPrice), cols.price, y, { align: "right" });
-    text(`${l.vatRate} %`, cols.vat, y, { align: "right", color: MUTED });
-    text(money(Math.round(l.quantity * l.unitPrice)), cols.sum, y, { align: "right" });
+  /** Ny sida med en kort rubrik när innehållet inte får plats. */
+  const continuePage = (withTable: boolean) => {
+    addPage();
+    y = H - M;
+    text(`${title} ${numberText} – ${brand}`, left, y - 8, { size: 9, color: MUTED });
+    text("forts.", right, y - 8, { size: 9, color: MUTED, align: "right" });
+    y -= 34;
+    if (withTable) tableHeader();
+  };
+  tableHeader();
+  for (const l of doc.lines) {
+    const desc = wrap(l.description, descW, 9);
+    const period = l.periodStart || l.periodEnd ? `Period ${l.periodStart ?? ""} – ${l.periodEnd ?? ""}` : "";
+    const rowH = desc.length * 11.5 + (period ? 10.5 : 0) + 12;
+    if (y - rowH < FOOT + 12) continuePage(true);
+    text(desc[0], descX, y);
+    text(`${qty(l.quantity)} ${l.unit}`, colQty, y, { align: "right" });
+    text(money(l.unitPrice), colPrice, y, { align: "right" });
+    if (anyDiscount) text(l.discountBp ? `${qty(l.discountBp / 100)} %` : "", colDisc, y, { align: "right", color: MUTED });
+    text(`${l.vatRate} %`, colVat, y, { align: "right", color: MUTED });
+    text(money(l.net), colSum, y, { align: "right" });
     for (const extra of desc.slice(1)) {
-      y -= 12;
-      text(extra, cols.desc, y);
+      y -= 11.5;
+      text(extra, descX, y);
     }
-    y -= 9;
-    hair(left, W - M, y + 1);
+    if (period) {
+      y -= 10.5;
+      text(period, descX, y, { size: 7.8, color: MUTED });
+    }
+    y -= 8;
+    hair(left, right, y + 1);
     y -= 13;
   }
 
   // ---------- Summering ----------
-  y -= 4;
-  const sx = W - M - 220;
-  const row = (k: string, v: string) => {
-    text(k, sx, y, { color: MUTED });
-    text(v, W - M, y, { align: "right" });
-    y -= 15;
-  };
-  row("Belopp exkl. moms", `${money(t.net)} kr`);
-  for (const [rate, v] of t.byRate) if (rate > 0) row(`Moms ${rate} %`, `${money(v.vat)} kr`);
-  // Luft mellan momsraderna och totalsumman (som i vissa mallar ligger i en färgad ruta).
-  y -= tpl === "modern" || tpl === "elegant" ? 16 : 4;
-  const totalLabel = invoice.status === "credited" ? "Krediterat belopp" : "Att betala";
+  const t = doc.totals;
+  const sumRows: [string, string][] = [];
+  if (t.discount) {
+    sumRows.push(["Summa före rabatt", money(t.net + t.discount)]);
+    sumRows.push(["Rabatt", money(-t.discount)]);
+  }
+  sumRows.push(["Summa exkl. moms", money(t.net)]);
+  for (const r of [...t.byRate].sort((a, b2) => b2.rate - a.rate)) sumRows.push([`Moms ${r.rate} % på ${money(r.net)}`, money(r.vat)]);
+  const vatNoteLines = doc.vatNote ? wrap(doc.vatNote, right - left - 236, 8.8, f.bold) : [];
+  const sumH = sumRows.length * 14 + 54;
+  if (y - Math.max(sumH, vatNoteLines.length * 11.5 + 10) < FOOT + 12) continuePage(false);
+  y -= 2;
+  const sx = right - 224;
+  const sumTop = y;
+  for (const [k, v] of sumRows) {
+    text(k, sx, y, { color: MUTED, size: 8.8 });
+    text(`${v} ${cur}`, right, y, { align: "right", size: 9 });
+    y -= 14;
+  }
+  y -= 10;
+  const totalLabel = credit ? "KREDITERAT BELOPP" : "ATT BETALA";
+  const totalText = `${money(t.total)} ${cur}`;
   if (tpl === "modern") {
-    roundRect(sx - 12, y - 12, W - M - sx + 12, 32, 8, accent);
-    text(totalLabel, sx, y, { font: f.bold, size: 11, color: onAccent });
-    text(`${money(t.total)} kr`, W - M - 10, y, { font: f.bold, size: 13, color: onAccent, align: "right" });
+    roundRect(sx - 12, y - 12, right - sx + 12, 32, 8, accent);
+    text(totalLabel, sx, y, { font: f.bold, size: 10.5, color: onAccent });
+    text(totalText, right - 10, y, { font: f.bold, size: 13, color: onAccent, align: "right" });
     y -= 30;
   } else if (tpl === "elegant") {
-    roundRect(sx - 12, y - 16, W - M - sx + 12, 38, 6, tint);
-    text(totalLabel, sx, y, { font: f.serifBold, size: 13, color: accentText });
-    text(`${money(t.total)} kr`, W - M - 10, y, { font: f.serifBold, size: 16, color: accentText, align: "right" });
-    y -= 34;
-  } else if (tpl === "minimal") {
-    hair(sx, W - M, y + 10);
-    text(totalLabel, sx, y - 6, { font: f.bold, size: 10 });
-    text(`${money(t.total)} kr`, W - M, y - 8, { font: f.bold, size: 18, color: accentText, align: "right" });
+    roundRect(sx - 12, y - 16, right - sx + 12, 36, 6, tint);
+    text(totalLabel, sx, y, { font: f.serifBold, size: 11.5, color: accentText });
+    text(totalText, right - 10, y, { font: f.serifBold, size: 15, color: accentText, align: "right" });
     y -= 32;
+  } else if (tpl === "minimal") {
+    hair(sx, right, y + 10);
+    text(totalLabel, sx, y - 6, { font: f.bold, size: 9.5 });
+    text(totalText, right, y - 8, { font: f.bold, size: 17, color: accentText, align: "right" });
+    y -= 30;
   } else {
-    page.drawLine({ start: { x: sx, y: y + 10 }, end: { x: W - M, y: y + 10 }, thickness: 1, color: INK });
-    text(totalLabel, sx, y - 4, { font: f.bold, size: 11.5 });
-    text(`${money(t.total)} kr`, W - M, y - 4, { font: f.bold, size: 13, align: "right" });
-    y -= 26;
+    page.drawLine({ start: { x: sx, y: y + 10 }, end: { x: right, y: y + 10 }, thickness: 1, color: INK });
+    text(totalLabel, sx, y - 4, { font: f.bold, size: 10.5 });
+    text(totalText, right, y - 4, { font: f.bold, size: 13, align: "right" });
+    y -= 24;
   }
+  // Hänvisning vid momsfrihet eller omvänd betalningsskyldighet, till vänster om summeringen.
+  let ny = sumTop;
+  for (const l of vatNoteLines) {
+    text(l, left, ny, { font: f.bold, size: 8.8 });
+    ny -= 11.5;
+  }
+  y = Math.min(y, ny - 4);
 
-  if (invoice.notes) {
-    y -= 8;
-    for (const l of wrap(invoice.notes, W - M - left)) {
-      text(l, left, y, { color: MUTED });
-      y -= 12;
+  if (doc.notes) {
+    const lines = wrap(doc.notes, right - left, 8.8);
+    if (y - lines.length * 11.5 - 8 < FOOT + 12) continuePage(false);
+    y -= 6;
+    for (const l of lines) {
+      text(l, left, y, { color: MUTED, size: 8.8 });
+      y -= 11.5;
     }
   }
 
-  // ---------- Betalningsinformation ----------
-  const swish = design.swishNumber && validSwish(design.swishNumber) ? swishDigits(design.swishNumber) : "";
-  const showQr = !!swish && design.swishQr && invoice.status !== "credited";
-  const payLink = invoice.status !== "credited" ? safeLink(design.paymentLink) : "";
-  const payRows: [string, string][] = [];
-  if (company.bankgiro) payRows.push(["Bankgiro", company.bankgiro]);
-  if (company.plusgiro) payRows.push(["Plusgiro", company.plusgiro]);
-  if (company.iban) payRows.push(["IBAN", company.iban]);
-  if (company.bic) payRows.push(["BIC", company.bic]);
-  if (swish) payRows.push(["Swish", swish.replace(/^(\d{3})(\d{3})(\d{2})(\d{2})$/, "$1 $2 $3 $4")]);
-  payRows.push(["Referens", invoice.number ? String(invoice.number) : "-"]);
-
-  const boxH = Math.max(payRows.length * 13 + 44 + (payLink ? 16 : 0), showQr ? 128 : 0);
-  if (y - boxH < 96) {
-    page = newPage();
-    y = H - M;
+  // ---------- Betalning ----------
+  if (!credit) {
+    const p = doc.payment;
+    const swish = p.swishNumber && validSwish(p.swishNumber) ? swishDigits(p.swishNumber) : "";
+    const showQr = !!swish && p.swishQr && t.total > 0 && !draft;
+    const payLink = safeLink(p.paymentLink);
+    const rows: [string, string][] = [["Betalningsmottagare", s.name]];
+    if (p.bankgiro) rows.push(["Bankgiro", p.bankgiro]);
+    if (p.plusgiro) rows.push(["Plusgiro", p.plusgiro]);
+    if (p.iban) rows.push(["IBAN", p.iban]);
+    if (p.bic) rows.push(["BIC", p.bic]);
+    if (swish) rows.push(["Swish", swish.replace(/^(\d{3})(\d{3})(\d{2})(\d{2})$/, "$1 $2 $3 $4")]);
+    rows.push(["Referens", draft ? "-" : numberText]);
+    const boxH = Math.max(rows.length * 13 + 46 + (payLink ? 16 : 0), showQr ? 132 : 0);
+    if (y - 14 - boxH < FOOT + 8) continuePage(false);
+    y -= 14;
+    const top = y;
+    const boxed = tpl === "modern" || tpl === "elegant";
+    if (boxed) roundRect(left, top - boxH, right - left, boxH, 10, tpl === "modern" ? tint : rgb(0.97, 0.97, 0.975));
+    else hair(left, right, top);
+    const px = boxed ? left + 16 : left;
+    let py = top - 21;
+    text("Betalning", px, py, { font: heading, size: tpl === "elegant" ? 12 : 10.5, color: tpl === "modern" ? accentText : INK });
+    py -= 17;
+    text(`Betala ${money(t.total)} ${cur} senast ${doc.dueDate}. Ange fakturanumret som referens.`, px, py, { size: 8.8 });
+    py -= 16;
+    for (const [k, v] of rows) {
+      text(k, px, py, { color: MUTED, size: 8.4 });
+      text(v, px + 96, py, { font: f.bold, size: 8.8 });
+      py -= 13;
+    }
+    if (payLink) {
+      const w = text("Betala online »", px, py - 3, { font: f.bold, size: 9.2, color: accentText });
+      link(payLink, px, py - 6, w, 14);
+    }
+    if (showQr) {
+      const qrText = swishPayload(swish, t.total, `Faktura ${numberText}`);
+      const png = await QRCode.toBuffer(qrText, { type: "png", errorCorrectionLevel: "M", margin: 1, width: 360 });
+      const qr = await pdf.embedPng(png);
+      const size = 92;
+      const qx = right - size - 16;
+      const qy = top - 16 - size;
+      page.drawImage(qr, { x: qx, y: qy, width: size, height: size });
+      text("Skanna med Swish", qx + size / 2, qy - 11, { size: 7.4, color: MUTED, align: "center" });
+    }
+    y = top - boxH;
+  } else if (doc.creditOf) {
+    if (y - 30 < FOOT + 8) continuePage(false);
+    y -= 18;
+    text(`Kreditfakturan avser faktura nr ${doc.creditOf.number ?? "-"} och avräknas mot den. Ingen betalning ska göras.`, left, y, { size: 8.8 });
   }
-  y -= 14;
-  const bx = left;
-  const bw = W - M - left;
-  const top = y;
-  if (tpl === "modern" || tpl === "elegant") roundRect(bx, top - boxH, bw, boxH, 10, tpl === "modern" ? tint : rgb(0.97, 0.97, 0.975));
-  else hair(bx, W - M, top);
-  const px = tpl === "modern" || tpl === "elegant" ? bx + 16 : bx;
-  let py = top - 22;
-  text("Betalningsinformation", px, py, { font: heading, size: tpl === "elegant" ? 12 : 10.5, color: tpl === "modern" ? accentText : INK });
-  py -= 18;
-  text(`Betala ${money(t.total)} kr senast ${dateStr(invoice.dueDate)}.`, px, py, { size: 9 });
-  py -= 16;
-  for (const [k, v] of payRows) {
-    text(k, px, py, { color: MUTED, size: 8.5 });
-    text(v, px + 70, py, { font: f.bold, size: 9 });
-    py -= 13;
-  }
-  if (payLink) {
-    const linkText = "Betala online »";
-    const w = text(linkText, px, py - 3, { font: f.bold, size: 9.5, color: accentText });
-    link(payLink, px, py - 6, w, 14);
-  }
-  if (showQr) {
-    const amount = (t.total / 100).toFixed(2);
-    const message = `Faktura ${invoice.number ?? ""}`.trim().slice(0, 50);
-    // Swish QR-format för förifylld betalning: C<nummer>;<belopp>;<meddelande>;<låsta fält (0 = inget redigerbart)>
-    const qrText = `C${swish};${amount};${message};0`;
-    const png = await QRCode.toBuffer(qrText, { type: "png", errorCorrectionLevel: "M", margin: 1, width: 360 });
-    const qr = await pdf.embedPng(png);
-    const size = 92;
-    const qx = bx + bw - size - 16;
-    const qy = top - 16 - size;
-    page.drawImage(qr, { x: qx, y: qy, width: size, height: size });
-    text("Skanna med Swish", qx + size / 2, qy - 11, { size: 7.5, color: MUTED, align: "center" });
-  }
-  y = top - boxH;
 
   // ---------- Sidfot på varje sida ----------
-  const legal = [company.name, `Org.nr ${company.orgNumber}`, company.vatNumber ? `Momsreg.nr ${company.vatNumber}` : "", "Godkänd för F-skatt"].filter(Boolean).join("  ·  ");
-  const footerText = design.footer.trim() || "Vid betalning efter förfallodagen debiteras dröjsmålsränta enligt räntelagen.";
+  const legal = [
+    s.name,
+    s.orgNumber ? `Org.nr ${s.orgNumber}` : "",
+    s.vatRegistered && s.vatNumber ? `Momsreg.nr ${s.vatNumber}` : "",
+    s.companyType === "ab" && s.seat ? `Styrelsens säte: ${s.seat}` : "",
+    s.fSkatt ? "Godkänd för F-skatt" : "",
+  ]
+    .filter(Boolean)
+    .join("  ·  ");
+  const terms = credit ? doc.footer.trim() : [doc.payment.lateInterest, doc.payment.reminderFee, doc.footer.trim()].filter(Boolean).join(" ");
   pages.forEach((p, i) => {
-    const fx = tpl === "elegant" ? M + 6 : M;
-    p.drawLine({ start: { x: fx, y: 58 }, end: { x: W - M, y: 58 }, thickness: 0.5, color: HAIR });
-    text(legal, fx, 44, { size: 7.5, color: MUTED, p });
-    wrap(footerText, W - M - fx - 70, 7.5).slice(0, 2).forEach((l, j) => text(l, fx, 33 - j * 9.5, { size: 7.5, color: MUTED, p }));
-    if (pages.length > 1) text(`Sida ${i + 1} av ${pages.length}`, W - M, 33, { size: 7.5, color: MUTED, align: "right", p });
+    p.drawLine({ start: { x: left, y: FOOT - 10 }, end: { x: right, y: FOOT - 10 }, thickness: 0.5, color: HAIR });
+    const ly = wrap(legal, right - left - 60, 7.4);
+    let fy = FOOT - 23;
+    for (const l of ly.slice(0, 2)) {
+      text(l, left, fy, { size: 7.4, color: MUTED, p });
+      fy -= 9.5;
+    }
+    for (const l of wrap(terms, right - left - 60, 7.2).slice(0, 4 - Math.min(2, ly.length))) {
+      text(l, left, fy, { size: 7.2, color: MUTED, p });
+      fy -= 9.2;
+    }
+    text(`Sida ${i + 1} av ${pages.length}`, right, FOOT - 23, { size: 7.4, color: MUTED, align: "right", p });
   });
 
   return pdf.save();

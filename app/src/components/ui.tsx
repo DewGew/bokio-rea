@@ -54,6 +54,7 @@ const BADGE: Record<string, [string, string]> = {
   overdue: ["Förfallen", "bg-danger-soft text-danger"],
   paid: ["Betald", "bg-success-soft text-success"],
   credited: ["Krediterad", "bg-fill text-muted"],
+  credit: ["Kreditfaktura", "bg-fill text-muted"],
   pending: ["Att bokföra", "bg-warn-soft text-warn"],
   booked: ["Ej utbetald", "bg-brand-soft text-brand"],
   locked: ["Låst", "bg-success-soft text-success"],
