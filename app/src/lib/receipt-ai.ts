@@ -5,7 +5,7 @@ import "server-only";
  * Standardmodell: google/gemini-3.1-flash-lite – billig, bra på text i bilder och läser PDF direkt.
  * Reserv om den inte svarar: google/gemini-2.5-flash-lite. Båda kan ändras med OPENROUTER_MODEL.
  */
-export const AI_MODEL = process.env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free";
+export const AI_MODEL = process.env.OPENROUTER_MODEL || "nvidia/nemotron-nano-12b-v2-vl:free";
 const FALLBACK_MODEL = "openrouter/free";
 // OPENROUTER_BASE_URL kan peka på en proxy eller en lokal testserver.
 const ENDPOINT = `${(process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1").replace(/\/$/, "")}/chat/completions`;
