@@ -7,6 +7,7 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { BookingWizard } from "@/components/BookingWizard";
 import { AI_VERSION, aiEnabled, type ReceiptData } from "@/lib/receipt-ai";
 import { PdfPreview } from "@/components/PdfPreview";
+import { readStored } from "@/lib/storage";
 import { VerificationEditor } from "@/components/VerificationEditor";
 import { ExpenseFields } from "@/components/ExpenseFields";
 import { createManualVerification } from "@/app/(app)/verifications/actions";
@@ -23,8 +24,10 @@ export default async function UploadPage({ params, searchParams }: { params: Pro
   const { id } = await params;
   const { get, error, notice } = await readParams(searchParams);
   const tab = get("tab") ?? "template";
-  const u = await db.upload.findFirst({ where: { id: Number(id) || -1, companyId }, include: { verification: true, expense: true } });
+  const u = await db.upload.findFirst({ where: { id: Number(id) || -1, companyId }, include: { verification: true, expense: true, inboundEmail: true } });
   if (!u) notFound();
+  // Mejl utan bilaga sparas som text och visas som text (aldrig som HTML).
+  const text = u.mimeType === "text/plain" ? Buffer.from((await readStored(u)) ?? new Uint8Array()).toString("utf8") : null;
   const done = u.verification || u.expense;
 
   const [templates, accounts] = await Promise.all([
@@ -53,7 +56,14 @@ export default async function UploadPage({ params, searchParams }: { params: Pro
       <Flash error={error} notice={notice} />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="overflow-hidden">
-          {u.mimeType === "application/pdf" ? (
+          {u.inboundEmail && (
+            <p className="border-b border-line px-4 py-2.5 text-[13px] text-muted">
+              Från e-post: <span className="font-medium text-ink">{u.inboundEmail.fromAddress}</span> · {u.inboundEmail.subject}
+            </p>
+          )}
+          {text !== null ? (
+            <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap break-words p-4 font-sans text-[13px] leading-relaxed">{text}</pre>
+          ) : u.mimeType === "application/pdf" ? (
             <PdfPreview src={src} maxPages={3} label={u.fileName} />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element

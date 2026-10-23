@@ -87,6 +87,10 @@ model Company {
   reminderFee      Int     @default(0) // påminnelseavgift i öre (högst 60 kr och bara om den är avtalad); 0 = ingen
   invoiceCounter   Int     @default(0) // senast utdelade fakturanummer (räknas upp atomiskt)
 
+  // Kvitton via e-post: hemlig token i adressen (kvitton+<token>@...) och valfri lista över tillåtna avsändare
+  inboxToken          String? @unique
+  inboxAllowedSenders String  @default("") // en adress eller domän per rad; tomt = alla
+
   memberships      Membership[]
   accounts         Account[]
   verifications    Verification[]
@@ -100,6 +104,7 @@ model Company {
   fiscalYears      FiscalYear[]
   bankTransactions BankTransaction[]
   invitations      Invitation[]
+  inboundEmails    InboundEmail[]
   oauthGrants      OAuthGrant[]
 }
 
@@ -203,6 +208,9 @@ model Upload {
   aiStatus       String? // done | error
   aiData         Json?
   aiError        String?
+  source         String        @default("upload") // upload | email
+  inboundEmailId Int?
+  inboundEmail   InboundEmail? @relation(fields: [inboundEmailId], references: [id], onDelete: SetNull)
   verificationId Int?
   verification   Verification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
   expense        Expense?
@@ -432,4 +440,22 @@ model OAuthToken {
   createdAt DateTime   @default(now())
 
   @@index([grantId])
+}
+
+// Mejl som kommit in till företagets kvittoadress (logg och dubblettkontroll).
+model InboundEmail {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  messageId   String
+  fromAddress String
+  subject     String   @default("")
+  status      String // ok | no_attachment | rejected_sender | limit | error | forwarding_confirmation
+  uploads     Upload[]
+  fileCount   Int      @default(0)
+  detail      String   @default("") // felmeddelande, eller länk/kod för att bekräfta vidarebefordran
+  createdAt   DateTime @default(now())
+
+  @@unique([companyId, messageId])
+  @@index([companyId, createdAt])
 }

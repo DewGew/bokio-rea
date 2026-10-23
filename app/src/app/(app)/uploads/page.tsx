@@ -12,13 +12,17 @@ export default async function Uploads({ searchParams }: { searchParams: SP }) {
   const showBooked = get("show") === "all";
   const uploads = await db.upload.findMany({
     where: showBooked ? { companyId } : { companyId, verificationId: null, expense: null },
-    include: { verification: true, expense: true },
+    include: { verification: true, expense: true, inboundEmail: { select: { fromAddress: true } } },
     orderBy: { createdAt: "desc" },
   });
 
   return (
     <>
-      <PageHeader title="Uppladdat" subtitle="Kvitton, leverantörsfakturor och andra underlag att bokföra" />
+      <PageHeader
+        title="Uppladdat"
+        subtitle="Kvitton, leverantörsfakturor och andra underlag att bokföra"
+        actions={<Link href="/settings/inbox" className="btn-secondary">Kvitton via e-post</Link>}
+      />
       <Flash error={error} notice={notice} />
 
       <Card className="mb-6 p-4">
@@ -44,6 +48,8 @@ export default async function Uploads({ searchParams }: { searchParams: SP }) {
                     {u.mimeType.startsWith("image/") ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={`/api/files/${u.id}`} alt="" className="h-full w-full object-cover" />
+                    ) : u.mimeType === "text/plain" ? (
+                      "MEJL"
                     ) : (
                       "PDF"
                     )}
@@ -56,7 +62,9 @@ export default async function Uploads({ searchParams }: { searchParams: SP }) {
                         ? `Bokförd ${u.verification.series}${u.verification.number}`
                         : u.expense
                           ? "Registrerad som utlägg"
-                          : `Uppladdad ${dateStr(u.createdAt)}`}
+                          : u.inboundEmail
+                            ? `Från e-post: ${u.inboundEmail.fromAddress}`
+                            : `Uppladdad ${dateStr(u.createdAt)}`}
                     </p>
                   </div>
                 </Link>

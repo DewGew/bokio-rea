@@ -85,10 +85,13 @@ export async function readReceipt(file: { bytes: Uint8Array; mime: string; name:
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new ReceiptAiError("AI-avläsning är inte aktiverad (OPENROUTER_API_KEY saknas).");
   const dataUrl = `data:${file.mime};base64,${Buffer.from(file.bytes).toString("base64")}`;
+  // Mejl utan bilaga sparas som text (kvittot står i själva mejlet).
   const attachment =
-    file.mime === "application/pdf"
-      ? { type: "file", file: { filename: file.name || "kvitto.pdf", file_data: dataUrl } }
-      : { type: "image_url", image_url: { url: dataUrl } };
+    file.mime === "text/plain"
+      ? { type: "text", text: `Kvittot (från ett e-postmeddelande):\n\n${Buffer.from(file.bytes).toString("utf8").slice(0, 20_000)}` }
+      : file.mime === "application/pdf"
+        ? { type: "file", file: { filename: file.name || "kvitto.pdf", file_data: dataUrl } }
+        : { type: "image_url", image_url: { url: dataUrl } };
 
   const res = await fetch(ENDPOINT, {
     method: "POST",

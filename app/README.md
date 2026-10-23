@@ -42,6 +42,10 @@ med eget namn, egen design och egen kod.
   med "Skapad via …" och inget kan raderas.
 - **Automatisk utloggning** efter 30 minuters inaktivitet per enhet, med varning två minuter innan (`IDLE_MINUTES` i
   `src/lib/session-config.ts`).
+- **Kvitton via e-post**: varje företag får en hemlig adress (Postmark Inbound) dit kvitton och leverantörsfakturor
+  skickas eller vidarebefordras. Bilagor (och mejl utan bilaga, som text) hamnar i Uppladdat, läses av med AI och bokförs
+  automatiskt när bankraden matchas. Tillåtna avsändare, dubblettkontroll, dygnsgräns och Gmails bekräftelse av
+  vidarebefordran visas i appen. Kräver `INBOUND_ADDRESS` och `INBOUND_WEBHOOK_SECRET` (se Inställningar → Kvitton via e-post).
 - **Utseende**: ljust, mörkt eller automatiskt tema per användare.
 - **Räkenskapsår och moms**: företagsform, faktura-/kontantmetoden, moms per månad/kvartal/helår (eller ej momsregistrerad),
   brutet/förlängt räkenskapsår och deadlines enligt Skatteverket.

@@ -139,7 +139,7 @@ export async function readStored(s: Stored): Promise<Uint8Array | null> {
 
 export async function fileResponse(u: Stored & { mimeType: string; fileName: string }, download = false) {
   const headers = new Headers({
-    "Content-Type": u.mimeType,
+    "Content-Type": u.mimeType === "text/plain" ? "text/plain; charset=utf-8" : u.mimeType,
     "Content-Disposition": `${download ? "attachment" : "inline"}; filename*=UTF-8''${encodeURIComponent(u.fileName)}`,
     "X-Content-Type-Options": "nosniff",
     "Cache-Control": "private, no-store",
