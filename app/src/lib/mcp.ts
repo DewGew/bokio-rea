@@ -53,10 +53,10 @@ export function buildMcpServer(ctx: McpContext) {
   const { companyId } = ctx;
   const canWrite = ctx.scopes.includes("write");
   const server = new McpServer(
-    { name: "huvudbok", title: "Huvudbok", version: "1.1.0" },
+    { name: "huvudbok", title: "Kapima Bokför", version: "1.1.0" },
     {
       instructions:
-        "Huvudbok är ett svenskt bokföringsprogram (BAS-kontoplan). Kopplingen gäller ett företag. Belopp är i kronor. " +
+        "Kapima Bokför är ett svenskt bokföringsprogram (BAS-kontoplan). Kopplingen gäller ett företag. Belopp är i kronor. " +
         "Intäkter visas positiva och kostnader negativa i resultatrapporten. Börja gärna med foretag_oversikt. " +
         (canWrite
           ? "Kopplingen kan bokföra. Bokföring kan inte raderas, bara makuleras i appen – visa därför alltid konteringen " +
@@ -338,7 +338,7 @@ export function buildMcpServer(ctx: McpContext) {
     "att_bokfora",
     {
       title: "Att bokföra",
-      description: "Det som väntar: obokförda underlag (kvitton), banktransaktioner med Huvudboks förslag, utlägg och fakturautkast.",
+      description: "Det som väntar: obokförda underlag (kvitton), banktransaktioner med förslag från Kapima Bokför, utlägg och fakturautkast.",
       annotations: READ,
     },
     async () => {

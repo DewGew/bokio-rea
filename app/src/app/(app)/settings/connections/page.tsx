@@ -62,7 +62,7 @@ export default async function Connections({ searchParams }: { searchParams: SP }
                     Öppna Claude (Desktop eller claude.ai) och gå till <strong>Inställningar → Kopplingar</strong> (Connectors).
                   </li>
                   <li>
-                    Välj <strong>Lägg till anpassad koppling</strong>, ge den namnet Huvudbok och klistra in adressen:
+                    Välj <strong>Lägg till anpassad koppling</strong>, ge den namnet Kapima Bokför och klistra in adressen:
                   </li>
                 </ol>
                 <CopyField value={url} />

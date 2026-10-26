@@ -6,7 +6,7 @@ export default async function Appearance() {
   const { user } = await requireCompany();
   return (
     <>
-      <PageHeader title="Utseende" subtitle="Välj hur Huvudbok ska se ut. Inställningen sparas på ditt konto och gäller på alla enheter." />
+      <PageHeader title="Utseende" subtitle="Välj hur Kapima Bokför ska se ut. Inställningen sparas på ditt konto och gäller på alla enheter." />
       <Card title="Tema" className="max-w-3xl">
         <div className="px-5 pb-5 pt-2">
           <ThemePicker current={user.theme} />

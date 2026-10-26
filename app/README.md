@@ -1,4 +1,4 @@
-# Huvudbok
+# Kapima Bokför
 
 Bokförings- och faktureringsapp för småföretag, inspirerad av arbetsflödena i Bokio men byggd från grunden
 med eget namn, egen design och egen kod.

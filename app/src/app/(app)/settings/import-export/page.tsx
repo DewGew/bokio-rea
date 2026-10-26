@@ -9,7 +9,7 @@ export default async function ImportExport() {
 
   return (
     <>
-      <PageHeader title="Import och export" subtitle="Flytta bokföring mellan Huvudbok och andra program med SIE-filer, standardformatet i Sverige." />
+      <PageHeader title="Import och export" subtitle="Flytta bokföring mellan Kapima Bokför och andra program med SIE-filer, standardformatet i Sverige." />
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <Card title="Importera SIE-fil">
           <div className="px-5 pb-5 pt-1">

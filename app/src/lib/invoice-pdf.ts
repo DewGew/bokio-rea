@@ -48,7 +48,7 @@ export async function invoicePdf(doc: InvoiceDoc, design: InvoiceDesign, logo: L
   const numberText = draft ? "Utkast" : String(doc.number);
   pdf.setTitle(`${title} ${numberText} - ${doc.seller.name}`);
   pdf.setAuthor(doc.seller.name);
-  pdf.setCreator("Huvudbok");
+  pdf.setCreator("Kapima Bokför");
   pdf.setLanguage("sv-SE");
 
   const f = {

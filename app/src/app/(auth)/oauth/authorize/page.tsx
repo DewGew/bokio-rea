@@ -37,7 +37,7 @@ export default async function Authorize({ searchParams }: { searchParams: SP }) 
           <Icon name="plug" className="h-6 w-6" />
         </span>
       </div>
-      <h1 className="mb-2 text-center text-[24px] font-semibold tracking-[-0.02em]">{req.clientName} vill få åtkomst till Huvudbok</h1>
+      <h1 className="mb-2 text-center text-[24px] font-semibold tracking-[-0.02em]">{req.clientName} vill få åtkomst till Kapima Bokför</h1>
       <p className="mb-6 text-center text-[15px] text-muted">Inloggad som {session.user.email}</p>
       <Flash error={error} />
 

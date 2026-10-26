@@ -99,7 +99,7 @@ export async function readReceipt(file: { bytes: Uint8Array; mime: string; name:
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
       "HTTP-Referer": process.env.APP_URL || "https://huvudbok.app",
-      "X-Title": "Huvudbok",
+      "X-Title": "Kapima Bokför",
     },
     body: JSON.stringify({
       model: AI_MODEL,

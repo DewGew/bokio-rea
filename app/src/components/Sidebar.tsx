@@ -75,7 +75,7 @@ export function Sidebar({ company, companies, userName, readOnly = false }: { co
   // Markera den klickade länken direkt, innan nästa sida hunnit laddas.
   const [pending, setPending] = useState<string | null>(null);
   const active = pending ?? activeHref(path);
-  const current = NAV.flatMap((g) => g.items).find(([h]) => h === active)?.[1] ?? "Huvudbok";
+  const current = NAV.flatMap((g) => g.items).find(([h]) => h === active)?.[1] ?? "Kapima Bokför";
 
   useEffect(() => {
     setOpen(false);
@@ -104,7 +104,7 @@ export function Sidebar({ company, companies, userName, readOnly = false }: { co
             <span className="grid h-8 w-8 place-items-center rounded-[9px] bg-gradient-to-br from-[#2b90ff] to-[#0058d1] text-white shadow-sm">
               <Icon name="book" className="h-[18px] w-[18px]" />
             </span>
-            <span className="text-[17px] font-semibold tracking-[-0.02em]">Huvudbok</span>
+            <span className="text-[17px] font-semibold tracking-[-0.02em]">Kapima Bokför</span>
           </Link>
           <form action={switchCompany}>
             <label className="sr-only" htmlFor="company-switch">Företag</label>

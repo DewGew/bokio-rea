@@ -212,7 +212,7 @@ export type SieExport = {
 export function buildSie(e: SieExport): string {
   const out: string[] = [
     "#FLAGGA 0",
-    `#PROGRAM ${q("Huvudbok")} 1.0`,
+    `#PROGRAM ${q("Kapima Bokför")} 1.0`,
     "#FORMAT PC8",
     `#GEN ${d8(new Date())}`,
     "#SIETYP 4",
