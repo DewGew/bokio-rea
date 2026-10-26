@@ -4,7 +4,7 @@ import { Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { deleteTemplate, saveTemplate } from "../../registers/actions";
 
-const DIRECTION: Record<string, string> = { purchase: "Inköp", sale: "Försäljning / insättning", reverse: "Omvänd moms (utland)" };
+const DIRECTION: Record<string, string> = { purchase: "Inköp / uttag", sale: "Försäljning / insättning", reverse: "Omvänd moms (utland)" };
 
 export default async function Templates({ searchParams }: { searchParams: SP }) {
   const { companyId } = await requireCompany();
