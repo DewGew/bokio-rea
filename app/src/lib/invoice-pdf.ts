@@ -379,6 +379,10 @@ export async function invoicePdf(doc: InvoiceDoc, design: InvoiceDesign, logo: L
     const rows: [string, string][] = [["Betalningsmottagare", s.name]];
     if (p.bankgiro) rows.push(["Bankgiro", p.bankgiro]);
     if (p.plusgiro) rows.push(["Plusgiro", p.plusgiro]);
+    if (p.bankAccount) {
+      if (p.bankName) rows.push(["Bank", p.bankName]);
+      rows.push(["Bankkonto", p.bankAccount]);
+    }
     if (p.iban) rows.push(["IBAN", p.iban]);
     if (p.bic) rows.push(["BIC", p.bic]);
     if (swish) rows.push(["Swish", swish.replace(/^(\d{3})(\d{3})(\d{2})(\d{2})$/, "$1 $2 $3 $4")]);
