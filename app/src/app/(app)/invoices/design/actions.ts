@@ -33,6 +33,8 @@ export async function saveInvoiceDesign(_: DesignState, fd: FormData): Promise<D
       paymentLink: link ? safeLink(link) : "",
       bankgiro: str(fd, "bankgiro"),
       plusgiro: str(fd, "plusgiro"),
+      bankName: str(fd, "bankName").slice(0, 60),
+      bankAccount: str(fd, "bankAccount").slice(0, 60),
       iban: iban.replace(/(.{4})/g, "$1 ").trim(),
       bic: str(fd, "bic").toUpperCase(),
       phone: str(fd, "phone"),
