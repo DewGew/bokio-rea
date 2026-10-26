@@ -64,6 +64,8 @@ export type InvoiceDoc = {
   payment: {
     bankgiro: string;
     plusgiro: string;
+    bankName?: string; // saknas i ögonblicksbilder som sparades före banköverföring
+    bankAccount?: string;   
     iban: string;
     bic: string;
     swishNumber: string;
@@ -134,6 +136,8 @@ export function buildInvoiceDoc(invoice: Full, company: Company): InvoiceDoc {
     payment: {
       bankgiro: company.bankgiro,
       plusgiro: company.plusgiro,
+      bankName: company.bankName,
+      bankAccount: company.bankAccount,
       iban: company.iban,
       bic: company.bic,
       swishNumber: company.swishNumber,
