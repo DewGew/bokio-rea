@@ -73,6 +73,8 @@ model Company {
   logoBlobUrl     String?
   logoMime        String?
   plusgiro        String  @default("")
+  bankName        String  @default("")
+  bankAccount     String  @default("")
   iban            String  @default("")
   bic             String  @default("")
   swishNumber     String  @default("")
