@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/Sidebar";
 import { requireCompany } from "@/lib/auth";
+import { isAdminEmail } from "@/lib/admin";
 import { IdleLogout } from "@/components/IdleLogout";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
         userName={user.name}
         readOnly={role === "read"}
+        isAdmin={isAdminEmail(user.email)}
       />
       <main className="min-w-0 flex-1 px-4 pb-16 pt-6 sm:px-6 md:px-10 md:pt-10">
         <div className="mx-auto max-w-[1180px]">

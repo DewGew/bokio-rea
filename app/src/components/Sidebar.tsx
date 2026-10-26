@@ -69,7 +69,7 @@ type C = { id: number; name: string };
 // Sidor för att lägga till bokföring döljs för användare med läsbehörighet.
 const WRITE_ONLY = new Set(["/verifications/new"]);
 
-export function Sidebar({ company, companies, userName, readOnly = false }: { company: C; companies: C[]; userName: string; readOnly?: boolean }) {
+export function Sidebar({ company, companies, userName, readOnly = false, isAdmin = false }: { company: C; companies: C[]; userName: string; readOnly?: boolean; isAdmin?: boolean }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   // Markera den klickade länken direkt, innan nästa sida hunnit laddas.
@@ -161,9 +161,16 @@ export function Sidebar({ company, companies, userName, readOnly = false }: { co
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-medium">{userName}</p>
-            <form action={logout}>
-              <button className="text-[12px] text-brand hover:underline">Logga ut</button>
-            </form>
+            <div className="flex items-center gap-3">
+              <form action={logout}>
+                <button className="text-[12px] text-brand hover:underline">Logga ut</button>
+              </form>
+              {isAdmin && (
+                <Link href="/admin" className="text-[12px] text-brand hover:underline">
+                  Admin
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </aside>

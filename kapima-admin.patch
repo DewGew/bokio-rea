@@ -1,0 +1,194 @@
+diff --git a/app/.env.example b/app/.env.example
+index 8563b67..f11b8db 100644
+--- a/app/.env.example
++++ b/app/.env.example
+@@ -13,3 +13,6 @@ OPENROUTER_API_KEY=
+ # Kvitton via e-post (Postmark Inbound). Webhook: https://inbound:<INBOUND_WEBHOOK_SECRET>@<din-app>/api/inbound/postmark
+ # INBOUND_ADDRESS="abc123@inbound.postmarkapp.com"
+ # INBOUND_WEBHOOK_SECRET="en-lang-slumpad-hemlighet"
++
++# Administratörer (kommaseparerade e-postadresser) som får se /admin.
++ADMIN_EMAILS="du@example.se"
+diff --git a/app/src/app/(app)/admin/page.tsx b/app/src/app/(app)/admin/page.tsx
+new file mode 100644
+index 0000000..b0d98da
+--- /dev/null
++++ b/app/src/app/(app)/admin/page.tsx
+@@ -0,0 +1,100 @@
++import { db } from "@/lib/db";
++import { requireAdmin } from "@/lib/admin";
++import { dateStr } from "@/lib/money";
++import { Card, PageHeader, Stat } from "@/components/ui";
++
++export const dynamic = "force-dynamic";
++
++export default async function Admin() {
++  await requireAdmin();
++  const [companies, users, sessions, verifications, invoices] = await Promise.all([
++    db.company.findMany({
++      orderBy: { id: "asc" },
++      include: { _count: { select: { memberships: true } } },
++    }),
++    db.user.findMany({
++      orderBy: { id: "asc" },
++      include: {
++        memberships: { include: { company: { select: { name: true } } } },
++        sessions: { select: { lastSeenAt: true }, orderBy: { lastSeenAt: "desc" }, take: 1 },
++      },
++    }),
++    db.session.count({ where: { expiresAt: { gt: new Date() } } }),
++    db.verification.groupBy({ by: ["companyId"], _count: { _all: true } }),
++    db.invoice.groupBy({ by: ["companyId"], _count: { _all: true } }),
++  ]);
++  const verCount = new Map(verifications.map((v) => [v.companyId, v._count._all]));
++  const invCount = new Map(invoices.map((v) => [v.companyId, v._count._all]));
++
++  return (
++    <>
++      <PageHeader title="Administration" subtitle="Översikt över alla företag och användare i systemet. Endast läsning." />
++
++      <div className="mb-6 grid gap-4 sm:grid-cols-3">
++        <Stat label="Företag" value={String(companies.length)} />
++        <Stat label="Användare" value={String(users.length)} />
++        <Stat label="Aktiva sessioner" value={String(sessions)} />
++      </div>
++
++      <div className="space-y-6">
++        <Card title="Företag">
++          <div className="overflow-x-auto">
++            <table className="w-full text-[14px]">
++              <thead>
++                <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
++                  <th className="px-5 py-2">Namn</th>
++                  <th className="px-3 py-2">Org.nr</th>
++                  <th className="px-3 py-2">Användare</th>
++                  <th className="px-3 py-2">Verifikationer</th>
++                  <th className="px-3 py-2">Fakturor</th>
++                  <th className="px-5 py-2">Skapat</th>
++                </tr>
++              </thead>
++              <tbody className="divide-y divide-line">
++                {companies.map((c) => (
++                  <tr key={c.id}>
++                    <td className="px-5 py-2.5 font-medium">{c.name}</td>
++                    <td className="px-3 py-2.5">{c.orgNumber}</td>
++                    <td className="px-3 py-2.5">{c._count.memberships}</td>
++                    <td className="px-3 py-2.5">{verCount.get(c.id) ?? 0}</td>
++                    <td className="px-3 py-2.5">{invCount.get(c.id) ?? 0}</td>
++                    <td className="px-5 py-2.5">{dateStr(c.createdAt)}</td>
++                  </tr>
++                ))}
++              </tbody>
++            </table>
++          </div>
++        </Card>
++
++        <Card title="Användare">
++          <div className="overflow-x-auto">
++            <table className="w-full text-[14px]">
++              <thead>
++                <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
++                  <th className="px-5 py-2">Namn</th>
++                  <th className="px-3 py-2">E-post</th>
++                  <th className="px-3 py-2">Företag</th>
++                  <th className="px-3 py-2">Senast aktiv</th>
++                  <th className="px-5 py-2">Skapad</th>
++                </tr>
++              </thead>
++              <tbody className="divide-y divide-line">
++                {users.map((u) => (
++                  <tr key={u.id}>
++                    <td className="px-5 py-2.5 font-medium">{u.name}</td>
++                    <td className="px-3 py-2.5">{u.email}</td>
++                    <td className="px-3 py-2.5">
++                      {u.memberships.map((m) => `${m.company.name} (${m.role})`).join(", ") || "–"}
++                    </td>
++                    <td className="px-3 py-2.5">{u.sessions[0] ? dateStr(u.sessions[0].lastSeenAt) : "–"}</td>
++                    <td className="px-5 py-2.5">{dateStr(u.createdAt)}</td>
++                  </tr>
++                ))}
++              </tbody>
++            </table>
++          </div>
++        </Card>
++      </div>
++    </>
++  );
++}
+diff --git a/app/src/app/(app)/layout.tsx b/app/src/app/(app)/layout.tsx
+index 385b915..616092a 100644
+--- a/app/src/app/(app)/layout.tsx
++++ b/app/src/app/(app)/layout.tsx
+@@ -1,5 +1,6 @@
+ import { Sidebar } from "@/components/Sidebar";
+ import { requireCompany } from "@/lib/auth";
++import { isAdminEmail } from "@/lib/admin";
+ import { IdleLogout } from "@/components/IdleLogout";
+ 
+ export const dynamic = "force-dynamic";
+@@ -13,6 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
+         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+         userName={user.name}
+         readOnly={role === "read"}
++        isAdmin={isAdminEmail(user.email)}
+       />
+       <main className="min-w-0 flex-1 px-4 pb-16 pt-6 sm:px-6 md:px-10 md:pt-10">
+         <div className="mx-auto max-w-[1180px]">
+diff --git a/app/src/components/Sidebar.tsx b/app/src/components/Sidebar.tsx
+index 2336f83..879f316 100644
+--- a/app/src/components/Sidebar.tsx
++++ b/app/src/components/Sidebar.tsx
+@@ -69,7 +69,7 @@ type C = { id: number; name: string };
+ // Sidor för att lägga till bokföring döljs för användare med läsbehörighet.
+ const WRITE_ONLY = new Set(["/verifications/new"]);
+ 
+-export function Sidebar({ company, companies, userName, readOnly = false }: { company: C; companies: C[]; userName: string; readOnly?: boolean }) {
++export function Sidebar({ company, companies, userName, readOnly = false, isAdmin = false }: { company: C; companies: C[]; userName: string; readOnly?: boolean; isAdmin?: boolean }) {
+   const path = usePathname();
+   const [open, setOpen] = useState(false);
+   // Markera den klickade länken direkt, innan nästa sida hunnit laddas.
+@@ -161,9 +161,16 @@ export function Sidebar({ company, companies, userName, readOnly = false }: { co
+           </span>
+           <div className="min-w-0 flex-1">
+             <p className="truncate text-[13px] font-medium">{userName}</p>
+-            <form action={logout}>
+-              <button className="text-[12px] text-brand hover:underline">Logga ut</button>
+-            </form>
++            <div className="flex items-center gap-3">
++              <form action={logout}>
++                <button className="text-[12px] text-brand hover:underline">Logga ut</button>
++              </form>
++              {isAdmin && (
++                <Link href="/admin" className="text-[12px] text-brand hover:underline">
++                  Admin
++                </Link>
++              )}
++            </div>
+           </div>
+         </div>
+       </aside>
+diff --git a/app/src/lib/admin.ts b/app/src/lib/admin.ts
+new file mode 100644
+index 0000000..667b817
+--- /dev/null
++++ b/app/src/lib/admin.ts
+@@ -0,0 +1,19 @@
++import "server-only";
++import { notFound } from "next/navigation";
++import { requireUser } from "./auth";
++
++/** E-postadresser (kommaseparerade) i ADMIN_EMAILS har tillgång till /admin. */
++export function isAdminEmail(email: string) {
++  const list = (process.env.ADMIN_EMAILS ?? "")
++    .split(",")
++    .map((s) => s.trim().toLowerCase())
++    .filter(Boolean);
++  return list.includes(email.trim().toLowerCase());
++}
++
++/** Kräver inloggad administratör. Andra användare får 404, så att sidan inte avslöjas. */
++export async function requireAdmin() {
++  const s = await requireUser();
++  if (!isAdminEmail(s.user.email)) notFound();
++  return s;
++}
