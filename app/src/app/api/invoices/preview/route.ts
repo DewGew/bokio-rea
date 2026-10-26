@@ -31,6 +31,8 @@ export async function GET(req: Request) {
     ...company,
     bankgiro: q.get("bankgiro") ?? company.bankgiro,
     plusgiro: q.get("plusgiro") ?? company.plusgiro,
+    bankName: q.get("bankName") ?? company.bankName,
+    bankAccount: q.get("bankAccount") ?? company.bankAccount,    
     iban: q.get("iban") ?? company.iban,
     bic: q.get("bic") ?? company.bic,
     phone: q.get("phone") ?? company.phone,
