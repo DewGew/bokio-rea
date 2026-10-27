@@ -31,6 +31,35 @@ export async function companyBookkeeping(companyId: number) {
   };
 }
 
+/**
+ * Databasoperationerna som tar bort ett företag. Verifikat och fakturor tas bort först: länkarna till
+ * räkenskapsår och kunder är RESTRICT och kan annars stoppa företagets kaskadradering beroende på ordningen.
+ */
+export function companyPurgeOps(companyId: number) {
+  return [
+    db.invoice.deleteMany({ where: { companyId } }),
+    db.verification.deleteMany({ where: { companyId } }),
+    db.company.delete({ where: { id: companyId } }),
+  ];
+}
+
+type CompanyFiles = { logoStoredName: string | null; logoBlobUrl: string | null; uploads: { storedName: string; blobUrl: string | null }[] };
+
+/** Filerna som hör till ett företag, att städa ur lagringen efter att företaget raderats. */
+export async function companyFiles(companyId: number): Promise<CompanyFiles | null> {
+  return db.company.findUnique({
+    where: { id: companyId },
+    select: { logoStoredName: true, logoBlobUrl: true, uploads: { select: { storedName: true, blobUrl: true } } },
+  });
+}
+
+/** Städar lagringen efteråt. Misslyckas det är företaget ändå borta. */
+export async function deleteCompanyFiles(company: CompanyFiles) {
+  const files = company.uploads.map((u) => ({ storedName: u.storedName, blobUrl: u.blobUrl }));
+  if (company.logoStoredName) files.push({ storedName: company.logoStoredName, blobUrl: company.logoBlobUrl });
+  await Promise.allSettled(files.map((f) => deleteStored(f)));
+}
+
 export const BOOKKEEPING_BLOCK_MESSAGE =
   "Företaget har bokföring som inte är exporterad. Exportera en SIE-fil för varje räkenskapsår under Inställningar → Import och export " +
   "och spara filerna på ett säkert ställe. Därefter kan företaget tas bort.";
@@ -57,18 +86,8 @@ export async function deleteCompany(opts: { companyId: number; userId: number; r
   }
   if ((await companyBookkeeping(companyId)).blocked) throw new CompanyDeleteError(BOOKKEEPING_BLOCK_MESSAGE);
 
-  // Verifikat och fakturor tas bort först. Länkarna till räkenskapsår och kunder är RESTRICT och
-  // skulle annars kunna stoppa företagets kaskadradering beroende på ordningen.
-  await db.$transaction([
-    db.invoice.deleteMany({ where: { companyId } }),
-    db.verification.deleteMany({ where: { companyId } }),
-    db.company.delete({ where: { id: companyId } }),
-  ]);
-
-  // Filer i lagringen städas efteråt. Misslyckas det är företaget ändå borta.
-  const files = company.uploads.map((u) => ({ storedName: u.storedName, blobUrl: u.blobUrl }));
-  if (company.logoStoredName) files.push({ storedName: company.logoStoredName, blobUrl: company.logoBlobUrl });
-  await Promise.allSettled(files.map((f) => deleteStored(f)));
+  await db.$transaction(companyPurgeOps(companyId));
+  await deleteCompanyFiles(company);
 
   return other.companyId;
 }

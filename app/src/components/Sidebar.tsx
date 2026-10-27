@@ -53,6 +53,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
       ["/settings/connections", "Kopplingar (Claude)", "plug"],
       ["/settings/inbox", "Kvitton via e-post", "tray"],
       ["/settings/appearance", "Utseende", "sun"],
+      ["/settings/account", "Mitt konto", "people"],
     ],
   },
 ];
