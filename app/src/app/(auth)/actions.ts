@@ -66,7 +66,10 @@ export async function login(fd: FormData) {
   const user = await db.user.findUnique({ where: { email } });
   // Kör alltid hashjämförelsen så att svarstiden inte avslöjar om kontot finns.
   const ok = await verifyPassword(password, user?.passwordHash ?? "scrypt$00$00");
-  if (!user || !ok) redirect(withParam("/login", "error", "Fel e-post eller lösenord."));
+  if (!user || !ok) {
+    await db.systemEvent.create({ data: { kind: "login_failed", detail: email.slice(0, 200) } }).catch(() => {});
+    redirect(withParam("/login", "error", "Fel e-post eller lösenord."));
+  }
   if (user.disabledAt) redirect(withParam("/login", "error", "Kontot är spärrat. Kontakta administratören."));
   const first = await db.membership.findFirst({ where: { userId: user.id }, orderBy: { companyId: "asc" } });
   await startSession(user.id, first?.companyId ?? null);

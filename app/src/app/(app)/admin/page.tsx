@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { dateTime, isAdminEmail, requireAdmin } from "@/lib/admin";
 import { dateStr } from "@/lib/money";
 import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
+import { AdminTabs } from "@/components/AdminTabs";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ResetLinkForm } from "@/components/ResetLinkForm";
 import { disableUser, enableUser, endUserSessions } from "./actions";
@@ -31,10 +32,7 @@ export default async function Admin({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <PageHeader title="Administration" subtitle="Översikt över företag och användare. Du ser bara uppgifter om konton och mängder, aldrig innehållet i någons bokföring." />
-      <div className="mb-4 flex gap-4 text-[14px]">
-        <span className="font-medium">Översikt</span>
-        <Link href="/admin/log" className="text-brand">Logg</Link>
-      </div>
+      <AdminTabs active="/admin" />
       <Flash notice={notice} error={error} />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">

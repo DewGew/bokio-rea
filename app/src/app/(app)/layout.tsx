@@ -18,7 +18,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
       <main className="min-w-0 flex-1 px-4 pb-16 pt-6 sm:px-6 md:px-10 md:pt-10">
         <div className="mx-auto max-w-[1180px]">
-          {role === "read" && (
+          {company.lockedAt && (
+            <p className="no-print mb-6 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+              <strong>{company.name} är låst av en administratör.</strong> Du kan se allt men inte ändra något.
+              {company.lockedReason ? ` Orsak: ${company.lockedReason}` : ""}
+            </p>
+          )}
+          {role === "read" && !company.lockedAt && (
             <p className="no-print mb-6 rounded-2xl bg-brand-soft px-4 py-3 text-[14px] text-brand">
               <strong>Läsbehörighet.</strong> Du kan se bokföring, rapporter och underlag i {company.name}, men inte ändra något.
             </p>

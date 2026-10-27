@@ -75,6 +75,7 @@ export async function POST(req: Request) {
       // Lagringsfel: ta bort loggraden så att Postmarks nya försök inte ses som en dubblett.
       await db.upload.deleteMany({ where: { id: { in: ids } } });
       await db.inboundEmail.delete({ where: { id: inbound.id } });
+      await db.systemEvent.create({ data: { kind: "inbound_storage_error", detail: `Företag ${companyId}: ${(e as Error).message}`.slice(0, 300) } }).catch(() => {});
       return reply({ error: (e as Error).message }, 500);
     }
     await db.inboundEmail.update({ where: { id: inbound.id }, data: { fileCount: ids.length } });

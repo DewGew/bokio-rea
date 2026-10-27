@@ -77,7 +77,8 @@ export const requireCompany = cache(async () => {
     session: s,
     companyId: active.companyId,
     company: active.company,
-    role: active.role as Role,
+    // Ett företag som en administratör har låst är skrivskyddat för alla, även ägaren.
+    role: (active.company.lockedAt ? "read" : active.role) as Role,
     companies: memberships.map((m) => m.company),
   };
 });
@@ -121,6 +122,9 @@ export async function requireOwner() {
 export async function apiCompany() {
   const s = await getSession();
   if (!s?.activeCompanyId) return null;
-  const m = await db.membership.findUnique({ where: { userId_companyId: { userId: s.userId, companyId: s.activeCompanyId } } });
-  return m ? { userId: s.userId, companyId: m.companyId, role: m.role as Role } : null;
+  const m = await db.membership.findUnique({
+    where: { userId_companyId: { userId: s.userId, companyId: s.activeCompanyId } },
+    include: { company: { select: { lockedAt: true } } },
+  });
+  return m ? { userId: s.userId, companyId: m.companyId, role: (m.company.lockedAt ? "read" : m.role) as Role } : null;
 }

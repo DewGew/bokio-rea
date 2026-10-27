@@ -1,8 +1,8 @@
 import "server-only";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { del, get, head, put } from "@vercel/blob";
+import { del, get, head, list, put } from "@vercel/blob";
 
 /**
  * Lagring av underlag och logotyper.
@@ -161,4 +161,46 @@ export async function deleteStored(u: Stored) {
     const p = localPath(u.storedName);
     if (p) await unlink(p).catch(() => {});
   }
+}
+
+export type StoredFile = { pathname: string; size: number; uploadedAt: Date; blobUrl: string | null };
+
+/** Alla filer i lagringen (för administratörens översikt). Bara metadata, aldrig innehåll. */
+export async function listStoredFiles(): Promise<StoredFile[]> {
+  const out: StoredFile[] = [];
+  if (blobEnabled()) {
+    let cursor: string | undefined;
+    do {
+      const page = await list({ prefix: "companies/", limit: 1000, cursor, ...auth() });
+      for (const b of page.blobs) out.push({ pathname: b.pathname, size: b.size, uploadedAt: b.uploadedAt, blobUrl: b.url });
+      cursor = page.hasMore ? page.cursor : undefined;
+    } while (cursor);
+    return out;
+  }
+  async function walk(dir: string) {
+    for (const e of await readdir(dir, { withFileTypes: true }).catch(() => [])) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) await walk(full);
+      else {
+        const st = await stat(full);
+        out.push({ pathname: path.relative(LOCAL_DIR, full).split(path.sep).join("/"), size: st.size, uploadedAt: st.mtime, blobUrl: null });
+      }
+    }
+  }
+  await walk(LOCAL_DIR);
+  return out;
+}
+
+/** Kontrollerar kontakten med lagringen. */
+export async function pingStorage(): Promise<{ ok: boolean; backend: string; message: string }> {
+  if (blobEnabled()) {
+    try {
+      await list({ prefix: "companies/", limit: 1, ...auth() });
+      return { ok: true, backend: "Vercel Blob", message: "Svarar" };
+    } catch (e) {
+      return { ok: false, backend: "Vercel Blob", message: (e as Error).message.slice(0, 200) };
+    }
+  }
+  if (process.env.VERCEL) return { ok: false, backend: "Ingen", message: STORAGE_MISSING };
+  return { ok: true, backend: "Lokal disk", message: LOCAL_DIR };
 }

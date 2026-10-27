@@ -31,6 +31,12 @@ export const ADMIN_ACTIONS: Record<string, string> = {
   user_enabled: "Återaktiverade användare",
   user_sessions_ended: "Loggade ut användare överallt",
   password_reset_link: "Skapade återställningslänk",
+  company_owner_added: "Utsåg ny ägare",
+  company_locked: "Låste företag",
+  company_unlocked: "Låste upp företag",
+  company_deleted: "Raderade företag",
+  grant_revoked: "Återkallade koppling",
+  orphans_deleted: "Rensade föräldralösa filer",
 };
 
 export const dateTime = (d: Date) => d.toLocaleString("sv-SE", { timeZone: "Europe/Stockholm", dateStyle: "short", timeStyle: "short" });

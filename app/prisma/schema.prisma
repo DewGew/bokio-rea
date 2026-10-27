@@ -47,6 +47,8 @@ model Membership {
 
 model Company {
   id          Int    @id @default(autoincrement())
+  lockedAt     DateTime? // låst av administratör: alla användare har bara läsrätt
+  lockedReason String    @default("")
   name        String
   orgNumber   String
   vatNumber   String @default("")
@@ -503,4 +505,14 @@ model AdminLog {
   createdAt   DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// Händelser som driften behöver kunna se (misslyckade inloggningar, lagringsfel). Rensas efter 30 dagar.
+model SystemEvent {
+  id        Int      @id @default(autoincrement())
+  kind      String // login_failed | inbound_storage_error
+  detail    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([kind, createdAt])
 }

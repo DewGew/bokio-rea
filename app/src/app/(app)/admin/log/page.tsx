@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { db } from "@/lib/db";
 import { ADMIN_ACTIONS, dateTime, requireAdmin } from "@/lib/admin";
+import { AdminTabs } from "@/components/AdminTabs";
 import { Card, PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -11,10 +11,7 @@ export default async function AdminLog() {
   return (
     <>
       <PageHeader title="Administration" subtitle="Alla administratörers åtgärder. Loggen kan inte ändras från appen. De senaste 300 raderna visas." />
-      <div className="mb-4 flex gap-4 text-[14px]">
-        <Link href="/admin" className="text-brand">Översikt</Link>
-        <span className="font-medium">Logg</span>
-      </div>
+      <AdminTabs active="/admin/log" />
       <Card title="Logg">
         <div className="overflow-x-auto">
           <table className="w-full text-[14px]">
