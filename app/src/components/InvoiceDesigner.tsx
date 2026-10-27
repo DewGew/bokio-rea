@@ -16,6 +16,8 @@ export type DesignValues = {
   paymentLink: string;
   bankgiro: string;
   plusgiro: string;
+  bankName: string;
+  bankAccount: string;
   iban: string;
   bic: string;
   phone: string;
@@ -126,6 +128,8 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
       paymentLink: v.paymentLink,
       bankgiro: v.bankgiro,
       plusgiro: v.plusgiro,
+      bankName: v.bankName,
+      bankAccount: v.bankAccount,    
       iban: v.iban,
       bic: v.bic,
       phone: v.phone,
@@ -272,6 +276,8 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
               [
                 ["bankgiro", "Bankgiro", "123-4567"],
                 ["plusgiro", "Plusgiro", "12 34 56-7"],
+                ["bankName", "Bank", "Swedbank"],
+                ["bankAccount", "Bankkonto (clearing + kontonummer)", "8327-9, 123 456 789-0"],
                 ["iban", "IBAN", "SE45 5000 0000 0583 9825 7466"],
                 ["bic", "BIC", "ESSESESS"],
               ] as const

@@ -6,7 +6,7 @@ import "./globals.css";
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Huvudbok",
+  title: "Kapima Bokför",
   description: "Bokföring, fakturering och moms för småföretag",
 };
 

@@ -198,6 +198,7 @@ export type ValidationInput = {
     vatRegistered: boolean;
     bankgiro: string;
     plusgiro: string;
+    bankAccount?: string; // valfritt så att befintliga anrop fortsätter kompilera
     iban: string;
     swishNumber: string;
   };
@@ -233,8 +234,8 @@ export function validateInvoice(input: ValidationInput): InvoiceIssue[] {
     else if (!vatMatchesOrg(s.vatNumber, s.orgNumber)) err("seller.vatNumber", "Momsregistreringsnumret stämmer inte med organisationsnumret.");
   }
   if (s.companyType === "ab" && !s.seat.trim()) err("seller.seat", "Aktiebolag ska ange styrelsens säte (kommun) på fakturan (Inställningar → Företag).");
-  if (!credit && !s.bankgiro.trim() && !s.plusgiro.trim() && !s.iban.trim() && !s.swishNumber.trim()) {
-    err("seller.payment", "Ange minst ett sätt att betala: bankgiro, plusgiro, IBAN eller Swish (Fakturadesign).");
+  if (!credit && !s.bankgiro.trim() && !s.plusgiro.trim() && !(s.bankAccount ?? "").trim() && !s.iban.trim() && !s.swishNumber.trim()) {
+    err("seller.payment", "Ange minst ett sätt att betala: bankgiro, plusgiro, bankkonto, IBAN eller Swish (Fakturadesign).");
   }
 
   // Köparen

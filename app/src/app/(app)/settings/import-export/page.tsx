@@ -9,7 +9,7 @@ export default async function ImportExport() {
 
   return (
     <>
-      <PageHeader title="Import och export" subtitle="Flytta bokföring mellan Huvudbok och andra program med SIE-filer, standardformatet i Sverige." />
+      <PageHeader title="Import och export" subtitle="Flytta bokföring mellan Kapima Bokför och andra program med SIE-filer, standardformatet i Sverige." />
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <Card title="Importera SIE-fil">
           <div className="px-5 pb-5 pt-1">
@@ -34,6 +34,30 @@ export default async function ImportExport() {
                 </select>
               </div>
               <button className="btn-primary w-full">Ladda ner SIE-fil</button>
+            </form>
+          </Card>
+
+          <Card title="Exportera underlag (ZIP)">
+            <form action="/api/underlag/export" method="get" className="space-y-3 px-5 pb-5 pt-1">
+              <p className="text-[14px] text-muted">
+                Alla uppladdade underlag som är bokförda under räkenskapsåret, ordnade i mappar per verifikat, samt PDF-kopior av årets utfärdade fakturor.
+                En indexfil (CSV) visar vilken fil som hör till vilket verifikat. SIE-filer innehåller inga underlag, så ladda ner dem här också.
+              </p>
+              <div className="rounded-lg bg-warn-soft px-3 py-2 text-[13px] text-warn">
+                Stora år med många filer kan ta flera minuter. Låt fönstret vara öppet tills nedladdningen är klar. Kontrollera att indexfilen inte
+                markerar några filer som saknade i lagringen.
+              </div>
+              <div>
+                <label className="label" htmlFor="ufy">Räkenskapsår</label>
+                <select id="ufy" name="fy" defaultValue={current.id} className="input">
+                  {[...years].reverse().map((y) => (
+                    <option key={y.id} value={y.id}>
+                      {fyLabel(y)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button className="btn-primary w-full">Ladda ner underlag</button>
             </form>
           </Card>
 

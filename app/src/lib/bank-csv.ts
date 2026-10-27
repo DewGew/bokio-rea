@@ -269,7 +269,7 @@ export function parseBankCsv(text: string, opts: { override?: Partial<Mapping>; 
   if (!rows.length) throw new BankCsvError("Inga transaktioner kunde läsas. Kontrollera att kolumnerna för datum och belopp är rätt.");
 
   const warnings: string[] = [];
-  if (foreign.size) warnings.push(`Filen innehåller belopp i ${[...foreign].join(", ")}. Huvudbok bokför i kronor – kontrollera de raderna.`);
+  if (foreign.size) warnings.push(`Filen innehåller belopp i ${[...foreign].join(", ")}. Kapima Bokför bokför i kronor – kontrollera de raderna.`);
   if (skipped) warnings.push(`${skipped} rader utan giltigt datum eller belopp hoppades över (t.ex. summeringsrader).`);
   return { bank: headerless ? "Bank (utan rubriker)" : guessBank(headers), headers, mapping, rows, skipped, warnings };
 }

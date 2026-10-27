@@ -19,6 +19,8 @@ export default async function InvoiceDesignPage() {
           paymentLink: c.paymentLink,
           bankgiro: c.bankgiro,
           plusgiro: c.plusgiro,
+          bankName: c.bankName,
+          bankAccount: c.bankAccount,
           iban: c.iban,
           bic: c.bic,
           phone: c.phone,

@@ -12,8 +12,8 @@ export function InviteForm({ companyName }: { companyName: string }) {
 
   if (state && "link" in state) {
     const label = (ROLES[state.role as "read" | "full"] ?? ROLES.read).label.toLowerCase();
-    const subject = `Inbjudan till ${companyName} i Huvudbok`;
-    const body = `Hej!\n\nDu är inbjuden till ${companyName} i Huvudbok med ${label}.\n\nÖppna länken för att gå med:\n${state.link}\n\nLänken gäller i 14 dagar.`;
+    const subject = `Inbjudan till ${companyName} i Kapima Bokför`;
+    const body = `Hej!\n\nDu är inbjuden till ${companyName} i Kapima Bokför med ${label}.\n\nÖppna länken för att gå med:\n${state.link}\n\nLänken gäller i 14 dagar.`;
     return (
       <div className="space-y-4">
         <div className="flex items-start gap-3 rounded-2xl bg-success-soft p-4 text-success">

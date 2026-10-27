@@ -204,6 +204,7 @@ export function validationInput(company: Company, customer: Customer | null, inv
       vatRegistered: company.vatPeriod !== "none",
       bankgiro: company.bankgiro,
       plusgiro: company.plusgiro,
+      bankAccount: company.bankAccount,
       iban: company.iban,
       swishNumber: company.swishNumber,
     },

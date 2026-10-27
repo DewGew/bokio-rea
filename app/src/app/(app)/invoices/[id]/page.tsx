@@ -85,6 +85,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
               vatRegistered: company.vatPeriod !== "none",
               bankgiro: company.bankgiro,
               plusgiro: company.plusgiro,
+              bankAccount: company.bankAccount,
               iban: company.iban,
               swishNumber: company.swishNumber,
             }}

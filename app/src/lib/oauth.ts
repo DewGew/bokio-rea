@@ -73,7 +73,7 @@ export function protectedResourceMetadata(base: string) {
     authorization_servers: [base],
     scopes_supported: [...SCOPES],
     bearer_methods_supported: ["header"],
-    resource_name: "Huvudbok",
+    resource_name: "Kapima Bokför",
   };
 }
 

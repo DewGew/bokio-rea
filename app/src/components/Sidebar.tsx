@@ -53,6 +53,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
       ["/settings/connections", "Kopplingar (Claude)", "plug"],
       ["/settings/inbox", "Kvitton via e-post", "tray"],
       ["/settings/appearance", "Utseende", "sun"],
+      ["/settings/account", "Mitt konto", "people"],
     ],
   },
 ];
@@ -69,13 +70,13 @@ type C = { id: number; name: string };
 // Sidor för att lägga till bokföring döljs för användare med läsbehörighet.
 const WRITE_ONLY = new Set(["/verifications/new"]);
 
-export function Sidebar({ company, companies, userName, readOnly = false }: { company: C; companies: C[]; userName: string; readOnly?: boolean }) {
+export function Sidebar({ company, companies, userName, readOnly = false, isAdmin = false }: { company: C; companies: C[]; userName: string; readOnly?: boolean; isAdmin?: boolean }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   // Markera den klickade länken direkt, innan nästa sida hunnit laddas.
   const [pending, setPending] = useState<string | null>(null);
   const active = pending ?? activeHref(path);
-  const current = NAV.flatMap((g) => g.items).find(([h]) => h === active)?.[1] ?? "Huvudbok";
+  const current = NAV.flatMap((g) => g.items).find(([h]) => h === active)?.[1] ?? "Kapima Bokför";
 
   useEffect(() => {
     setOpen(false);
@@ -104,7 +105,7 @@ export function Sidebar({ company, companies, userName, readOnly = false }: { co
             <span className="grid h-8 w-8 place-items-center rounded-[9px] bg-gradient-to-br from-[#2b90ff] to-[#0058d1] text-white shadow-sm">
               <Icon name="book" className="h-[18px] w-[18px]" />
             </span>
-            <span className="text-[17px] font-semibold tracking-[-0.02em]">Huvudbok</span>
+            <span className="text-[17px] font-semibold tracking-[-0.02em]">Kapima Bokför</span>
           </Link>
           <form action={switchCompany}>
             <label className="sr-only" htmlFor="company-switch">Företag</label>
@@ -161,9 +162,16 @@ export function Sidebar({ company, companies, userName, readOnly = false }: { co
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-medium">{userName}</p>
-            <form action={logout}>
-              <button className="text-[12px] text-brand hover:underline">Logga ut</button>
-            </form>
+            <div className="flex items-center gap-3">
+              <form action={logout}>
+                <button className="text-[12px] text-brand hover:underline">Logga ut</button>
+              </form>
+              {isAdmin && (
+                <Link href="/admin" className="text-[12px] text-brand hover:underline">
+                  Admin
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </aside>
