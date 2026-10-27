@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireCompany } from "@/lib/auth";
 import { companyBookkeeping } from "@/lib/company-delete";
+import { fyLabel } from "@/lib/fiscal";
 import { COMPANY_TYPES } from "@/lib/company-setup";
 import { Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -104,16 +105,27 @@ export default async function Settings({ searchParams }: { searchParams: SP }) {
               {companies.length < 2 ? (
                 <p className="text-muted">Du kan bara ta bort ett företag när du har minst ett annat företag att växla till.</p>
               ) : bookkeeping?.blocked ? (
-                <p className="text-muted">
-                  {c.name} har bokföring och kan inte tas bort. Bokföring ska bevaras i sju år enligt bokföringslagen. Exportera en SIE-fil under{" "}
-                  <Link href="/settings/import-export" className="text-brand">Import och export</Link> och spara den på ett säkert ställe.
-                </p>
+                <div className="space-y-2 text-muted">
+                  <p>
+                    {c.name} har bokföring som inte är exporterad. Bokföring ska bevaras i sju år enligt bokföringslagen, så exportera en SIE-fil för{" "}
+                    {bookkeeping.missingYears.length === 1 ? "räkenskapsåret" : "räkenskapsåren"}{" "}
+                    <strong className="text-ink">{bookkeeping.missingYears.map((y) => fyLabel(y)).join(", ")}</strong> under{" "}
+                    <Link href="/settings/import-export" className="text-brand">Import och export</Link> och spara filerna på ett säkert ställe.
+                  </p>
+                  <p>Därefter kan företaget tas bort här.</p>
+                </div>
               ) : (
                 <form action={deleteCompanyAction} className="space-y-3">
                   <p className="text-muted">
-                    Tar bort <strong className="text-ink">{c.name}</strong> permanent, med kunder, artiklar, utkast och uppladdade filer. Det går inte att ångra.
-                    Skriv företagets namn för att bekräfta.
+                    Tar bort <strong className="text-ink">{c.name}</strong> permanent, med all bokföring, alla fakturor, kunder, artiklar och uppladdade filer. Det går inte att ångra.
                   </p>
+                  {bookkeeping?.hasBookkeeping && (
+                    <p className="text-muted">
+                      Alla räkenskapsår är exporterade som SIE. Observera att SIE-filer bara innehåller bokföringen. Fakturor, kunder och underlag ingår inte,
+                      och även de ska enligt lag sparas i sju år. Se till att du har sparat dem på annat sätt, till exempel som PDF.
+                    </p>
+                  )}
+                  <p className="text-muted">Skriv företagets namn för att bekräfta.</p>
                   <input name="confirmName" required autoComplete="off" placeholder={c.name} aria-label="Bekräfta företagsnamn" className="input sm:max-w-sm" />
                   <div>
                     <ConfirmButton className="btn-danger" message={`Ta bort ${c.name} permanent?`}>Ta bort företaget</ConfirmButton>

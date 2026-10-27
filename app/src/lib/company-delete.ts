@@ -4,22 +4,40 @@ import { deleteStored } from "./storage";
 
 export class CompanyDeleteError extends Error {}
 
-/** Bokföring som finns kvar i företaget. Företag med bokföring kan inte tas bort. */
+/**
+ * Bokföringen i ett företag och vilka räkenskapsår som saknar en aktuell SIE-export.
+ * Ett år räknas som exporterat om en export gjordes efter det senaste verifikatet i året.
+ */
 export async function companyBookkeeping(companyId: number) {
-  const [verifications, issuedInvoices] = await Promise.all([
-    db.verification.count({ where: { companyId } }),
-    db.invoice.count({ where: { companyId, status: { not: "draft" } } }),
+  const [perYear, exports] = await Promise.all([
+    db.verification.groupBy({ by: ["fiscalYearId"], where: { companyId }, _count: { _all: true }, _max: { createdAt: true } }),
+    db.sieExport.findMany({ where: { companyId } }),
   ]);
-  return { verifications, issuedInvoices, blocked: verifications > 0 || issuedInvoices > 0 };
+  const exportedAt = new Map(exports.map((e) => [e.fiscalYearId, e.exportedAt]));
+  const missingIds = perYear
+    .filter((y) => {
+      const at = exportedAt.get(y.fiscalYearId);
+      return !at || (y._max.createdAt !== null && at < y._max.createdAt);
+    })
+    .map((y) => y.fiscalYearId);
+  const missingYears = missingIds.length
+    ? await db.fiscalYear.findMany({ where: { id: { in: missingIds } }, orderBy: { start: "asc" } })
+    : [];
+  return {
+    hasBookkeeping: perYear.length > 0,
+    verifications: perYear.reduce((n, y) => n + y._count._all, 0),
+    missingYears,
+    blocked: missingYears.length > 0,
+  };
 }
 
 export const BOOKKEEPING_BLOCK_MESSAGE =
-  "Företaget har bokföring och kan därför inte tas bort. Bokföringen ska bevaras i sju år (bokföringslagen). " +
-  "Exportera en SIE-fil under Inställningar → Import och export först och spara den på ett säkert ställe.";
+  "Företaget har bokföring som inte är exporterad. Exportera en SIE-fil för varje räkenskapsår under Inställningar → Import och export " +
+  "och spara filerna på ett säkert ställe. Därefter kan företaget tas bort.";
 
 /**
  * Tar bort ett företag med allt som hör till det. Bara ägaren, bara om användaren har fler företag,
- * och aldrig om det finns bokföring. Returnerar företaget som användaren ska byta till.
+ * och bara om all bokföring har exporterats som SIE-fil. Returnerar företaget som användaren ska byta till.
  */
 export async function deleteCompany(opts: { companyId: number; userId: number; role: string; confirmName: string }) {
   const { companyId, userId, role, confirmName } = opts;
@@ -39,9 +57,15 @@ export async function deleteCompany(opts: { companyId: number; userId: number; r
   }
   if ((await companyBookkeeping(companyId)).blocked) throw new CompanyDeleteError(BOOKKEEPING_BLOCK_MESSAGE);
 
-  await db.company.delete({ where: { id: companyId } });
+  // Verifikat och fakturor tas bort först. Länkarna till räkenskapsår och kunder är RESTRICT och
+  // skulle annars kunna stoppa företagets kaskadradering beroende på ordningen.
+  await db.$transaction([
+    db.invoice.deleteMany({ where: { companyId } }),
+    db.verification.deleteMany({ where: { companyId } }),
+    db.company.delete({ where: { id: companyId } }),
+  ]);
 
-  // Filer i lagringen städas efteråt. Misslyckas det här är företaget ändå borta.
+  // Filer i lagringen städas efteråt. Misslyckas det är företaget ändå borta.
   const files = company.uploads.map((u) => ({ storedName: u.storedName, blobUrl: u.blobUrl }));
   if (company.logoStoredName) files.push({ storedName: company.logoStoredName, blobUrl: company.logoBlobUrl });
   await Promise.allSettled(files.map((f) => deleteStored(f)));

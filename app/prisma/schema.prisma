@@ -108,6 +108,7 @@ model Company {
   invitations      Invitation[]
   inboundEmails    InboundEmail[]
   oauthGrants      OAuthGrant[]
+  sieExports SieExport[]
 }
 
 model FiscalYear {
@@ -120,6 +121,7 @@ model FiscalYear {
   // Verifikat som skapades av bokslutet (skatt, årets resultat, omföring), så att bokslutet kan ångras.
   closingVerificationIds Int[]          @default([])
   verifications          Verification[]
+  sieExports             SieExport[]
 
   @@unique([companyId, start])
 }
@@ -460,4 +462,16 @@ model InboundEmail {
 
   @@unique([companyId, messageId])
   @@index([companyId, createdAt])
+}
+
+// Registrerar när ett räkenskapsår senast exporterades som SIE-fil. Ett företag med bokföring får bara tas bort om alla år är exporterade.
+model SieExport {
+  id           Int        @id @default(autoincrement())
+  companyId    Int
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fiscalYearId Int
+  fiscalYear   FiscalYear @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+  exportedAt   DateTime   @default(now())
+
+  @@unique([companyId, fiscalYearId])
 }
