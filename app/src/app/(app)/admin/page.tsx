@@ -1,17 +1,19 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/admin";
+import { dateTime, isAdminEmail, requireAdmin } from "@/lib/admin";
 import { dateStr } from "@/lib/money";
-import { Card, PageHeader, Stat } from "@/components/ui";
+import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { ResetLinkForm } from "@/components/ResetLinkForm";
+import { disableUser, enableUser, endUserSessions } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function Admin() {
+export default async function Admin({ searchParams }: { searchParams: SP }) {
   await requireAdmin();
+  const { notice, error } = await readParams(searchParams);
   const [companies, users, sessions, verifications, invoices] = await Promise.all([
-    db.company.findMany({
-      orderBy: { id: "asc" },
-      include: { _count: { select: { memberships: true } } },
-    }),
+    db.company.findMany({ orderBy: { id: "asc" }, include: { _count: { select: { memberships: true } } } }),
     db.user.findMany({
       orderBy: { id: "asc" },
       include: {
@@ -28,7 +30,12 @@ export default async function Admin() {
 
   return (
     <>
-      <PageHeader title="Administration" subtitle="Översikt över alla företag och användare i systemet. Endast läsning." />
+      <PageHeader title="Administration" subtitle="Översikt över företag och användare. Du ser bara uppgifter om konton och mängder, aldrig innehållet i någons bokföring." />
+      <div className="mb-4 flex gap-4 text-[14px]">
+        <span className="font-medium">Översikt</span>
+        <Link href="/admin/log" className="text-brand">Logg</Link>
+      </div>
+      <Flash notice={notice} error={error} />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <Stat label="Företag" value={String(companies.length)} />
@@ -37,6 +44,60 @@ export default async function Admin() {
       </div>
 
       <div className="space-y-6">
+        <Card title="Användare">
+          <div className="overflow-x-auto">
+            <table className="w-full text-[14px]">
+              <thead>
+                <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
+                  <th className="px-5 py-2">Namn</th>
+                  <th className="px-3 py-2">E-post</th>
+                  <th className="px-3 py-2">Företag</th>
+                  <th className="px-3 py-2">Senast aktiv</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-5 py-2">Åtgärder</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line align-top">
+                {users.map((u) => {
+                  const protectedAdmin = isAdminEmail(u.email);
+                  return (
+                    <tr key={u.id}>
+                      <td className="px-5 py-2.5 font-medium">{u.name}</td>
+                      <td className="px-3 py-2.5">{u.email}</td>
+                      <td className="px-3 py-2.5">{u.memberships.map((m) => `${m.company.name} (${m.role})`).join(", ") || "–"}</td>
+                      <td className="px-3 py-2.5">{u.sessions[0] ? dateTime(u.sessions[0].lastSeenAt) : "–"}</td>
+                      <td className="px-3 py-2.5">
+                        {u.disabledAt ? <span className="text-danger">Spärrad {dateStr(u.disabledAt)}</span> : protectedAdmin ? "Administratör" : "Aktiv"}
+                      </td>
+                      <td className="space-y-1.5 px-5 py-2.5">
+                        <ResetLinkForm userId={u.id} />
+                        <form action={endUserSessions}>
+                          <input type="hidden" name="userId" value={u.id} />
+                          <ConfirmButton className="text-[13px] text-brand hover:underline" message={`Logga ut ${u.email} på alla enheter?`}>Logga ut överallt</ConfirmButton>
+                        </form>
+                        {u.disabledAt ? (
+                          <form action={enableUser}>
+                            <input type="hidden" name="userId" value={u.id} />
+                            <ConfirmButton className="text-[13px] text-brand hover:underline" message={`Återaktivera ${u.email}?`}>Återaktivera</ConfirmButton>
+                          </form>
+                        ) : (
+                          !protectedAdmin && (
+                            <form action={disableUser} className="flex items-center gap-2">
+                              <input type="hidden" name="userId" value={u.id} />
+                              <input name="reason" placeholder="Orsak (loggas)" maxLength={200} className="input w-36 text-[12px]" />
+                              <ConfirmButton className="text-[13px] text-danger hover:underline" message={`Spärra ${u.email}? Kontot loggas ut direkt.`}>Spärra</ConfirmButton>
+                            </form>
+                          )
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
         <Card title="Företag">
           <div className="overflow-x-auto">
             <table className="w-full text-[14px]">
@@ -53,41 +114,14 @@ export default async function Admin() {
               <tbody className="divide-y divide-line">
                 {companies.map((c) => (
                   <tr key={c.id}>
-                    <td className="px-5 py-2.5 font-medium">{c.name}</td>
+                    <td className="px-5 py-2.5 font-medium">
+                      <Link href={`/admin/companies/${c.id}`} className="text-brand">{c.name}</Link>
+                    </td>
                     <td className="px-3 py-2.5">{c.orgNumber}</td>
                     <td className="px-3 py-2.5">{c._count.memberships}</td>
                     <td className="px-3 py-2.5">{verCount.get(c.id) ?? 0}</td>
                     <td className="px-3 py-2.5">{invCount.get(c.id) ?? 0}</td>
                     <td className="px-5 py-2.5">{dateStr(c.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        <Card title="Användare">
-          <div className="overflow-x-auto">
-            <table className="w-full text-[14px]">
-              <thead>
-                <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
-                  <th className="px-5 py-2">Namn</th>
-                  <th className="px-3 py-2">E-post</th>
-                  <th className="px-3 py-2">Företag</th>
-                  <th className="px-3 py-2">Senast aktiv</th>
-                  <th className="px-5 py-2">Skapad</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {users.map((u) => (
-                  <tr key={u.id}>
-                    <td className="px-5 py-2.5 font-medium">{u.name}</td>
-                    <td className="px-3 py-2.5">{u.email}</td>
-                    <td className="px-3 py-2.5">
-                      {u.memberships.map((m) => `${m.company.name} (${m.role})`).join(", ") || "–"}
-                    </td>
-                    <td className="px-3 py-2.5">{u.sessions[0] ? dateStr(u.sessions[0].lastSeenAt) : "–"}</td>
-                    <td className="px-5 py-2.5">{dateStr(u.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -272,8 +272,8 @@ async function issueTokens(grantId: number, scope: string) {
 const s256 = (verifier: string) => createHash("sha256").update(verifier).digest("base64url");
 
 async function allowed(userId: number, companyId: number) {
-  const m = await db.membership.findUnique({ where: { userId_companyId: { userId, companyId } } });
-  return !!m && MCP_ROLES.includes(m.role);
+  const m = await db.membership.findUnique({ where: { userId_companyId: { userId, companyId } }, include: { user: { select: { disabledAt: true } } } });
+  return !!m && !m.user.disabledAt && MCP_ROLES.includes(m.role);
 }
 
 /** Token-endpoint: authorization_code och refresh_token. */

@@ -1,5 +1,6 @@
 import "server-only";
 import { notFound } from "next/navigation";
+import { db } from "./db";
 import { requireUser } from "./auth";
 
 /** E-postadresser (kommaseparerade) i ADMIN_EMAILS har tillgång till /admin. */
@@ -17,3 +18,19 @@ export async function requireAdmin() {
   if (!isAdminEmail(s.user.email)) notFound();
   return s;
 }
+
+/** Skriver en rad i administratörsloggen. Allt administratörer gör ska passera här. */
+export function adminLogOp(entry: { adminEmail: string; action: string; targetType: "user" | "company"; targetId?: number; targetLabel?: string; details?: string }) {
+  return db.adminLog.create({
+    data: { adminEmail: entry.adminEmail, action: entry.action, targetType: entry.targetType, targetId: entry.targetId ?? null, targetLabel: entry.targetLabel ?? "", details: entry.details ?? "" },
+  });
+}
+
+export const ADMIN_ACTIONS: Record<string, string> = {
+  user_disabled: "Spärrade användare",
+  user_enabled: "Återaktiverade användare",
+  user_sessions_ended: "Loggade ut användare överallt",
+  password_reset_link: "Skapade återställningslänk",
+};
+
+export const dateTime = (d: Date) => d.toLocaleString("sv-SE", { timeZone: "Europe/Stockholm", dateStyle: "short", timeStyle: "short" });

@@ -44,6 +44,8 @@ export const getSession = cache(async () => {
     include: { user: { include: { memberships: { include: { company: true }, orderBy: { companyId: "asc" } } } } },
   });
   if (!session || session.expiresAt < new Date()) return null;
+  // Spärrade konton kan inte använda någon session.
+  if (session.user.disabledAt) return null;
   // Automatisk utloggning efter en tids inaktivitet på enheten.
   const idle = Date.now() - session.lastSeenAt.getTime();
   if (idle > IDLE_MINUTES * 60_000) {

@@ -18,6 +18,8 @@ model User {
   passwordHash String
   theme        String       @default("system") // system | light | dark
   createdAt    DateTime     @default(now())
+  disabledAt   DateTime? // spärrat av administratör: ingen inloggning, inga sessioner eller kopplingar
+  passwordResets PasswordReset[]
   memberships  Membership[]
   sessions     Session[]
   oauthGrants  OAuthGrant[]
@@ -474,4 +476,31 @@ model SieExport {
   exportedAt   DateTime   @default(now())
 
   @@unique([companyId, fiscalYearId])
+}
+
+// Engångslänk för att byta lösenord, skapas av en administratör. Sparas bara som hash.
+model PasswordReset {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Spårbarhet för administratörernas åtgärder. E-post och etikett sparas som text så att loggen består även om kontot raderas.
+model AdminLog {
+  id          Int      @id @default(autoincrement())
+  adminEmail  String
+  action      String
+  targetType  String // user | company
+  targetId    Int?
+  targetLabel String   @default("")
+  details     String   @default("")
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
 }
