@@ -120,10 +120,10 @@ export default async function Settings({ searchParams }: { searchParams: SP }) {
                     Tar bort <strong className="text-ink">{c.name}</strong> permanent, med all bokföring, alla fakturor, kunder, artiklar och uppladdade filer. Det går inte att ångra.
                   </p>
                   {bookkeeping?.hasBookkeeping && (
-                    <p className="text-muted">
-                      Alla räkenskapsår är exporterade som SIE. Observera att SIE-filer bara innehåller bokföringen. Fakturor, kunder och underlag ingår inte,
-                      och även de ska enligt lag sparas i sju år. Se till att du har sparat dem på annat sätt, till exempel som PDF.
-                    </p>
+                    <div className="rounded-lg bg-warn-soft px-3 py-2 text-warn">
+                      Varning: SIE-filerna innehåller bara bokföringen. Uppladdade underlag och fakturakopior följer inte med, och även de ska sparas i sju år.
+                      Ladda ner dem under <Link href="/settings/import-export" className="underline">Import och export</Link> (Exportera underlag) innan du tar bort företaget.
+                    </div>
                   )}
                   <p className="text-muted">Skriv företagets namn för att bekräfta.</p>
                   <input name="confirmName" required autoComplete="off" placeholder={c.name} aria-label="Bekräfta företagsnamn" className="input sm:max-w-sm" />
