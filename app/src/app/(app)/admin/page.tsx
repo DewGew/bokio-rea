@@ -6,7 +6,7 @@ import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components
 import { AdminTabs } from "@/components/AdminTabs";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ResetLinkForm } from "@/components/ResetLinkForm";
-import { disableUser, enableUser, endUserSessions } from "./actions";
+import { endUserSessions, lockUser, unlockUser } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +65,7 @@ export default async function Admin({ searchParams }: { searchParams: SP }) {
                       <td className="px-3 py-2.5">{u.memberships.map((m) => `${m.company.name} (${m.role})`).join(", ") || "–"}</td>
                       <td className="px-3 py-2.5">{u.sessions[0] ? dateTime(u.sessions[0].lastSeenAt) : "–"}</td>
                       <td className="px-3 py-2.5">
-                        {u.disabledAt ? <span className="text-danger">Spärrad {dateStr(u.disabledAt)}</span> : protectedAdmin ? "Administratör" : "Aktiv"}
+                        {u.lockedAt ? <span className="text-warn" title={u.lockedReason}>Låst {dateStr(u.lockedAt)}</span> : protectedAdmin ? "Administratör" : "Aktiv"}
                       </td>
                       <td className="space-y-1.5 px-5 py-2.5">
                         <ResetLinkForm userId={u.id} />
@@ -73,17 +73,17 @@ export default async function Admin({ searchParams }: { searchParams: SP }) {
                           <input type="hidden" name="userId" value={u.id} />
                           <ConfirmButton className="text-[13px] text-brand hover:underline" message={`Logga ut ${u.email} på alla enheter?`}>Logga ut överallt</ConfirmButton>
                         </form>
-                        {u.disabledAt ? (
-                          <form action={enableUser}>
+                        {u.lockedAt ? (
+                          <form action={unlockUser}>
                             <input type="hidden" name="userId" value={u.id} />
-                            <ConfirmButton className="text-[13px] text-brand hover:underline" message={`Återaktivera ${u.email}?`}>Återaktivera</ConfirmButton>
+                            <ConfirmButton className="text-[13px] text-brand hover:underline" message={`Låsa upp ${u.email}?`}>Lås upp</ConfirmButton>
                           </form>
                         ) : (
                           !protectedAdmin && (
-                            <form action={disableUser} className="flex items-center gap-2">
+                            <form action={lockUser} className="flex items-center gap-2">
                               <input type="hidden" name="userId" value={u.id} />
                               <input name="reason" placeholder="Orsak (loggas)" maxLength={200} className="input w-36 text-[12px]" />
-                              <ConfirmButton className="text-[13px] text-danger hover:underline" message={`Spärra ${u.email}? Kontot loggas ut direkt.`}>Spärra</ConfirmButton>
+                              <ConfirmButton className="text-[13px] text-warn hover:underline" message={`Låsa ${u.email}? Användaren får bara läsrätt i alla sina företag.`}>Lås</ConfirmButton>
                             </form>
                           )
                         )}

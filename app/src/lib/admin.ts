@@ -27,8 +27,10 @@ export function adminLogOp(entry: { adminEmail: string; action: string; targetTy
 }
 
 export const ADMIN_ACTIONS: Record<string, string> = {
-  user_disabled: "Spärrade användare",
-  user_enabled: "Återaktiverade användare",
+  user_locked: "Låste användare",
+  user_unlocked: "Låste upp användare",
+  user_disabled: "Spärrade användare (äldre)",
+  user_enabled: "Återaktiverade användare (äldre)",
   user_sessions_ended: "Loggade ut användare överallt",
   password_reset_link: "Skapade återställningslänk",
   company_owner_added: "Utsåg ny ägare",

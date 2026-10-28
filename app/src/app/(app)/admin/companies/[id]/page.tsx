@@ -23,7 +23,7 @@ export default async function AdminCompany({ params, searchParams }: { params: P
     where: { id },
     select: {
       id: true, name: true, orgNumber: true, companyType: true, vatPeriod: true, createdAt: true, lockedAt: true, lockedReason: true,
-      memberships: { select: { userId: true, role: true, user: { select: { name: true, email: true, disabledAt: true } } }, orderBy: { userId: "asc" } },
+      memberships: { select: { userId: true, role: true, user: { select: { name: true, email: true, lockedAt: true } } }, orderBy: { userId: "asc" } },
       fiscalYears: { select: { id: true, start: true, end: true }, orderBy: { start: "asc" } },
     },
   });
@@ -73,7 +73,7 @@ export default async function AdminCompany({ params, searchParams }: { params: P
                   <td className="px-5 py-2.5 font-medium">{m.user.name}</td>
                   <td className="px-3 py-2.5">{m.user.email}</td>
                   <td className="px-3 py-2.5">{m.role}</td>
-                  <td className="px-5 py-2.5">{m.user.disabledAt ? <span className="text-danger">Spärrad</span> : ""}</td>
+                  <td className="px-5 py-2.5">{m.user.lockedAt ? <span className="text-warn">Användaren är låst</span> : ""}</td>
                 </tr>
               ))}
             </tbody>

@@ -18,7 +18,8 @@ model User {
   passwordHash String
   theme        String       @default("system") // system | light | dark
   createdAt    DateTime     @default(now())
-  disabledAt   DateTime? // spärrat av administratör: ingen inloggning, inga sessioner eller kopplingar
+  lockedAt     DateTime? // låst av administratör: användaren kan logga in men har bara läsrätt i alla sina företag
+  lockedReason String    @default("")
   passwordResets PasswordReset[]
   memberships  Membership[]
   sessions     Session[]

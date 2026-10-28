@@ -22,29 +22,28 @@ async function target(fd: FormData) {
   return { adminEmail: admin.user.email, user: user! };
 }
 
-export async function disableUser(fd: FormData) {
+export async function lockUser(fd: FormData) {
   const { adminEmail, user } = await target(fd);
-  if (isAdminEmail(user.email)) back("error", "Administratörer kan inte spärras.");
-  if (user.disabledAt) back("error", `${user.email} är redan spärrad.`);
+  if (isAdminEmail(user.email)) back("error", "Administratörer kan inte låsas.");
+  if (user.lockedAt) back("error", `${user.email} är redan låst.`);
   const reason = str(fd, "reason").slice(0, 200);
   await db.$transaction([
-    db.user.update({ where: { id: user.id }, data: { disabledAt: new Date() } }),
-    db.session.deleteMany({ where: { userId: user.id } }),
-    adminLogOp({ adminEmail, action: "user_disabled", targetType: "user", targetId: user.id, targetLabel: user.email, details: reason }),
+    db.user.update({ where: { id: user.id }, data: { lockedAt: new Date(), lockedReason: reason } }),
+    adminLogOp({ adminEmail, action: "user_locked", targetType: "user", targetId: user.id, targetLabel: user.email, details: reason }),
   ]);
-  revalidatePath("/admin");
-  back("ok", `${user.email} är spärrad och utloggad.`);
+  revalidatePath("/", "layout");
+  back("ok", `${user.email} är låst. Användaren kan logga in men har bara läsrätt i alla sina företag.`);
 }
 
-export async function enableUser(fd: FormData) {
+export async function unlockUser(fd: FormData) {
   const { adminEmail, user } = await target(fd);
-  if (!user.disabledAt) back("error", `${user.email} är inte spärrad.`);
+  if (!user.lockedAt) back("error", `${user.email} är inte låst.`);
   await db.$transaction([
-    db.user.update({ where: { id: user.id }, data: { disabledAt: null } }),
-    adminLogOp({ adminEmail, action: "user_enabled", targetType: "user", targetId: user.id, targetLabel: user.email }),
+    db.user.update({ where: { id: user.id }, data: { lockedAt: null, lockedReason: "" } }),
+    adminLogOp({ adminEmail, action: "user_unlocked", targetType: "user", targetId: user.id, targetLabel: user.email }),
   ]);
-  revalidatePath("/admin");
-  back("ok", `${user.email} är återaktiverad.`);
+  revalidatePath("/", "layout");
+  back("ok", `${user.email} är upplåst.`);
 }
 
 export async function endUserSessions(fd: FormData) {

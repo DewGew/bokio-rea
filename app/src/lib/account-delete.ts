@@ -53,6 +53,7 @@ export async function accountPlan(userId: number): Promise<CompanyPlan[]> {
 export async function deleteAccount(userId: number, password: string) {
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) throw new AccountDeleteError("Kontot finns inte.");
+  if (user.lockedAt) throw new AccountDeleteError("Kontot är låst av en administratör och kan inte avslutas just nu. Kontakta administratören.");
   if (!password || !(await verifyPassword(password, user.passwordHash))) {
     throw new AccountDeleteError("Lösenordet stämmer inte. Inget har tagits bort.");
   }

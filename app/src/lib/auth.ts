@@ -44,8 +44,6 @@ export const getSession = cache(async () => {
     include: { user: { include: { memberships: { include: { company: true }, orderBy: { companyId: "asc" } } } } },
   });
   if (!session || session.expiresAt < new Date()) return null;
-  // Spärrade konton kan inte använda någon session.
-  if (session.user.disabledAt) return null;
   // Automatisk utloggning efter en tids inaktivitet på enheten.
   const idle = Date.now() - session.lastSeenAt.getTime();
   if (idle > IDLE_MINUTES * 60_000) {
@@ -77,8 +75,8 @@ export const requireCompany = cache(async () => {
     session: s,
     companyId: active.companyId,
     company: active.company,
-    // Ett företag som en administratör har låst är skrivskyddat för alla, även ägaren.
-    role: (active.company.lockedAt ? "read" : active.role) as Role,
+    // Ett låst företag, eller en låst användare, är skrivskyddat. Administratörer låser; ägare påverkas också.
+    role: (active.company.lockedAt || s.user.lockedAt ? "read" : active.role) as Role,
     companies: memberships.map((m) => m.company),
   };
 });
@@ -126,5 +124,5 @@ export async function apiCompany() {
     where: { userId_companyId: { userId: s.userId, companyId: s.activeCompanyId } },
     include: { company: { select: { lockedAt: true } } },
   });
-  return m ? { userId: s.userId, companyId: m.companyId, role: (m.company.lockedAt ? "read" : m.role) as Role } : null;
+  return m ? { userId: s.userId, companyId: m.companyId, role: (m.company.lockedAt || s.user.lockedAt ? "read" : m.role) as Role } : null;
 }
