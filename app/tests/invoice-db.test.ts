@@ -129,5 +129,6 @@ test("ett företag kan inte utfärda, kreditera, betala eller läsa ett annat f�
   // Företag B:s nummerserie påverkas inte av företag A.
   const b = await draft(B, customerB);
   const issuedB = await sendInvoice(B, b.id);
-  assert.equal(issuedB.number, 1);
+  // En ny serie börjar på 10 (fakturanummer ska ha minst två siffror).
+  assert.equal(issuedB.number, 10);
 });

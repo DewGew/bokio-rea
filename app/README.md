@@ -21,10 +21,10 @@ med eget namn, egen design och egen kod.
   - rättelse med kreditfaktura (eget nummer, hänvisning till originalet, omvänd bokföring) och historik per faktura
   - dröjsmålsränta (räntelagen eller avtalad) och påminnelseavgift (högst 60 kr, bara om avtalad) som fakturatext
   - **OCR-nummer**: valfritt (under *Fakturadesign → Betalning*, kräver bankgiro eller plusgiro). Numret är fakturanumret plus en
-    kontrollsiffra (Luhn) och visas som betalningsreferens; det sparas i fakturans ögonblicksbild. Bankimporten matchar inbetalningar
+    kontrollsiffra enligt svensk Modulus 10 (Bankgirots OCR-standard, utan längdsiffra) och visas som betalningsreferens; det sparas i fakturans ögonblicksbild. Bankimporten matchar inbetalningar
     mot fakturan via OCR-numret. Kreditfakturor får inget OCR-nummer.
-  - **Startnummer**: under *Fakturadesign → Fakturanumrering* väljer du vilket nummer fakturorna börjar på (till exempel 1, 10, 100
-    eller 1000). Det går bara att ändra innan den första fakturan har utfärdats, eftersom fakturanummer ska vara löpande och unika.
+  - **Startnummer**: under *Fakturadesign → Fakturanumrering* väljer du vilket nummer fakturorna börjar på (till exempel 10, 100
+    eller 1000). Fakturanummer ska ha minst två siffror, så en ny serie börjar aldrig lägre än 10. Det går bara att ändra innan den första fakturan har utfärdats, eftersom fakturanummer ska vara löpande och unika.
   - **PDF-fakturor** (A4, flera sidor) genereras på servern (`/api/invoices/[id]/pdf`); fakturaregistret kan exporteras som CSV
 - **Fakturadesign**: fyra mallar (Modern, Klassisk, Minimal, Elegant), valfri accentfärg, logotyp, bankgiro, plusgiro, IBAN/BIC,
   Swish-QR (förifyllt belopp och fakturanummer), klickbar betallänk och egen sidfot, med förhandsvisning i realtid.

@@ -1,9 +1,12 @@
 /**
- * OCR-nummer (betalningsreferens) för bankgiro och plusgiro: fakturanumret följt av en kontrollsiffra (Luhn, mod 10).
- * Hela numret ska vara 2–25 siffror. Det har ingen längdsiffra.
+ * OCR-nummer (betalningsreferens) för bankgiro och plusgiro enligt Bankgirots svenska OCR-standard med kontrollsiffra
+ * enligt Modulus 10: fakturanumret följt av en kontrollsiffra. Hela numret är 2–25 siffror och har ingen längdsiffra.
+ *
+ * Modulus 10 (samma metod som i personnummer): siffrorna före kontrollsiffran viktas 2, 1, 2, 1 … räknat från höger, så att siffran
+ * närmast kontrollsiffran får vikt 2. Produkter över 9 ersätts med sin siffersumma (14 → 1 + 4 = 5). Kontrollsiffran är det tal
+ * som gör att den totala summan blir jämnt delbar med 10.
  */
-
-/** Luhn-kontrollsiffran för en sifferrad (siffran längst till höger i raden dubbleras först). */
+/** Kontrollsiffra enligt Modulus 10 för en sifferrad (siffran längst till höger i raden får vikt 2). */
 export function luhnCheckDigit(digits: string): number {
   let sum = 0;
   let double = true;

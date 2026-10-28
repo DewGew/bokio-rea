@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireWriter } from "@/lib/auth";
 import { str, withParam } from "@/lib/action";
+import { MIN_INVOICE_NUMBER } from "@/lib/invoice-rules";
 import { isTemplate, safeLink, swishDigits, validHex, validSwish } from "@/lib/invoice-design";
 
 export type DesignState = { ok?: string; error?: string } | undefined;
@@ -58,7 +59,7 @@ export async function setStartInvoiceNumber(fd: FormData) {
   const raw = str(fd, "start");
   const n = Number(raw);
   const back = (key: "ok" | "error", msg: string): never => redirect(withParam("/invoices/design", key, msg));
-  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(n) || n < 1 || n > 99_999_999) back("error", "Ange ett heltal mellan 1 och 99 999 999.");
+  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(n) || n < MIN_INVOICE_NUMBER || n > 99_999_999) back("error", `Fakturanummer ska ha minst två siffror. Ange ett heltal mellan ${MIN_INVOICE_NUMBER} och 99 999 999.`);
   const done = await db.$transaction(async (tx) => {
     if ((await tx.invoice.count({ where: { companyId, number: { not: null } } })) > 0) return false;
     await tx.company.update({ where: { id: companyId }, data: { invoiceCounter: n - 1 } });
