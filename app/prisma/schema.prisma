@@ -48,6 +48,7 @@ model Membership {
 
 model Company {
   id          Int    @id @default(autoincrement())
+  plan         String    @default("free") // free | pro. Pro ger AI-avläsning, koppling till Claude och kvitton via e-post.
   lockedAt     DateTime? // låst av administratör: alla användare har bara läsrätt
   lockedReason String    @default("")
   name        String
@@ -516,4 +517,11 @@ model SystemEvent {
   createdAt DateTime @default(now())
 
   @@index([kind, createdAt])
+}
+
+// Strömbrytare för hela appen (till exempel feature.ai = off). Saknas raden är funktionen på.
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

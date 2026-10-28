@@ -7,7 +7,8 @@ import { dateStr } from "@/lib/money";
 import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { companyBookkeeping } from "@/lib/company-delete";
-import { adminDeleteCompany, lockCompany, makeOwner, unlockCompany } from "../../actions";
+import { FEATURES, FEATURE_KEYS, planLabel } from "@/lib/features";
+import { adminDeleteCompany, lockCompany, makeOwner, setPlan, unlockCompany } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function AdminCompany({ params, searchParams }: { params: P
   const company = await db.company.findUnique({
     where: { id },
     select: {
-      id: true, name: true, orgNumber: true, companyType: true, vatPeriod: true, createdAt: true, lockedAt: true, lockedReason: true,
+      id: true, name: true, orgNumber: true, companyType: true, vatPeriod: true, createdAt: true, plan: true, lockedAt: true, lockedReason: true,
       memberships: { select: { userId: true, role: true, user: { select: { name: true, email: true, lockedAt: true } } }, orderBy: { userId: "asc" } },
       fiscalYears: { select: { id: true, start: true, end: true }, orderBy: { start: "asc" } },
     },
@@ -120,6 +121,24 @@ export default async function AdminCompany({ params, searchParams }: { params: P
             </tbody>
           </table>
           {lastActivity && <p className="px-5 pb-4 text-[13px] text-muted">Senast bokfört: {dateTime(lastActivity)}</p>}
+        </Card>
+
+        <Card title="Abonnemang">
+          <form action={setPlan} className="space-y-3 px-5 pb-5 pt-1 text-[14px]">
+            <input type="hidden" name="companyId" value={company.id} />
+            <p>
+              Nuvarande abonnemang: <strong>{planLabel(company.plan)}</strong>
+            </p>
+            <ul className="space-y-1 text-muted">
+              {FEATURE_KEYS.map((f) => (
+                <li key={f}>{company.plan === "pro" ? "✓" : "✗"} {FEATURES[f].label}</li>
+              ))}
+            </ul>
+            <input type="hidden" name="plan" value={company.plan === "pro" ? "free" : "pro"} />
+            <ConfirmButton className="btn-secondary" message={company.plan === "pro" ? `Flytta ${company.name} till Gratis? Funktionerna stängs av direkt.` : `Ge ${company.name} Pro?`}>
+              {company.plan === "pro" ? "Flytta till Gratis" : "Ge Pro"}
+            </ConfirmButton>
+          </form>
         </Card>
 
         <Card title="Låsning">

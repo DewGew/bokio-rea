@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
+import { featureFor } from "@/lib/features";
 import { Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { BookingWizard } from "@/components/BookingWizard";
 import { directUploadEnabled, serverUploadLimit } from "@/lib/storage";
@@ -24,7 +25,7 @@ export default async function NewVerification({ searchParams }: { searchParams: 
         manualAction={createManualVerification}
         uploader={{ blob: directUploadEnabled(), limit: serverUploadLimit(), companyId }}
         back="/verifications/new"
-        ai={aiEnabled()}
+        ai={aiEnabled() && (await featureFor(company, "ai")).available}
       />
     </>
   );

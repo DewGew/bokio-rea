@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { featureState, globalSwitches } from "@/lib/features";
 import { MCP_ROLES, SCOPE_LABEL, checkAuthorize, headerOrigin } from "@/lib/oauth";
 import { ROLES, type Role } from "@/lib/session-config";
 import { Flash, type SP } from "@/components/ui";
@@ -27,7 +28,8 @@ export default async function Authorize({ searchParams }: { searchParams: SP }) 
     );
   }
 
-  const companies = session.user.memberships.filter((m) => MCP_ROLES.includes(m.role));
+  const switches = await globalSwitches();
+  const companies = session.user.memberships.filter((m) => MCP_ROLES.includes(m.role) && featureState(m.company.plan, switches, "mcp").available);
   const hidden = Object.entries(oauth).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />);
 
   return (
@@ -42,7 +44,7 @@ export default async function Authorize({ searchParams }: { searchParams: SP }) 
       <Flash error={error} />
 
       {companies.length === 0 ? (
-        <p className="rounded-xl bg-warn-soft p-3 text-[14px] text-warn">Du behöver vara ägare eller ha full behörighet i ett företag för att koppla det till {req.clientName}.</p>
+        <p className="rounded-xl bg-warn-soft p-3 text-[14px] text-warn">Du behöver vara ägare eller ha full behörighet i ett företag med Pro för att koppla det till {req.clientName}. Koppling till Claude ingår i Pro.</p>
       ) : (
         <form action={approveConsent} className="space-y-5">
           {hidden}

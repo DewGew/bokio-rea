@@ -3,6 +3,7 @@ import Link from "next/link";
 const TABS = [
   ["/admin", "Översikt"],
   ["/admin/system", "System"],
+  ["/admin/features", "Funktioner"],
   ["/admin/storage", "Lagring"],
   ["/admin/connections", "Kopplingar"],
   ["/admin/log", "Logg"],

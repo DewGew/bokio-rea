@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { dateTime, isAdminEmail, requireAdmin } from "@/lib/admin";
 import { dateStr } from "@/lib/money";
 import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
+import { planLabel } from "@/lib/features";
 import { AdminTabs } from "@/components/AdminTabs";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ResetLinkForm } from "@/components/ResetLinkForm";
@@ -103,6 +104,7 @@ export default async function Admin({ searchParams }: { searchParams: SP }) {
                 <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
                   <th className="px-5 py-2">Namn</th>
                   <th className="px-3 py-2">Org.nr</th>
+                  <th className="px-3 py-2">Plan</th>
                   <th className="px-3 py-2">Användare</th>
                   <th className="px-3 py-2">Verifikationer</th>
                   <th className="px-3 py-2">Fakturor</th>
@@ -116,6 +118,7 @@ export default async function Admin({ searchParams }: { searchParams: SP }) {
                       <Link href={`/admin/companies/${c.id}`} className="text-brand">{c.name}</Link>
                     </td>
                     <td className="px-3 py-2.5">{c.orgNumber}</td>
+                    <td className="px-3 py-2.5">{planLabel(c.plan)}</td>
                     <td className="px-3 py-2.5">{c._count.memberships}</td>
                     <td className="px-3 py-2.5">{verCount.get(c.id) ?? 0}</td>
                     <td className="px-3 py-2.5">{invCount.get(c.id) ?? 0}</td>

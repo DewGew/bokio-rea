@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { after } from "next/server";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { featureFor } from "@/lib/features";
 import { storeFile } from "@/lib/storage";
 import { readUpload } from "@/lib/receipt-read";
 import { DAILY_LIMIT, allowedSender, forwardingConfirmation, parsePostmark, receiptText } from "@/lib/inbound-email";
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
   if (!json) return reply({ error: "Ogiltig JSON." }, 400);
 
   const mail = parsePostmark(json);
-  const company = mail.token ? await db.company.findUnique({ where: { inboxToken: mail.token }, select: { id: true, inboxAllowedSenders: true } }) : null;
+  const company = mail.token ? await db.company.findUnique({ where: { inboxToken: mail.token }, select: { id: true, plan: true, inboxAllowedSenders: true } }) : null;
   if (!company) return reply({ status: "ignored", reason: "okänd adress" });
   const companyId = company.id;
   const messageId = mail.messageId || createHash("sha256").update(`${mail.from}|${mail.subject}|${mail.text.slice(0, 500)}`).digest("hex");
@@ -46,6 +47,11 @@ export async function POST(req: Request) {
     if ((await db.inboundEmail.count({ where: { companyId, createdAt: { gte: since } } })) >= DAILY_LIMIT) {
       await log("limit", `Högst ${DAILY_LIMIT} mejl per dygn.`);
       return reply({ status: "limit" });
+    }
+    // Kvitton via e-post ingår i Pro och kan stängas av för hela appen.
+    if (!(await featureFor(company, "inbound")).available) {
+      await log("feature_off", "Mottagning av e-post är inte aktiverad för företaget.");
+      return reply({ status: "ignored", reason: "funktionen är inte aktiverad" });
     }
     const confirmation = forwardingConfirmation(mail);
     if (confirmation) {

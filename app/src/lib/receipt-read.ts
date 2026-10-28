@@ -2,6 +2,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { db } from "./db";
 import { readStored } from "./storage";
+import { featureFor } from "./features";
 import { AI_VERSION, ReceiptAiError, aiEnabled, readReceipt, type ReceiptData } from "./receipt-ai";
 
 const READABLE = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf", "text/plain"];
@@ -21,6 +22,9 @@ export async function readUpload(companyId: number, uploadId: number, opts: { fo
   const outdated = !!cached && (cached.version ?? 1) < AI_VERSION;
   if (upload.aiStatus === "done" && cached && !opts.force && !outdated) return { status: "done", data: cached };
   if (!aiEnabled()) return { status: "disabled" };
+  // AI-avläsning ingår i Pro och kan stängas av för hela appen. Redan lästa underlag visas ändå (se ovan).
+  const owner = await db.company.findUnique({ where: { id: companyId }, select: { plan: true } });
+  if (!owner || !(await featureFor(owner, "ai")).available) return { status: "disabled" };
   if (!READABLE.includes(upload.mimeType)) return { status: "error", error: "Filtypen kan inte läsas av." };
 
   const bytes = await readStored(upload);

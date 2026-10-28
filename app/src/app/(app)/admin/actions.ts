@@ -12,6 +12,7 @@ import { companyBookkeeping, companyFiles, companyPurgeOps, deleteCompanyFiles }
 import { revokeGrant } from "@/lib/oauth";
 import { deleteStored } from "@/lib/storage";
 import { findOrphans } from "@/lib/admin-system";
+import { FEATURES, FEATURE_KEYS, planLabel, type Feature } from "@/lib/features";
 
 const back = (key: "ok" | "error", msg: string): never => redirect(withParam("/admin", key, msg));
 
@@ -172,4 +173,32 @@ export async function deleteOrphans() {
   }
   await adminLogOp({ adminEmail: admin.user.email, action: "orphans_deleted", targetType: "company", targetLabel: "Lagring", details: `${orphans.length} filer, ${(size / 1_048_576).toFixed(1)} MB` });
   backTo("/admin/storage", "ok", `${orphans.length} föräldralösa filer är borttagna.`);
+}
+
+// ---------------------------------------------------------------- Abonnemang och funktioner
+
+export async function setPlan(fd: FormData) {
+  const { adminEmail, company, path } = await companyTarget(fd);
+  const plan = str(fd, "plan") === "pro" ? "pro" : "free";
+  const current = await db.company.findUniqueOrThrow({ where: { id: company.id }, select: { plan: true } });
+  if (current.plan === plan) backTo(path, "error", `${company.name} har redan abonnemanget ${planLabel(plan)}.`);
+  await db.$transaction([
+    db.company.update({ where: { id: company.id }, data: { plan } }),
+    adminLogOp({ adminEmail, action: "company_plan", targetType: "company", targetId: company.id, targetLabel: company.name, details: `${planLabel(current.plan)} → ${planLabel(plan)}` }),
+  ]);
+  revalidatePath("/", "layout");
+  backTo(path, "ok", `${company.name} har nu ${planLabel(plan)}.`);
+}
+
+export async function setFeatureSwitch(fd: FormData) {
+  const admin = await requireAdmin();
+  const feature = str(fd, "feature") as Feature;
+  if (!FEATURE_KEYS.includes(feature)) backTo("/admin/features", "error", "Okänd funktion.");
+  const on = str(fd, "on") === "1";
+  await db.$transaction([
+    db.systemSetting.upsert({ where: { key: `feature.${feature}` }, create: { key: `feature.${feature}`, value: on ? "on" : "off" }, update: { value: on ? "on" : "off" } }),
+    adminLogOp({ adminEmail: admin.user.email, action: "feature_switch", targetType: "company", targetLabel: FEATURES[feature].label, details: on ? "På för hela appen" : "Av för hela appen" }),
+  ]);
+  revalidatePath("/", "layout");
+  backTo("/admin/features", "ok", `${FEATURES[feature].label} är ${on ? "påslagen" : "avstängd"} för hela appen.`);
 }

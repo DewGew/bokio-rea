@@ -37,6 +37,8 @@ export const ADMIN_ACTIONS: Record<string, string> = {
   company_locked: "Låste företag",
   company_unlocked: "Låste upp företag",
   company_deleted: "Raderade företag",
+  company_plan: "Ändrade abonnemang",
+  feature_switch: "Slog av/på funktion",
   grant_revoked: "Återkallade koppling",
   orphans_deleted: "Rensade föräldralösa filer",
 };
