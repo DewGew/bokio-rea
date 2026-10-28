@@ -16,6 +16,7 @@ export type DesignValues = {
   paymentLink: string;
   bankgiro: string;
   plusgiro: string;
+  showOcr: boolean;
   bankName: string;
   bankAccount: string;
   iban: string;
@@ -128,6 +129,7 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
       paymentLink: v.paymentLink,
       bankgiro: v.bankgiro,
       plusgiro: v.plusgiro,
+      showOcr: v.showOcr ? "1" : "0",
       bankName: v.bankName,
       bankAccount: v.bankAccount,    
       iban: v.iban,
@@ -287,6 +289,12 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
                 <input id={k} name={k} value={v[k]} onChange={(e) => set(k, e.target.value)} placeholder={ph} className="input" />
               </div>
             ))}
+          </div>
+          <div className="mt-4 space-y-1">
+            <Toggle name="showOcr" checked={v.showOcr} onChange={(b) => set("showOcr", b)} label="Visa OCR-nummer på fakturan" />
+            <p className="text-[13px] text-muted">
+              OCR-numret är fakturanumret följt av en kontrollsiffra. Det används som betalningsreferens via bankgiro eller plusgiro, så ett av dem måste vara ifyllt.
+            </p>
           </div>
         </Section>
 

@@ -94,6 +94,7 @@ model Company {
   lateInterestRate Float? // dröjsmålsränta i procent per år; null = enligt räntelagen
   reminderFee      Int     @default(0) // påminnelseavgift i öre (högst 60 kr och bara om den är avtalad); 0 = ingen
   invoiceCounter   Int     @default(0) // senast utdelade fakturanummer (räknas upp atomiskt)
+  showOcr          Boolean @default(false) // visa OCR-nummer (fakturanummer + kontrollsiffra) på fakturor, kräver bankgiro eller plusgiro
 
   // Kvitton via e-post: hemlig token i adressen (kvitton+<token>@...) och valfri lista över tillåtna avsändare
   inboxToken          String? @unique

@@ -3,6 +3,7 @@
 // företags-, kund- och betalningsuppgifter som gällde då – även om uppgifterna ändras senare.
 import type { Company, Customer, Invoice, InvoiceLine } from "@prisma/client";
 import { invoiceTotals, isOrganisationNumber, isVatTreatment, lateInterestText, lineNet, reminderFeeText, type VatTreatment } from "./invoice-rules";
+import { ocrNumber } from "./ocr";
 
 export type DocLine = {
   description: string;
@@ -66,6 +67,7 @@ export type InvoiceDoc = {
     plusgiro: string;
     bankName?: string; // saknas i ögonblicksbilder som sparades före banköverföring
     bankAccount?: string;   
+    ocr?: string; // OCR-nummer (fakturanummer + kontrollsiffra), bara om företaget valt det. Saknas i äldre ögonblicksbilder.
     iban: string;
     bic: string;
     swishNumber: string;
@@ -138,6 +140,7 @@ export function buildInvoiceDoc(invoice: Full, company: Company): InvoiceDoc {
       plusgiro: company.plusgiro,
       bankName: company.bankName,
       bankAccount: company.bankAccount,
+      ocr: company.showOcr && invoice.kind !== "credit" && invoice.number != null && (company.bankgiro || company.plusgiro) ? ocrNumber(invoice.number) : "",
       iban: company.iban,
       bic: company.bic,
       swishNumber: company.swishNumber,
