@@ -7,6 +7,7 @@ import { rankSuggestions } from "./suggest";
 import { templateLines, type Country } from "./template-lines";
 import type { BankRow } from "./bank-csv";
 import { kr } from "./money";
+import { ocrNumber } from "./ocr";
 
 /**
  * Bankimport: transaktioner från kontoutdraget matchas mot det som redan finns i bokföringen och bokförs.
@@ -145,11 +146,11 @@ function propose(ctx: Ctx, t: Tx): Proposal[] {
     // 2. Obetald kundfaktura
     const candidates = ctx.invoices.filter((i) => invoiceTotals(i.lines).total === gross);
     for (const i of candidates.slice(0, 3)) {
-      const named = (i.number != null && new RegExp(`(^|\\D)${i.number}(\\D|$)`).test(hay)) || words(i.customer.name).some((w) => hay.includes(w));
+      const named = (i.number != null && [String(i.number), ocrNumber(i.number)].some((ref) => new RegExp(`(^|\\D)${ref}(\\D|$)`).test(hay))) || words(i.customer.name).some((w) => hay.includes(w));
       out.push({
         choice: { kind: "invoice", invoiceId: i.id },
         label: `Betalning av faktura #${i.number} – ${i.customer.name}`,
-        reason: named ? "Samma belopp och fakturanummer eller kundnamn" : "Samma belopp som en obetald faktura",
+        reason: named ? "Samma belopp och fakturanummer, OCR-nummer eller kundnamn" : "Samma belopp som en obetald faktura",
         confidence: candidates.length === 1 || named ? "high" : "medium",
       });
     }

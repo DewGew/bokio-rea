@@ -18,6 +18,9 @@ model User {
   passwordHash String
   theme        String       @default("system") // system | light | dark
   createdAt    DateTime     @default(now())
+  lockedAt     DateTime? // låst av administratör: användaren kan logga in men har bara läsrätt i alla sina företag
+  lockedReason String    @default("")
+  passwordResets PasswordReset[]
   memberships  Membership[]
   sessions     Session[]
   oauthGrants  OAuthGrant[]
@@ -45,6 +48,9 @@ model Membership {
 
 model Company {
   id          Int    @id @default(autoincrement())
+  plan         String    @default("free") // free | pro. Pro ger AI-avläsning, koppling till Claude och kvitton via e-post.
+  lockedAt     DateTime? // låst av administratör: alla användare har bara läsrätt
+  lockedReason String    @default("")
   name        String
   orgNumber   String
   vatNumber   String @default("")
@@ -88,6 +94,7 @@ model Company {
   lateInterestRate Float? // dröjsmålsränta i procent per år; null = enligt räntelagen
   reminderFee      Int     @default(0) // påminnelseavgift i öre (högst 60 kr och bara om den är avtalad); 0 = ingen
   invoiceCounter   Int     @default(0) // senast utdelade fakturanummer (räknas upp atomiskt)
+  showOcr          Boolean @default(false) // visa OCR-nummer (fakturanummer + kontrollsiffra) på fakturor, kräver bankgiro eller plusgiro
 
   // Kvitton via e-post: hemlig token i adressen (kvitton+<token>@...) och valfri lista över tillåtna avsändare
   inboxToken          String? @unique
@@ -474,4 +481,48 @@ model SieExport {
   exportedAt   DateTime   @default(now())
 
   @@unique([companyId, fiscalYearId])
+}
+
+// Engångslänk för att byta lösenord, skapas av en administratör. Sparas bara som hash.
+model PasswordReset {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Spårbarhet för administratörernas åtgärder. E-post och etikett sparas som text så att loggen består även om kontot raderas.
+model AdminLog {
+  id          Int      @id @default(autoincrement())
+  adminEmail  String
+  action      String
+  targetType  String // user | company
+  targetId    Int?
+  targetLabel String   @default("")
+  details     String   @default("")
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// Händelser som driften behöver kunna se (misslyckade inloggningar, lagringsfel). Rensas efter 30 dagar.
+model SystemEvent {
+  id        Int      @id @default(autoincrement())
+  kind      String // login_failed | inbound_storage_error
+  detail    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([kind, createdAt])
+}
+
+// Strömbrytare för hela appen (till exempel feature.ai = off). Saknas raden är funktionen på.
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

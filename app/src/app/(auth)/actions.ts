@@ -66,7 +66,10 @@ export async function login(fd: FormData) {
   const user = await db.user.findUnique({ where: { email } });
   // Kör alltid hashjämförelsen så att svarstiden inte avslöjar om kontot finns.
   const ok = await verifyPassword(password, user?.passwordHash ?? "scrypt$00$00");
-  if (!user || !ok) redirect(withParam("/login", "error", "Fel e-post eller lösenord."));
+  if (!user || !ok) {
+    await db.systemEvent.create({ data: { kind: "login_failed", detail: email.slice(0, 200) } }).catch(() => {});
+    redirect(withParam("/login", "error", "Fel e-post eller lösenord."));
+  }
   const first = await db.membership.findFirst({ where: { userId: user.id }, orderBy: { companyId: "asc" } });
   await startSession(user.id, first?.companyId ?? null);
   const next = str(fd, "next");
@@ -80,6 +83,7 @@ export async function logout() {
 
 export async function addCompany(_: FormState, fd: FormData): Promise<FormState> {
   const s = await requireUser();
+  if (s.user.lockedAt) return { error: "Kontot är låst av en administratör och kan inte skapa nya företag.", values: keep(fd) };
   const company = companyFields(fd);
   const cErr = companyError(company);
   if (cErr) return { error: cErr, values: keep(fd) };
@@ -111,11 +115,13 @@ export async function acceptInvite(fd: FormData) {
   let session = await getSession();
   if (mode === "join") {
     if (!session) back("Logga in först.");
+    if (session!.user.lockedAt) back("Kontot är låst av en administratör och kan inte gå med i nya företag.");
     user = session!.user;
   } else if (mode === "login") {
     const found = await db.user.findUnique({ where: { email: invitation.email } });
     const ok = await verifyPassword(password, found?.passwordHash ?? "scrypt$00$00");
     if (!found || !ok) back("Fel lösenord.");
+    if (found!.lockedAt) back("Kontot är låst av en administratör och kan inte gå med i nya företag.");
     user = found!;
     session = null;
   } else {

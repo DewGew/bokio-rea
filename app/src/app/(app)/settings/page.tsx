@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireCompany } from "@/lib/auth";
+import { FEATURES, FEATURE_KEYS, planLabel } from "@/lib/features";
 import { companyBookkeeping } from "@/lib/company-delete";
 import { fyLabel } from "@/lib/fiscal";
 import { COMPANY_TYPES } from "@/lib/company-setup";
@@ -98,6 +99,24 @@ export default async function Settings({ searchParams }: { searchParams: SP }) {
           </Card>
         </div>
       </form>
+      <div className="mt-6 max-w-5xl">
+        <Card title="Abonnemang">
+          <div className="space-y-2 px-5 pb-5 pt-1 text-[14px]">
+            <p>
+              <strong>{planLabel(c.plan)}</strong>
+            </p>
+            <ul className="space-y-1 text-muted">
+              {FEATURE_KEYS.map((f) => (
+                <li key={f}>
+                  {c.plan === "pro" ? "✓" : "✗"} {FEATURES[f].label}
+                </li>
+              ))}
+            </ul>
+            {c.plan !== "pro" && <p className="text-muted">Pro ger dig alla funktionerna ovan. Kontakta administratören för att uppgradera.</p>}
+          </div>
+        </Card>
+      </div>
+
       {role === "owner" && (
         <div className="mt-6 max-w-5xl">
           <Card title="Ta bort företag">

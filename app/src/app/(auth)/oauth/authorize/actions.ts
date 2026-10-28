@@ -1,6 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import { featureFor } from "@/lib/features";
 import { requireUser } from "@/lib/auth";
 import { MCP_ROLES, checkAuthorize, headerOrigin, issueCode } from "@/lib/oauth";
 
@@ -27,6 +29,8 @@ export async function approveConsent(fd: FormData) {
   const companyId = Number(fd.get("companyId"));
   const m = s.user.memberships.find((x) => x.companyId === companyId);
   if (!m || !MCP_ROLES.includes(m.role)) back(p, "Välj ett företag där du är ägare eller har full behörighet.");
+  const mcp = await db.company.findUnique({ where: { id: companyId }, select: { plan: true } });
+  if (!mcp || !(await featureFor(mcp, "mcp")).available) back(p, "Koppling till Claude ingår i Pro och är inte aktiverad för det här företaget.");
   // Användaren väljer nivå på godkännandesidan (läsa, eller läsa och bokföra).
   const scope = fd.get("level") === "write" ? "read write" : "read";
   redirect(await issueCode({ ...req, scope }, s.userId, companyId, base));

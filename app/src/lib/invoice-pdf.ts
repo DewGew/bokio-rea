@@ -386,7 +386,8 @@ export async function invoicePdf(doc: InvoiceDoc, design: InvoiceDesign, logo: L
     if (p.iban) rows.push(["IBAN", p.iban]);
     if (p.bic) rows.push(["BIC", p.bic]);
     if (swish) rows.push(["Swish", swish.replace(/^(\d{3})(\d{3})(\d{2})(\d{2})$/, "$1 $2 $3 $4")]);
-    rows.push(["Referens", draft ? "-" : numberText]);
+    // OCR-numret är betalningsreferensen när det används, annars fakturanumret.
+    rows.push(p.ocr && !draft ? ["OCR-nummer", p.ocr] : ["Referens", draft ? "-" : numberText]);
     const boxH = Math.max(rows.length * 13 + 46 + (payLink ? 16 : 0), showQr ? 132 : 0);
     if (y - 14 - boxH < FOOT + 8) continuePage(false);
     y -= 14;

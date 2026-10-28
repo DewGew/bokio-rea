@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
+import { featureFor, featureMessage } from "@/lib/features";
 import { inboxAddress } from "@/lib/inbound-email";
 import { Card, Empty, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -11,6 +12,7 @@ const STATUS: Record<string, [string, string]> = {
   ok: ["Mottaget", "bg-success-soft text-success"],
   no_attachment: ["Mottaget (text)", "bg-success-soft text-success"],
   rejected_sender: ["Nekad avsändare", "bg-warn-soft text-warn"],
+  feature_off: ["Funktionen avstängd", "bg-warn-soft text-warn"],
   limit: ["Över gränsen", "bg-danger-soft text-danger"],
   error: ["Fel", "bg-danger-soft text-danger"],
   forwarding_confirmation: ["Bekräfta vidarebefordran", "bg-brand-soft text-brand"],
@@ -21,6 +23,17 @@ const when = (d: Date) => d.toLocaleString("sv-SE", { dateStyle: "short", timeSt
 export default async function InboxSettings({ searchParams }: { searchParams: SP }) {
   const { error, notice } = await readParams(searchParams);
   const { companyId, company, role } = await requireCompany();
+  const feature = await featureFor(company, "inbound");
+  if (!feature.available) {
+    return (
+      <>
+        <PageHeader title="Kvitton via e-post" subtitle="Skicka eller vidarebefordra kvitton till företagets egen adress." />
+        <Card title="Ingår i Pro">
+          <p className="px-5 pb-5 pt-1 text-[14px] text-muted">{featureMessage(feature, "inbound")}</p>
+        </Card>
+      </>
+    );
+  }
   const enabled = !!process.env.INBOUND_ADDRESS && !!process.env.INBOUND_WEBHOOK_SECRET;
   const address = inboxAddress(process.env.INBOUND_ADDRESS, company.inboxToken);
   const mails = await db.inboundEmail.findMany({ where: { companyId }, orderBy: { createdAt: "desc" }, take: 50 });

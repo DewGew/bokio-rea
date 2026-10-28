@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
+import { featureFor, featureMessage } from "@/lib/features";
 import { MCP_ROLES, SCOPE_LABEL, headerOrigin, mcpResource } from "@/lib/oauth";
 import { dateStr } from "@/lib/money";
 import { Card, Empty, Flash, PageHeader, readParams, type SP } from "@/components/ui";
@@ -12,6 +13,7 @@ const when = (d: Date | null) => (d ? d.toLocaleString("sv-SE", { dateStyle: "sh
 export default async function Connections({ searchParams }: { searchParams: SP }) {
   const { error, notice } = await readParams(searchParams);
   const { companyId, company, role, user } = await requireCompany();
+  const feature = await featureFor(company, "mcp");
   const url = mcpResource(await headerOrigin());
   const grants = await db.oAuthGrant.findMany({
     where: { companyId, revokedAt: null },
@@ -23,6 +25,11 @@ export default async function Connections({ searchParams }: { searchParams: SP }
     <>
       <PageHeader title="Kopplingar" subtitle={`Ge Claude åtkomst till ${company.name} och fråga om bokföringen med vanliga ord.`} />
       <Flash error={error} notice={notice} />
+      {!feature.available && (
+        <p className="mb-6 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+          {featureMessage(feature, "mcp")} Befintliga kopplingar fungerar inte förrän funktionen är tillgänglig igen.
+        </p>
+      )}
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <Card title="Aktiva kopplingar">

@@ -27,6 +27,9 @@ export type RulesLine = {
 
 export const VAT_RATES = [25, 12, 6, 0] as const;
 
+/** Fakturanummer ska ha minst två siffror. En ny nummerserie börjar därför på 10 eller högre. */
+export const MIN_INVOICE_NUMBER = 10;
+
 /** Avrundning till hela ören, symmetrisk kring noll så att en kreditfaktura blir exakt originalet med omvänt tecken. */
 export const roundOre = (x: number) => Math.sign(x) * Math.round(Math.abs(x));
 

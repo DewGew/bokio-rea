@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { headers } from "next/headers";
 import { db } from "./db";
+import { featureFor } from "./features";
 import { hashToken } from "./token";
 
 /**
@@ -272,8 +273,9 @@ async function issueTokens(grantId: number, scope: string) {
 const s256 = (verifier: string) => createHash("sha256").update(verifier).digest("base64url");
 
 async function allowed(userId: number, companyId: number) {
-  const m = await db.membership.findUnique({ where: { userId_companyId: { userId, companyId } } });
-  return !!m && MCP_ROLES.includes(m.role);
+  const m = await db.membership.findUnique({ where: { userId_companyId: { userId, companyId } }, include: { company: { select: { plan: true } } } });
+  // Kopplingen till Claude ingår i Pro och kan stängas av för hela appen.
+  return !!m && MCP_ROLES.includes(m.role) && (await featureFor(m.company, "mcp")).available;
 }
 
 /** Token-endpoint: authorization_code och refresh_token. */

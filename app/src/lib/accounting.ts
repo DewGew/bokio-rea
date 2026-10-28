@@ -4,7 +4,7 @@ import { BANK_ACCOUNT, INPUT_VAT, OUTPUT_VAT, PAYABLE_EXPENSES, RECEIVABLES, VAT
 import { vatFromGross } from "./money";
 import { templateLines, type Country } from "./template-lines";
 import { FiscalError, ensureFiscalYearFor } from "./fiscal";
-import { blocking, invoiceTotals, isVatTreatment, lineNet, salesAccount, validateInvoice, type ValidationInput, type VatTreatment } from "./invoice-rules";
+import { blocking, invoiceTotals, isVatTreatment, lineNet, salesAccount, validateInvoice, type ValidationInput, type VatTreatment, MIN_INVOICE_NUMBER } from "./invoice-rules";
 import { buildInvoiceDoc } from "./invoice-doc";
 
 type Tx = Prisma.TransactionClient | PrismaClient;
@@ -217,6 +217,11 @@ export function validationInput(company: Company, customer: Customer | null, inv
 /** Nästa fakturanummer. Räknaren på företagsraden räknas upp i samma transaktion, så samtidiga utfärdanden köas och får olika nummer. */
 async function nextInvoiceNumber(t: Tx, companyId: number) {
   const c = await t.company.update({ where: { id: companyId }, data: { invoiceCounter: { increment: 1 } }, select: { invoiceCounter: true } });
+  // Fakturanummer ska ha minst två siffror: en helt ny serie börjar på MIN_INVOICE_NUMBER. En pågående serie fortsätter oavbrutet.
+  if (c.invoiceCounter < MIN_INVOICE_NUMBER && (await t.invoice.count({ where: { companyId, number: { not: null } } })) === 0) {
+    await t.company.update({ where: { id: companyId }, data: { invoiceCounter: MIN_INVOICE_NUMBER } });
+    return MIN_INVOICE_NUMBER;
+  }
   return c.invoiceCounter;
 }
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
+import { featureFor } from "@/lib/features";
 import { Card, Flash, PageHeader, readParams, Segmented, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { BookingWizard } from "@/components/BookingWizard";
@@ -103,7 +104,7 @@ export default async function UploadPage({ params, searchParams }: { params: Pro
                     presetUploadIds={[u.id]}
                     back={`/uploads/${u.id}`}
                     allowManual={false}
-                    ai={aiEnabled()}
+                    ai={aiEnabled() && (await featureFor(company, "ai")).available}
                     presetAi={u.aiStatus === "done" && ((u.aiData as unknown as ReceiptData)?.version ?? 1) >= AI_VERSION ? (u.aiData as unknown as ReceiptData) : null}
                   />
                 )}

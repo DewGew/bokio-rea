@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireCompany } from "@/lib/auth";
 import { accountPlan } from "@/lib/account-delete";
+import { FEATURES, FEATURE_KEYS, globalSwitches, planLabel } from "@/lib/features";
 import { fyLabel } from "@/lib/fiscal";
 import { Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -10,6 +11,7 @@ export default async function AccountPage({ searchParams }: { searchParams: SP }
   const { user } = await requireCompany();
   const { notice, error } = await readParams(searchParams);
   const plans = await accountPlan(user.id);
+  const switches = await globalSwitches();
   const blocked = plans.some((p) => p.action === "blocked");
   const deleting = plans.filter((p) => p.action === "delete");
 
@@ -17,6 +19,36 @@ export default async function AccountPage({ searchParams }: { searchParams: SP }
     <>
       <PageHeader title="Mitt konto" subtitle={`${user.name} · ${user.email}`} />
       <Flash notice={notice} error={error} />
+      <Card title="Vad ingår i Pro?" className="mb-6 max-w-3xl">
+        <div className="space-y-4 px-5 pb-5 pt-1 text-[14px]">
+          <ul className="divide-y divide-line rounded-lg border border-line">
+            {FEATURE_KEYS.map((f) => (
+              <li key={f} className="px-3 py-2.5">
+                <p className="font-medium">
+                  {FEATURES[f].label}
+                  {!switches[f] && <span className="ml-2 text-[13px] font-normal text-warn">Tillfälligt avstängd</span>}
+                </p>
+                <p className="text-muted">{FEATURES[f].description}</p>
+              </li>
+            ))}
+          </ul>
+          <div>
+            <h3 className="mb-1.5 font-medium">Dina företag</h3>
+            <ul className="divide-y divide-line rounded-lg border border-line">
+              {user.memberships.map((m) => (
+                <li key={m.companyId} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                  <span>{m.company.name}</span>
+                  <span className={m.company.plan === "pro" ? "font-medium text-success" : "text-muted"}>{planLabel(m.company.plan)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="text-muted">
+            Abonnemanget gäller per företag och gäller alla användare i företaget. Vill du uppgradera ett företag till Pro kontaktar du administratören.
+          </p>
+        </div>
+      </Card>
+
       <Card title="Avsluta konto" className="max-w-3xl">
         <div className="space-y-4 px-5 pb-5 pt-1 text-[14px]">
           <p className="text-muted">
