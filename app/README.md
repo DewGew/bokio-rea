@@ -103,6 +103,7 @@ Administratörer ser konton, roller och mängder, **aldrig innehållet i någons
 | Funktioner | strömbrytare per Pro-funktion och användning |
 | Lagring | använd lagring per företag och sökning efter föräldralösa filer |
 | Kopplingar | alla OAuth-kopplingar (Claude) med möjlighet att återkalla |
+| Tjänster | genvägar till Vercel, Neon, OpenRouter, Postmark och GitHub, med status för varje koppling |
 | Logg | alla administratörers åtgärder, som inte kan ändras från appen |
 
 Åtgärder (alla loggas):
