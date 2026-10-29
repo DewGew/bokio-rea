@@ -7,12 +7,12 @@ import { planLabel } from "@/lib/features";
 import { AdminTabs } from "@/components/AdminTabs";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ResetLinkForm } from "@/components/ResetLinkForm";
-import { endUserSessions, lockUser, unlockUser } from "./actions";
+import { endUserSessions, lockUser, resetUserMfa, unlockUser } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function Admin({ searchParams }: { searchParams: SP }) {
-  await requireAdmin();
+  const me = await requireAdmin();
   const { notice, error } = await readParams(searchParams);
   const [companies, users, sessions, verifications, invoices] = await Promise.all([
     db.company.findMany({ orderBy: { id: "asc" }, include: { _count: { select: { memberships: true } } } }),
@@ -67,9 +67,16 @@ export default async function Admin({ searchParams }: { searchParams: SP }) {
                       <td className="px-3 py-2.5">{u.sessions[0] ? dateTime(u.sessions[0].lastSeenAt) : "–"}</td>
                       <td className="px-3 py-2.5">
                         {u.lockedAt ? <span className="text-warn" title={u.lockedReason}>Låst {dateStr(u.lockedAt)}</span> : protectedAdmin ? "Administratör" : "Aktiv"}
+                        <div className="text-[12px] text-muted">{u.mfaEnabledAt ? "MFA på" : "Ingen MFA"}</div>
                       </td>
                       <td className="space-y-1.5 px-5 py-2.5">
                         <ResetLinkForm userId={u.id} />
+                        {u.mfaEnabledAt && u.email !== me.user.email && (
+                          <form action={resetUserMfa}>
+                            <input type="hidden" name="userId" value={u.id} />
+                            <ConfirmButton className="text-[13px] text-brand hover:underline" message={`Återställa tvåfaktor för ${u.email}? Användaren loggas ut.`}>Återställ MFA</ConfirmButton>
+                          </form>
+                        )}
                         <form action={endUserSessions}>
                           <input type="hidden" name="userId" value={u.id} />
                           <ConfirmButton className="text-[13px] text-brand hover:underline" message={`Logga ut ${u.email} på alla enheter?`}>Logga ut överallt</ConfirmButton>

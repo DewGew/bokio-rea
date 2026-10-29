@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { Sidebar } from "@/components/Sidebar";
 import { requireCompany } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
+import { mfaAvailable } from "@/lib/mfa";
 import { IdleLogout } from "@/components/IdleLogout";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +25,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <p className="no-print mb-6 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
               <strong>{company.name} är låst av en administratör.</strong> Du kan se allt men inte ändra något.
               {company.lockedReason ? ` Orsak: ${company.lockedReason}` : ""}
+            </p>
+          )}
+          {isAdminEmail(user.email) && !user.mfaEnabledAt && mfaAvailable() && (
+            <p className="no-print mb-6 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+              <strong>Administratörer måste ha tvåfaktorsinloggning.</strong> <Link href="/settings/account/mfa" className="underline">Aktivera den nu</Link> för att komma åt administrationen.
             </p>
           )}
           {user.lockedAt && (

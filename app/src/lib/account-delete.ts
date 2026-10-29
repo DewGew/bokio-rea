@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { verifyPassword } from "./password";
+import { logMfaFailure, verifyUserCode } from "./mfa";
 import { companyBookkeeping, companyFiles, companyPurgeOps, deleteCompanyFiles } from "./company-delete";
 
 export class AccountDeleteError extends Error {}
@@ -50,12 +51,16 @@ export async function accountPlan(userId: number): Promise<CompanyPlan[]> {
  * Tar bort användarens konto. Kräver lösenordet. Företag där användaren är ensam medlem och som saknar oexporterad
  * bokföring tas bort tillsammans med kontot. Övriga företag lämnas, men bara om de har en annan ägare.
  */
-export async function deleteAccount(userId: number, password: string) {
+export async function deleteAccount(userId: number, password: string, code = "") {
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) throw new AccountDeleteError("Kontot finns inte.");
   if (user.lockedAt) throw new AccountDeleteError("Kontot är låst av en administratör och kan inte avslutas just nu. Kontakta administratören.");
   if (!password || !(await verifyPassword(password, user.passwordHash))) {
     throw new AccountDeleteError("Lösenordet stämmer inte. Inget har tagits bort.");
+  }
+  if (user.mfaEnabledAt && !(await verifyUserCode(userId, code))) {
+    await logMfaFailure(userId);
+    throw new AccountDeleteError("Koden från autentiseringsappen stämmer inte. Inget har tagits bort.");
   }
   const plans = await accountPlan(userId);
   const blocked = plans.filter((p) => p.action === "blocked");

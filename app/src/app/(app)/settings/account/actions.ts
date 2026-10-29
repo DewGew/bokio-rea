@@ -8,7 +8,7 @@ import { AccountDeleteError, deleteAccount } from "@/lib/account-delete";
 export async function deleteAccountAction(fd: FormData) {
   const { userId } = await requireUser();
   try {
-    await deleteAccount(userId, typeof fd.get("password") === "string" ? (fd.get("password") as string) : "");
+    await deleteAccount(userId, typeof fd.get("password") === "string" ? (fd.get("password") as string) : "", typeof fd.get("code") === "string" ? (fd.get("code") as string) : "");
   } catch (e) {
     if (e instanceof AccountDeleteError) redirect(withParam("/settings/account", "error", e.message));
     throw e;

@@ -7,6 +7,7 @@ import { endSession, getSession, hashPassword, requireUser, setActiveCompany, st
 import { createCompany, isCompanyType, isVatPeriod, validOrgNumber } from "@/lib/company-setup";
 import { str, withParam } from "@/lib/action";
 import { MemberError, acceptInvitation, findInvitation } from "@/lib/members";
+import { clearChallenge, createChallenge, failChallenge, logMfaFailure, readChallenge, tooManyMfaFailures, verifyUserCode } from "@/lib/mfa";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -70,10 +71,40 @@ export async function login(fd: FormData) {
     await db.systemEvent.create({ data: { kind: "login_failed", detail: email.slice(0, 200) } }).catch(() => {});
     redirect(withParam("/login", "error", "Fel e-post eller lösenord."));
   }
-  const first = await db.membership.findFirst({ where: { userId: user.id }, orderBy: { companyId: "asc" } });
-  await startSession(user.id, first?.companyId ?? null);
   const next = str(fd, "next");
-  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  // Tvåfaktor: rätt lösenord räcker inte, sessionen skapas först när koden är godkänd.
+  if (user.mfaEnabledAt) {
+    if (await tooManyMfaFailures(user.id)) redirect(withParam("/login", "error", "För många felaktiga koder. Vänta en kvart och försök igen."));
+    await createChallenge(user.id, safeNext);
+    redirect("/login/mfa");
+  }
+  await finishLogin(user.id, safeNext);
+}
+
+async function finishLogin(userId: number, next: string): Promise<never> {
+  const first = await db.membership.findFirst({ where: { userId }, orderBy: { companyId: "asc" } });
+  await startSession(userId, first?.companyId ?? null);
+  redirect(next);
+}
+
+/** Andra steget i inloggningen: kod från autentiseringsappen eller en återställningskod. */
+export async function verifyMfaLogin(fd: FormData) {
+  const ch = await readChallenge();
+  if (!ch) redirect(withParam("/login", "error", "Inloggningen har gått ut. Logga in igen."));
+  const challenge = ch!;
+  if (await tooManyMfaFailures(challenge.userId)) {
+    await clearChallenge(challenge.id);
+    redirect(withParam("/login", "error", "För många felaktiga koder. Vänta en kvart och försök igen."));
+  }
+  if (!(await verifyUserCode(challenge.userId, String(fd.get("code") ?? "")))) {
+    await logMfaFailure(challenge.userId);
+    const more = await failChallenge(challenge.id);
+    if (!more) redirect(withParam("/login", "error", "För många felaktiga försök. Logga in igen."));
+    redirect(withParam("/login/mfa", "error", "Fel kod. Kontrollera att klockan går rätt och försök igen."));
+  }
+  await clearChallenge(challenge.id);
+  await finishLogin(challenge.userId, challenge.next);
 }
 
 export async function logout() {
@@ -122,6 +153,7 @@ export async function acceptInvite(fd: FormData) {
     const ok = await verifyPassword(password, found?.passwordHash ?? "scrypt$00$00");
     if (!found || !ok) back("Fel lösenord.");
     if (found!.lockedAt) back("Kontot är låst av en administratör och kan inte gå med i nya företag.");
+    if (found!.mfaEnabledAt) back("Kontot har tvåfaktorsinloggning. Logga in först på inloggningssidan och öppna sedan inbjudningslänken igen.");
     user = found!;
     session = null;
   } else {

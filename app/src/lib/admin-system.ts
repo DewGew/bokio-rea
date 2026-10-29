@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "./db";
+import { mfaAvailable } from "./mfa";
 import { blobEnabled, directUploadEnabled, listStoredFiles } from "./storage";
 
 const DAY = 86_400_000;
@@ -30,6 +31,7 @@ export function configStatus() {
     { name: "Inkommande e-post (INBOUND_WEBHOOK_SECRET)", ok: set(process.env.INBOUND_WEBHOOK_SECRET), note: set(process.env.INBOUND_WEBHOOK_SECRET) ? "Aktiverad" : "Inte aktiverad" },
     { name: "Kvittoadress (INBOUND_ADDRESS)", ok: set(process.env.INBOUND_ADDRESS), note: set(process.env.INBOUND_ADDRESS) ? "Satt" : "Saknas" },
     { name: "AI-avläsning (OPENROUTER_API_KEY)", ok: set(process.env.OPENROUTER_API_KEY), note: set(process.env.OPENROUTER_API_KEY) ? "Nyckel satt" : "Inte aktiverad" },
+    { name: "Tvåfaktor (MFA_ENCRYPTION_KEY)", ok: mfaAvailable(), note: mfaAvailable() ? "Nyckel satt" : "Saknas eller är kortare än 32 tecken. Tvåfaktor kan inte användas och kravet för administratörer är avstängt" },
     { name: "Appens webbadress (APP_URL)", ok: set(process.env.APP_URL), note: set(process.env.APP_URL) ? "Satt" : "Saknas" },
     { name: "Administratörer (ADMIN_EMAILS)", ok: set(process.env.ADMIN_EMAILS), note: `${(process.env.ADMIN_EMAILS ?? "").split(",").filter((s) => s.trim()).length} adresser` },
   ];
