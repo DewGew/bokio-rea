@@ -34,7 +34,7 @@ export default async function AdminFeatures({ searchParams }: { searchParams: SP
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
         <Stat label="Företag med Pro" value={String(pro)} tone="brand" />
-        <Stat label="Gratisföretag" value={String(free)} />
+        <Stat label="Basföretag" value={String(free)} />
       </div>
 
       <Card title="Funktioner">

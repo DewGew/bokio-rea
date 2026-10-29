@@ -65,7 +65,7 @@ export async function createCompany(tx: Prisma.TransactionClient, userId: number
   // Enskild firma har alltid kalenderår som räkenskapsår.
   const fiscalStartMonth = input.companyType === "ef" ? 1 : (input.fiscalStartMonth ?? 1);
   const company = await tx.company.create({
-    // Alla nya företag börjar som Gratis. Pro sätts av en administratör.
+    // Alla nya företag börjar som Bas. Pro sätts av en administratör.
     data: { ...input, plan: "free", fiscalStartMonth, memberships: { create: { userId, role: "owner" } } },
   });
   await createFirstFiscalYear(tx, company.id, fiscalStartMonth);

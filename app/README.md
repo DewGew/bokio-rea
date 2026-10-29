@@ -76,7 +76,7 @@ med eget namn, egen design och egen kod.
 
 ## Abonnemang (Pro)
 
-Varje företag har ett abonnemang, **Gratis** eller **Pro**. Pro ger:
+Varje företag har ett abonnemang, **Bas** eller **Pro**. Pro ger:
 
 | Funktion | Gäller |
 | --- | --- |
@@ -84,7 +84,7 @@ Varje företag har ett abonnemang, **Gratis** eller **Pro**. Pro ger:
 | Koppling till Claude (MCP) | godkännande av nya kopplingar och alla befintliga nycklar |
 | Kvitton via e-post | mottagning på företagets adress |
 
-Nya företag börjar som Gratis. Det finns ingen betalning eller självbetjäning: en administratör sätter abonnemanget per företag
+Nya företag börjar som Bas. Det finns ingen betalning eller självbetjäning: en administratör sätter abonnemanget per företag
 (*Administration → Företag → Abonnemang*). Dessutom kan varje funktion stängas av för hela appen (*Administration → Funktioner*),
 till exempel vid en driftstörning. Redan avlästa underlag visas även om AI-avläsningen är avstängd, och mejl som kommer till ett
 företag utan funktionen sparas som en rad med status "Funktionen avstängd" så att inget försvinner tyst.

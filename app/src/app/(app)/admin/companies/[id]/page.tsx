@@ -135,8 +135,8 @@ export default async function AdminCompany({ params, searchParams }: { params: P
               ))}
             </ul>
             <input type="hidden" name="plan" value={company.plan === "pro" ? "free" : "pro"} />
-            <ConfirmButton className="btn-secondary" message={company.plan === "pro" ? `Flytta ${company.name} till Gratis? Funktionerna stängs av direkt.` : `Ge ${company.name} Pro?`}>
-              {company.plan === "pro" ? "Flytta till Gratis" : "Ge Pro"}
+            <ConfirmButton className="btn-secondary" message={company.plan === "pro" ? `Flytta ${company.name} till Bas? Funktionerna stängs av direkt.` : `Ge ${company.name} Pro?`}>
+              {company.plan === "pro" ? "Flytta till Bas" : "Ge Pro"}
             </ConfirmButton>
           </form>
         </Card>
