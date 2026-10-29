@@ -47,6 +47,21 @@ export async function unlockUser(fd: FormData) {
   back("ok", `${user.email} är upplåst.`);
 }
 
+export async function resetUserMfa(fd: FormData) {
+  const { adminEmail, user } = await target(fd);
+  if (user.email === adminEmail) back("error", "Du kan inte återställa din egen tvåfaktor. Använd en återställningskod.");
+  if (!user.mfaEnabledAt) back("error", `${user.email} har inte tvåfaktor påslagen.`);
+  await db.$transaction([
+    db.user.update({ where: { id: user.id }, data: { mfaSecret: null, mfaEnabledAt: null, mfaLastStep: null } }),
+    db.mfaRecoveryCode.deleteMany({ where: { userId: user.id } }),
+    db.mfaChallenge.deleteMany({ where: { userId: user.id } }),
+    db.session.deleteMany({ where: { userId: user.id } }),
+    adminLogOp({ adminEmail, action: "user_mfa_reset", targetType: "user", targetId: user.id, targetLabel: user.email, details: "Tvåfaktor avstängd och användaren utloggad" }),
+  ]);
+  revalidatePath("/admin");
+  back("ok", `Tvåfaktor är återställd för ${user.email}. Användaren är utloggad och kan aktivera den på nytt.`);
+}
+
 export async function endUserSessions(fd: FormData) {
   const { adminEmail, user } = await target(fd);
   const { count } = await db.session.deleteMany({ where: { userId: user.id } });

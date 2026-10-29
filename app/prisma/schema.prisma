@@ -20,6 +20,11 @@ model User {
   createdAt    DateTime     @default(now())
   lockedAt     DateTime? // låst av administratör: användaren kan logga in men har bara läsrätt i alla sina företag
   lockedReason String    @default("")
+  mfaSecret    String? // TOTP-nyckeln, krypterad. Utan mfaEnabledAt är installationen inte bekräftad än.
+  mfaEnabledAt DateTime?
+  mfaLastStep  Int? // senast använda 30-sekundersperiod, så att en kod bara fungerar en gång
+  mfaRecoveryCodes MfaRecoveryCode[]
+  mfaChallenges    MfaChallenge[]
   passwordResets PasswordReset[]
   memberships  Membership[]
   sessions     Session[]
@@ -525,4 +530,30 @@ model SystemSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// Engångskoder om telefonen försvinner. Sparas bara som hash.
+model MfaRecoveryCode {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Mellansteg i inloggningen: rätt lösenord, väntar på kod. Cookien innehåller en slumpad token, här finns bara hashen.
+model MfaChallenge {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  next      String   @default("/")
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

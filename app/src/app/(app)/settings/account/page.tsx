@@ -6,6 +6,7 @@ import { fyLabel } from "@/lib/fiscal";
 import { Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { deleteAccountAction } from "./actions";
+import { mfaAvailable } from "@/lib/mfa";
 
 export default async function AccountPage({ searchParams }: { searchParams: SP }) {
   const { user } = await requireCompany();
@@ -19,6 +20,18 @@ export default async function AccountPage({ searchParams }: { searchParams: SP }
     <>
       <PageHeader title="Mitt konto" subtitle={`${user.name} · ${user.email}`} />
       <Flash notice={notice} error={error} />
+      <Card title="Tvåfaktorsinloggning" className="mb-6 max-w-3xl">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-5 pt-1 text-[14px]">
+          <p>
+            {user.mfaEnabledAt ? <span className="font-medium text-success">● Påslagen</span> : <span className="text-muted">Av</span>}
+            <span className="ml-2 text-muted">Skydda kontot med en kod från en autentiseringsapp.</span>
+          </p>
+          {(mfaAvailable() || user.mfaEnabledAt) && (
+            <Link href="/settings/account/mfa" className="btn-secondary">{user.mfaEnabledAt ? "Hantera" : "Aktivera"}</Link>
+          )}
+        </div>
+      </Card>
+
       <Card title="Vad ingår i Pro?" className="mb-6 max-w-3xl">
         <div className="space-y-4 px-5 pb-5 pt-1 text-[14px]">
           <ul className="divide-y divide-line rounded-lg border border-line">
@@ -110,6 +123,12 @@ export default async function AccountPage({ searchParams }: { searchParams: SP }
                 <label className="label" htmlFor="pw">Bekräfta med ditt lösenord</label>
                 <input id="pw" name="password" type="password" required autoComplete="current-password" className="input sm:max-w-sm" />
               </div>
+              {user.mfaEnabledAt && (
+                <div>
+                  <label className="label" htmlFor="mc">Kod från autentiseringsappen</label>
+                  <input id="mc" name="code" required autoComplete="one-time-code" maxLength={12} className="input sm:max-w-[12rem]" />
+                </div>
+              )}
               <ConfirmButton className="btn-danger" message="Avsluta kontot permanent?">Avsluta mitt konto</ConfirmButton>
             </form>
           )}

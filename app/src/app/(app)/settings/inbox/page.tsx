@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
+import { isAdminEmail } from "@/lib/admin";
 import { featureFor, featureMessage } from "@/lib/features";
 import { inboxAddress } from "@/lib/inbound-email";
 import { Card, Empty, Flash, PageHeader, readParams, type SP } from "@/components/ui";
@@ -22,7 +23,7 @@ const when = (d: Date) => d.toLocaleString("sv-SE", { dateStyle: "short", timeSt
 
 export default async function InboxSettings({ searchParams }: { searchParams: SP }) {
   const { error, notice } = await readParams(searchParams);
-  const { companyId, company, role } = await requireCompany();
+  const { companyId, company, role, user } = await requireCompany();
   const feature = await featureFor(company, "inbound");
   if (!feature.available) {
     return (
@@ -45,8 +46,12 @@ export default async function InboxSettings({ searchParams }: { searchParams: SP
       <PageHeader title="Kvitton via e-post" subtitle="Skicka eller vidarebefordra kvitton och leverantörsfakturor till företagets egen adress. De läses av med AI och bokförs när bankraden matchas." />
       <Flash error={error} notice={notice} />
 
-      {!enabled ? (
-        <Card title="Inte aktiverat">
+      {!enabled && !isAdminEmail(user.email) ? (
+        <Card title="Inte tillgängligt">
+          <p className="px-5 pb-5 pt-1 text-[14px] text-muted">Mottagning av kvitton via e-post är inte tillgänglig för tillfället. Försök igen senare.</p>
+        </Card>
+      ) : !enabled ? (
+        <Card title="Inte aktiverat (visas bara för administratörer)">
           <div className="space-y-3 px-5 pb-5 pt-1 text-[14px]">
             <p className="text-muted">Mottagning av e-post kräver ett konto hos e-posttjänsten Postmark. Det görs en gång för hela appen:</p>
             <ol className="list-decimal space-y-1.5 pl-5">

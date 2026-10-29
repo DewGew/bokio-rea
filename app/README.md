@@ -52,6 +52,12 @@ med eget namn, egen design och egen kod.
   automatiskt när bankraden matchas. Tillåtna avsändare, dubblettkontroll, dygnsgräns och Gmails bekräftelse av
   vidarebefordran visas i appen. Kräver `INBOUND_ADDRESS` och `INBOUND_WEBHOOK_SECRET` (se Inställningar → Kvitton via e-post).
 - **Abonnemang (Pro)**: AI-avläsning, koppling till Claude och kvitton via e-post ingår i Pro. Se [Abonnemang](#abonnemang-pro).
+- **Tvåfaktorsinloggning (MFA)**: frivilligt för alla via *Inställningar → Mitt konto → Tvåfaktorsinloggning*, och **obligatoriskt för
+  administratörer**. Funkar med vilken autentiseringsapp som helst (TOTP, RFC 6238): användaren skannar en QR-kod och bekräftar med en
+  kod. Åtta engångskoder för återställning visas en gång. Vid inloggning krävs rätt lösenord och därefter koden; ett mellansteg tillåter
+  fem försök och kontot spärras för koder i 15 minuter efter tio misslyckade. En kod kan bara användas en gång. Nyckeln lagras krypterad
+  (AES-256-GCM) med `MFA_ENCRYPTION_KEY`. Tappar en användare telefonen och koderna återställer en administratör tvåfaktorn
+  (*Administration → Översikt → Återställ MFA*). Avsluta konto kräver också en kod när MFA är på.
 - **Mitt konto**: *Inställningar → Mitt konto* låter användaren avsluta sitt konto med lösenordet. Företag där användaren är ensam
   medlem tas bort med kontot, om all bokföring är exporterad som SIE. Är man ensam ägare i ett företag med fler användare måste en ny
   ägare utses först.
@@ -70,7 +76,7 @@ med eget namn, egen design och egen kod.
 
 ## Abonnemang (Pro)
 
-Varje företag har ett abonnemang, **Gratis** eller **Pro**. Pro ger:
+Varje företag har ett abonnemang, **Bas** eller **Pro**. Pro ger:
 
 | Funktion | Gäller |
 | --- | --- |
@@ -78,7 +84,7 @@ Varje företag har ett abonnemang, **Gratis** eller **Pro**. Pro ger:
 | Koppling till Claude (MCP) | godkännande av nya kopplingar och alla befintliga nycklar |
 | Kvitton via e-post | mottagning på företagets adress |
 
-Nya företag börjar som Gratis. Det finns ingen betalning eller självbetjäning: en administratör sätter abonnemanget per företag
+Nya företag börjar som Bas. Det finns ingen betalning eller självbetjäning: en administratör sätter abonnemanget per företag
 (*Administration → Företag → Abonnemang*). Dessutom kan varje funktion stängas av för hela appen (*Administration → Funktioner*),
 till exempel vid en driftstörning. Redan avlästa underlag visas även om AI-avläsningen är avstängd, och mejl som kommer till ett
 företag utan funktionen sparas som en rad med status "Funktionen avstängd" så att inget försvinner tyst.
@@ -86,7 +92,7 @@ företag utan funktionen sparas som en rad med status "Funktionen avstängd" så
 ## Administration
 
 Administratörer anges med `ADMIN_EMAILS` (kommaseparerade e-postadresser). De får en länk **Admin** i sidomenyn och sidan `/admin`.
-Alla andra får 404. Det finns inga olika administratörsroller.
+Alla andra får 404. Det finns inga olika administratörsroller. Administratörer måste ha tvåfaktorsinloggning aktiverad (och `MFA_ENCRYPTION_KEY` satt) för att komma åt sidan.
 
 Administratörer ser konton, roller och mängder, **aldrig innehållet i någons bokföring** (inga verifikat, fakturor, belopp eller filer).
 

@@ -11,7 +11,7 @@ export const FEATURES = {
 
 export type Feature = keyof typeof FEATURES;
 export const FEATURE_KEYS = Object.keys(FEATURES) as Feature[];
-export const PLANS = { free: "Gratis", pro: "Pro" } as const;
+export const PLANS = { free: "Bas", pro: "Pro" } as const;
 export type Plan = keyof typeof PLANS;
 export const planLabel = (plan: string) => PLANS[plan as Plan] ?? plan;
 

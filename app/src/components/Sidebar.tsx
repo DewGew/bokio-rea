@@ -50,7 +50,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
       ["/settings/templates", "Bokföringsmallar", "wand"],
       ["/settings/import-export", "Import och export", "upload"],
       ["/settings/users", "Användare och behörighet", "people"],
-      ["/settings/connections", "Kopplingar (Claude)", "plug"],
+      ["/settings/connections", "Kopplingar", "plug"],
       ["/settings/inbox", "Kvitton via e-post", "tray"],
       ["/settings/appearance", "Utseende", "sun"],
       ["/settings/account", "Mitt konto", "people"],

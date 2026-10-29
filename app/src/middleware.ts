@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Snabb kontroll i kanten: utan sessionscookie skickas man till inloggningen.
 // Den riktiga kontrollen av sessionen görs i requireCompany()/apiCompany().
-const PUBLIC = ["/login", "/register"];
+const PUBLIC = ["/login", "/login/mfa", "/register"];
 
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;

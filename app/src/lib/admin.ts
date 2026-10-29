@@ -1,5 +1,6 @@
 import "server-only";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { mfaAvailable } from "./mfa";
 import { db } from "./db";
 import { requireUser } from "./auth";
 
@@ -16,6 +17,8 @@ export function isAdminEmail(email: string) {
 export async function requireAdmin() {
   const s = await requireUser();
   if (!isAdminEmail(s.user.email)) notFound();
+  // Administratörer måste ha tvåfaktorsinloggning. Är den inte konfigurerad på servern kan ingen aktivera den, så då släpps de in (System-fliken varnar).
+  if (mfaAvailable() && !s.user.mfaEnabledAt) redirect("/settings/account/mfa?required=1");
   return s;
 }
 
@@ -33,6 +36,7 @@ export const ADMIN_ACTIONS: Record<string, string> = {
   user_enabled: "Återaktiverade användare (äldre)",
   user_sessions_ended: "Loggade ut användare överallt",
   password_reset_link: "Skapade återställningslänk",
+  user_mfa_reset: "Återställde tvåfaktor",
   company_owner_added: "Utsåg ny ägare",
   company_locked: "Låste företag",
   company_unlocked: "Låste upp företag",
