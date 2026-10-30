@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Uploaded } from "@/lib/upload-client";
 import type { Suggestion } from "@/lib/suggest";
+import { calculateTemplateLines } from "@/lib/flexible-template-lines";
 import { AccountPicker } from "./AccountPicker";
 import { ConfirmButton } from "./ConfirmButton";
 import { FileUploader } from "./FileUploader";
@@ -37,7 +38,10 @@ function linesFor(s: Suggestion, gross: number, pay: number): Row[] {
     text: "",
   });
   let parts: [number, number][];
-  if (s.pattern) {
+  if (s.templateLines && Array.isArray(s.templateLines)) {
+    const calculated = calculateTemplateLines({ lines: s.templateLines, costAccount: s.account, vatRate: s.vatRate, vatAccount: null, direction: s.direction }, gross, { payAccount: pay });
+    return calculated.map(l => ({ account: String(l.account), debit: gross ? (l.debit ? plain(l.debit) : "") : "", credit: gross ? (l.credit ? plain(l.credit) : "") : "", text: l.text ?? "" })).concat([empty()]);
+  } else if (s.pattern) {
     // Samma kontering som tidigare, skalad till det nya beloppet. Öresavrundning läggs på största kreditraden.
     parts = s.pattern.map((p) => [p.account, Math.round(p.share * gross)]);
     const rest = parts.reduce((x, [, v]) => x + v, 0);
