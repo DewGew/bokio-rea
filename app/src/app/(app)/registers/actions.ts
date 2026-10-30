@@ -135,23 +135,41 @@ export async function toggleAccount(fd: FormData) {
 export async function saveTemplate(fd: FormData) {
   const { companyId } = await requireWriter();
   const name = str(fd, "name");
-  const costAccount = Number(str(fd, "costAccount"));
-  if (!name || !costAccount) redirect(withParam("/settings/templates", "error", "Ange namn och konto."));
-  const exists = await db.account.findUnique({ where: { companyId_number: { companyId, number: costAccount } } });
-  if (!exists) redirect(withParam("/settings/templates", "error", `Kontot ${costAccount} finns inte.`));
-  const direction = ["purchase", "sale", "reverse"].includes(str(fd, "direction")) ? str(fd, "direction") : "purchase";
+  const raw = str(fd, "lines");
+  let lines: { account: number; side: "debit" | "credit"; rule: "gross" | "net" | "vat" | "percent_gross" | "fixed" | "remainder"; value?: number; text?: string }[];
+  try {
+    lines = JSON.parse(raw);
+  } catch {
+    redirect(withParam("/settings/templates", "error", "Konteringsraderna kunde inte läsas."));
+  }
+  if (!name || !Array.isArray(lines) || lines.length < 2 || lines.length > 100) {
+    redirect(withParam("/settings/templates", "error", "Ange ett namn och minst två konteringsrader (högst 100)."));
+  }
+  const allowed = new Set(["gross", "net", "vat", "percent_gross", "fixed", "remainder"]);
+  if (lines.some(l => !Number.isInteger(l.account) || l.account < 1000 || l.account > 8999 ||
+      !["debit", "credit"].includes(l.side) || !allowed.has(l.rule) ||
+      (l.rule === "percent_gross" && (!Number.isFinite(l.value) || (l.value ?? -1) < 0 || (l.value ?? 1001) > 1000)) ||
+      (l.rule === "fixed" && (!Number.isFinite(l.value) || (l.value ?? -1) < 0)))) {
+    redirect(withParam("/settings/templates", "error", "En eller flera konteringsrader har ogiltiga konton eller beloppsregler."));
+  }
+  const accounts = await db.account.findMany({ where: { companyId, number: { in: [...new Set(lines.map(l => l.account))] }, active: true }, select: { number: true } });
+  if (accounts.length !== new Set(lines.map(l => l.account)).size) {
+    redirect(withParam("/settings/templates", "error", "Alla konton i mallen måste finnas och vara aktiva."));
+  }
+  const vatRate = [0, 6, 12, 25].includes(Number(str(fd, "vatRate"))) ? Number(str(fd, "vatRate")) : 0;
   await db.template.create({
     data: {
       companyId,
       name,
       category: str(fd, "category") || "Övrigt",
-      costAccount,
-      vatRate: Number(str(fd, "vatRate")) || 0,
-      direction,
+      costAccount: lines[0].account,
+      vatRate,
+      direction: "custom",
       keywords: str(fd, "keywords"),
+      lines,
     },
   });
-  done("/settings/templates", `Mallen ${name} är skapad.`);
+  done("/settings/templates", `Mallen ${name} är skapad med ${lines.length} konteringsrader.`);
 }
 
 export async function deleteTemplate(fd: FormData) {
