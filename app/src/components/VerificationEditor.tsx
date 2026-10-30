@@ -38,7 +38,7 @@ function linesFor(s: Suggestion, gross: number, pay: number): Row[] {
     text: "",
   });
   let parts: [number, number][];
-  if (s.templateLines && Array.isArray(s.templateLines)) {
+  if (Array.isArray(s.templateLines) && s.templateLines.length > 0) {
     const calculated = calculateTemplateLines({ lines: s.templateLines, costAccount: s.account, vatRate: s.vatRate, vatAccount: null, direction: s.direction }, gross, { payAccount: pay });
     return calculated.map(l => ({ account: String(l.account), debit: gross ? (l.debit ? plain(l.debit) : "") : "", credit: gross ? (l.credit ? plain(l.credit) : "") : "", text: l.text ?? "" })).concat([empty()]);
   } else if (s.pattern) {
