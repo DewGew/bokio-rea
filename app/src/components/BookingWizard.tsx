@@ -38,6 +38,7 @@ function hits(query: string, hay: string) {
 const PAY_ACCOUNTS: [string, string][] = [
   ["1930", "1930 – Företagskonto / affärskonto"],
   ["1910", "1910 – Kassa"],
+  ["2018", "2018 - Privat (ägare enskild firma)"],
   ["2893", "2893 – Privat (lån från ägare)"],
   ["2890", "2890 – Utlägg (skuld till anställd)"],
   ["2440", "2440 – Leverantörsskuld (obetald faktura)"],
