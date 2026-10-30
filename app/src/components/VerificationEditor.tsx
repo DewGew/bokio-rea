@@ -24,6 +24,7 @@ const SOURCE_LABEL: Record<Suggestion["source"], string> = { history: "Tidigare"
 const PAY_ACCOUNTS: [string, string][] = [
   ["1930", "Företagskontot (1930)"],
   ["1910", "Kassa (1910)"],
+  ["2018", "Egen insättning (2018)"],
   ["2893", "Privat – lån från ägare (2893)"],
   ["2890", "Utlägg – skuld till anställd (2890)"],
   ["2440", "Obetald leverantörsfaktura (2440)"],
