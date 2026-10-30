@@ -109,7 +109,7 @@ Administratörer ser konton, roller och mängder, **aldrig innehållet i någons
 Åtgärder (alla loggas):
 
 - **Användare**: *Lås* (användaren kan logga in men har bara läsrätt i alla sina företag, kan inte skapa eller gå med i företag eller
-  avsluta kontot), *Lås upp*, *Logga ut överallt* och *Återställningslänk* (engångslänk till `/reset/<token>`, giltig i 24 timmar och
+  avsluta kontot), *Lås upp*, *Radera* (bara för låsta användare, med samma regler som när användaren avslutar sitt eget konto: företag där användaren är ensam medlem raderas bara om bokföringen är exporterad som SIE, och en ensam ägare i ett företag med fler användare måste ersättas först; e-postadressen skrivs för att bekräfta), *Logga ut överallt* och *Återställningslänk* (engångslänk till `/reset/<token>`, giltig i 24 timmar och
   visas bara en gång; appen skickar ingen e-post). Administratörer kan inte låsas.
 - **Företag**: se medlemmar, räkenskapsår, antal och SIE-exportstatus; *Utse till ägare*; *Lås företaget* (alla får bara läsrätt, med en
   orsak som visas för användarna); sätta *Abonnemang*; *Radera företaget* (kräver att företaget är låst, att namnet skrivs och att all

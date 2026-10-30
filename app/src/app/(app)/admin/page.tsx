@@ -7,7 +7,7 @@ import { planLabel } from "@/lib/features";
 import { AdminTabs } from "@/components/AdminTabs";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ResetLinkForm } from "@/components/ResetLinkForm";
-import { endUserSessions, lockUser, resetUserMfa, unlockUser } from "./actions";
+import { deleteUserAdmin, endUserSessions, lockUser, resetUserMfa, unlockUser } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -82,10 +82,19 @@ export default async function Admin({ searchParams }: { searchParams: SP }) {
                           <ConfirmButton className="text-[13px] text-brand hover:underline" message={`Logga ut ${u.email} på alla enheter?`}>Logga ut överallt</ConfirmButton>
                         </form>
                         {u.lockedAt ? (
-                          <form action={unlockUser}>
-                            <input type="hidden" name="userId" value={u.id} />
-                            <ConfirmButton className="text-[13px] text-brand hover:underline" message={`Låsa upp ${u.email}?`}>Lås upp</ConfirmButton>
-                          </form>
+                          <>
+                            <form action={unlockUser}>
+                              <input type="hidden" name="userId" value={u.id} />
+                              <ConfirmButton className="text-[13px] text-brand hover:underline" message={`Låsa upp ${u.email}?`}>Lås upp</ConfirmButton>
+                            </form>
+                            {!protectedAdmin && u.email !== me.user.email && (
+                              <form action={deleteUserAdmin} className="flex items-center gap-2">
+                                <input type="hidden" name="userId" value={u.id} />
+                                <input name="confirmEmail" required autoComplete="off" placeholder="Skriv e-postadressen" aria-label={`Bekräfta radering av ${u.email}`} className="input w-44 text-[12px]" />
+                                <ConfirmButton className="text-[13px] text-danger hover:underline" message={`Radera ${u.email} permanent?`}>Radera</ConfirmButton>
+                              </form>
+                            )}
+                          </>
                         ) : (
                           !protectedAdmin && (
                             <form action={lockUser} className="flex items-center gap-2">
