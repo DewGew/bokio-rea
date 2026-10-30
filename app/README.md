@@ -37,12 +37,12 @@ med eget namn, egen design och egen kod.
 - **Användare och behörighet**: bjud in revisor eller redovisningskonsult med en länk (giltig i 14 dagar) som
   *Full behörighet* eller *Läsbehörighet*. Läsbehörighet stoppas på servern i alla åtgärder och API:er som ändrar data.
   Bara ägaren hanterar användare, och företaget har alltid minst en ägare.
-- **Koppling till Claude (MCP)** *(Pro)*: lägg till `https://<din-app>/api/mcp` som anpassad koppling i Claude (Desktop,
-  claude.ai eller mobilen), logga in och godkänn. Claude kan då läsa översikt, resultat- och balansrapport, huvudbok,
+- **Koppling till AI-assistent (MCP)** *(Pro)*: lägg till `https://<din-app>/api/mcp` som anpassad koppling i en AI-assistent
+  (testat med Claude och ChatGPT), logga in och godkänn. Assistenten kan då läsa översikt, resultat- och balansrapport, huvudbok,
   verifikat, kontoplan, fakturor, moms och det som väntar på att bokföras. Inloggningen sker med OAuth 2.1 (PKCE,
   dynamisk registrering, korta nycklar som byts vid förnyelse). Bara ägare och användare med full behörighet kan koppla,
   och kopplingar syns och kopplas från under *Inställningar → Kopplingar*. Vid godkännandet väljer man *Läsa* eller
-  *Läsa och bokföra*; med det senare kan Claude bokföra med mall (med förhandsgranskning och kvitto), bokföra bankrader,
+  *Läsa och bokföra*; med det senare kan assistenten bokföra med mall (med förhandsgranskning och kvitto), bokföra bankrader,
   skapa fakturautkast, registrera betalningar och lägga till kunder och artiklar (med dubblettkontroll). Allt märks
   med "Skapad via …" och inget kan raderas.
 - **Automatisk utloggning** efter 30 minuters inaktivitet per enhet, med varning två minuter innan (`IDLE_MINUTES` i
@@ -51,7 +51,7 @@ med eget namn, egen design och egen kod.
   skickas eller vidarebefordras. Bilagor (och mejl utan bilaga, som text) hamnar i Uppladdat, läses av med AI och bokförs
   automatiskt när bankraden matchas. Tillåtna avsändare, dubblettkontroll, dygnsgräns och Gmails bekräftelse av
   vidarebefordran visas i appen. Kräver `INBOUND_ADDRESS` och `INBOUND_WEBHOOK_SECRET` (se Inställningar → Kvitton via e-post).
-- **Abonnemang (Pro)**: AI-avläsning, koppling till Claude och kvitton via e-post ingår i Pro. Se [Abonnemang](#abonnemang-pro).
+- **Abonnemang (Pro)**: AI-avläsning, koppling till AI-assistent och kvitton via e-post ingår i Pro. Se [Abonnemang](#abonnemang-pro).
 - **Tvåfaktorsinloggning (MFA)**: frivilligt för alla via *Inställningar → Mitt konto → Tvåfaktorsinloggning*, och **obligatoriskt för
   administratörer**. Funkar med vilken autentiseringsapp som helst (TOTP, RFC 6238): användaren skannar en QR-kod och bekräftar med en
   kod. Åtta engångskoder för återställning visas en gång. Vid inloggning krävs rätt lösenord och därefter koden; ett mellansteg tillåter
@@ -81,7 +81,7 @@ Varje företag har ett abonnemang, **Bas** eller **Pro**. Pro ger:
 | Funktion | Gäller |
 | --- | --- |
 | AI-avläsning av kvitton | knappen i bokföringsguiden och mejlmottagningen |
-| Koppling till Claude (MCP) | godkännande av nya kopplingar och alla befintliga nycklar |
+| Koppling till AI-assistent (MCP) | godkännande av nya kopplingar och alla befintliga nycklar |
 | Kvitton via e-post | mottagning på företagets adress |
 
 Nya företag börjar som Bas. Det finns ingen betalning eller självbetjäning: en administratör sätter abonnemanget per företag
@@ -102,7 +102,7 @@ Administratörer ser konton, roller och mängder, **aldrig innehållet i någons
 | System | databasens svarstid och migrering, fillagring, inställningar (bara om de finns), fel per dag och senaste fel |
 | Funktioner | strömbrytare per Pro-funktion och användning |
 | Lagring | använd lagring per företag och sökning efter föräldralösa filer |
-| Kopplingar | alla OAuth-kopplingar (Claude) med möjlighet att återkalla |
+| Kopplingar | alla OAuth-kopplingar (AI-assistenter) med möjlighet att återkalla |
 | Tjänster | genvägar till Vercel, Neon, OpenRouter, Postmark och GitHub, med status för varje koppling |
 | Logg | alla administratörers åtgärder, som inte kan ändras från appen |
 

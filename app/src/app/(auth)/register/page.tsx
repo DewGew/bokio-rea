@@ -14,7 +14,7 @@ export default async function Register() {
         Har du redan ett konto? <Link href="/login" className="text-brand">Logga in</Link>
       </p>
       <p className="mb-5 rounded-xl bg-brand-soft px-3 py-2 text-center text-[13px] text-brand">
-        Nya företag börjar med <strong>Bas</strong>. AI-avläsning, koppling till Claude och kvitton via e-post ingår i Pro.
+        Nya företag börjar med <strong>Bas</strong>. AI-avläsning, koppling till AI-assistent och kvitton via e-post ingår i Pro.
       </p>
       <ActionForm action={register} submit="Skapa konto och företag">
         <fieldset className="space-y-3">

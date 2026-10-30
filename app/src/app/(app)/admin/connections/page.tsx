@@ -19,7 +19,7 @@ export default async function AdminConnections({ searchParams }: { searchParams:
 
   return (
     <>
-      <PageHeader title="Administration" subtitle="Externa program (till exempel Claude via MCP) som har åtkomst till ett företag på en användares uppdrag." />
+      <PageHeader title="Administration" subtitle="Externa AI-assistenter (till exempel Claude eller ChatGPT via MCP) som har åtkomst till ett företag på en användares uppdrag." />
       <AdminTabs active="/admin/connections" />
       <Flash notice={notice} error={error} />
       <Card title={`Kopplingar (${active} aktiva)`}>

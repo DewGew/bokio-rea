@@ -44,7 +44,7 @@ export default async function Authorize({ searchParams }: { searchParams: SP }) 
       <Flash error={error} />
 
       {companies.length === 0 ? (
-        <p className="rounded-xl bg-warn-soft p-3 text-[14px] text-warn">Du behöver vara ägare eller ha full behörighet i ett företag med Pro för att koppla det till {req.clientName}. Koppling till Claude ingår i Pro.</p>
+        <p className="rounded-xl bg-warn-soft p-3 text-[14px] text-warn">Du behöver vara ägare eller ha full behörighet i ett företag med Pro för att koppla det till {req.clientName}. Koppling till AI-assistent ingår i Pro.</p>
       ) : (
         <form action={approveConsent} className="space-y-5">
           {hidden}
