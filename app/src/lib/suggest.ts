@@ -21,6 +21,7 @@ export type Suggestion = {
   direction: SuggestDirection;
   /** Från historiken: kontona och deras andel av beloppet (debet positivt). */
   pattern?: { account: number; share: number }[];
+  templateLines?: unknown;
   score: number;
 };
 
@@ -114,7 +115,7 @@ export async function suggest(companyId: number, q: string): Promise<Suggestion[
 }
 
 type HistoryVerification = { description: string; lines: { accountNumber: number; debit: number; credit: number }[] };
-type TemplateRow = { id: number; name: string; category: string; keywords: string; costAccount: number; vatRate: number; direction: string };
+type TemplateRow = { id: number; name: string; category: string; keywords: string; costAccount: number; vatRate: number; direction: string; lines?: unknown };
 
 /** Rangordnar förslag utifrån redan hämtade data (används även av bankimporten för många rader i taget). */
 export function rankSuggestions(
@@ -176,6 +177,7 @@ export function rankSuggestions(
       account: t.costAccount,
       vatRate: noVat ? 0 : t.vatRate,
       direction: (noVat && t.direction === "reverse" ? "purchase" : t.direction) as SuggestDirection,
+      templateLines: t.lines,
       score: 60 + hits * 10,
     });
   }
