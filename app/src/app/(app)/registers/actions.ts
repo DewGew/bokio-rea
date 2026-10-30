@@ -142,8 +142,8 @@ export async function saveTemplate(fd: FormData) {
   } catch {
     redirect(withParam("/settings/templates", "error", "Konteringsraderna kunde inte läsas."));
   }
-  if (!name || !Array.isArray(lines) || lines.length < 2 || lines.length > 100) {
-    redirect(withParam("/settings/templates", "error", "Ange ett namn och minst två konteringsrader (högst 100)."));
+  if (!name || !Array.isArray(lines) || lines.length < 2) {
+    redirect(withParam("/settings/templates", "error", "Ange ett namn och minst två konteringsrader."));
   }
   const allowed = new Set(["gross", "net", "vat", "percent_gross", "fixed", "remainder"]);
   if (lines.some(l => !Number.isInteger(l.account) || l.account < 1000 || l.account > 8999 ||
