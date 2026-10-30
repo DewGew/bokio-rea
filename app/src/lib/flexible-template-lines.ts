@@ -57,8 +57,8 @@ export function calculateTemplateLines(
         if (!Number.isFinite(line.value) || (line.value ?? 0) < 0 || (line.value ?? 0) > 1000) throw new Error("Procentregeln måste vara mellan 0 och 1000.");
         amount = Math.round(gross * (line.value ?? 0) / 100); break;
       case "fixed":
-        if (!Number.isSafeInteger(line.value) || (line.value ?? -1) < 0) throw new Error("Fast belopp ska anges i ören och får inte vara negativt.");
-        amount = line.value ?? 0; break;
+        if (!Number.isFinite(line.value) || (line.value ?? -1) < 0) throw new Error("Fast belopp ska anges i kronor och får inte vara negativt.");
+        amount = Math.round((line.value ?? 0) * 100); break;
       case "remainder":
         amount = remainder; break;
       default: throw new Error("Mallen innehåller en okänd beloppsregel.");
