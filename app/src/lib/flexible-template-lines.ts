@@ -40,7 +40,8 @@ export function calculateTemplateLines(
   const rate = opts.noVat ? 0 : template.vatRate;
   const vat = rate ? Math.round(gross * rate / (100 + rate)) : 0;
   const net = gross - vat;
-  let remainder = 0;
+  let debitTotal = 0;
+  let creditTotal = 0;
   const output: CalculatedTemplateLine[] = [];
   for (const line of raw) {
     if (!line || !Number.isInteger(line.account) || line.account < 1000 || line.account > 8999) {
@@ -64,7 +65,7 @@ export function calculateTemplateLines(
     }
     if (!Number.isSafeInteger(amount) || amount < 0) throw new Error("Mallraden gav ett ogiltigt belopp.");
     output.push({ account: line.account, debit: line.side === "debit" ? amount : 0, credit: line.side === "credit" ? amount : 0, text: (line.text ?? "").slice(0, 200) });
-    if (line.rule !== "remainder") remainder += line.side === "debit" ? -amount : amount;
+    if (line.side === "debit") debitTotal += amount; else creditTotal += amount;
   }
   if (output.length < 2) throw new Error("En mall måste ha minst två konteringsrader.");
   return output.filter(l => l.debit || l.credit);
