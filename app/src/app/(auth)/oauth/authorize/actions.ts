@@ -30,7 +30,7 @@ export async function approveConsent(fd: FormData) {
   const m = s.user.memberships.find((x) => x.companyId === companyId);
   if (!m || !MCP_ROLES.includes(m.role)) back(p, "Välj ett företag där du är ägare eller har full behörighet.");
   const mcp = await db.company.findUnique({ where: { id: companyId }, select: { plan: true } });
-  if (!mcp || !(await featureFor(mcp, "mcp")).available) back(p, "Koppling till Claude ingår i Pro och är inte aktiverad för det här företaget.");
+  if (!mcp || !(await featureFor(mcp, "mcp")).available) back(p, "Koppling till AI-assistent ingår i Pro och är inte aktiverad för det här företaget.");
   // Användaren väljer nivå på godkännandesidan (läsa, eller läsa och bokföra).
   const scope = fd.get("level") === "write" ? "read write" : "read";
   redirect(await issueCode({ ...req, scope }, s.userId, companyId, base));

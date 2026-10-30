@@ -6,6 +6,7 @@ const TABS = [
   ["/admin/features", "Funktioner"],
   ["/admin/storage", "Lagring"],
   ["/admin/connections", "Kopplingar"],
+  ["/admin/services", "Tjänster"],
   ["/admin/log", "Logg"],
 ] as const;
 

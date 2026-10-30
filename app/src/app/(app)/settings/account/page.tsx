@@ -65,7 +65,7 @@ export default async function AccountPage({ searchParams }: { searchParams: SP }
       <Card title="Avsluta konto" className="max-w-3xl">
         <div className="space-y-4 px-5 pb-5 pt-1 text-[14px]">
           <p className="text-muted">
-            Avslutar du kontot raderas din inloggning, dina sessioner och dina kopplingar (till exempel Claude). Du kan inte logga in igen.
+            Avslutar du kontot raderas din inloggning, dina sessioner och dina kopplingar till AI-assistenter. Du kan inte logga in igen.
             Det går inte att ångra.
           </p>
 

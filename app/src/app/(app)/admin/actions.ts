@@ -12,6 +12,7 @@ import { companyBookkeeping, companyFiles, companyPurgeOps, deleteCompanyFiles }
 import { revokeGrant } from "@/lib/oauth";
 import { deleteStored } from "@/lib/storage";
 import { findOrphans } from "@/lib/admin-system";
+import { accountPlan, removeUser } from "@/lib/account-delete";
 import { FEATURES, FEATURE_KEYS, planLabel, type Feature } from "@/lib/features";
 
 const back = (key: "ok" | "error", msg: string): never => redirect(withParam("/admin", key, msg));
@@ -45,6 +46,29 @@ export async function unlockUser(fd: FormData) {
   ]);
   revalidatePath("/", "layout");
   back("ok", `${user.email} är upplåst.`);
+}
+
+/**
+ * Raderar en användare. Samma regler som när användaren avslutar sitt eget konto: företag där användaren är ensam medlem
+ * raderas bara om all bokföring är exporterad som SIE, och en ensam ägare i ett företag med fler användare måste ersättas först.
+ * Dessutom måste användaren vara låst och e-postadressen skrivas för att bekräfta.
+ */
+export async function deleteUserAdmin(fd: FormData) {
+  const { adminEmail, user } = await target(fd);
+  if (user.email === adminEmail) back("error", "Du kan inte radera dig själv. Använd Mitt konto.");
+  if (isAdminEmail(user.email)) back("error", "Administratörer kan inte raderas här.");
+  if (!user.lockedAt) back("error", "Lås användaren först. Radering är bara möjlig för låsta användare.");
+  if (str(fd, "confirmEmail").toLowerCase() !== user.email.toLowerCase()) back("error", "E-postadressen stämmer inte. Inget har tagits bort.");
+  const plans = await accountPlan(user.id);
+  const blocked = plans.filter((p) => p.action === "blocked");
+  if (blocked.length) back("error", `${user.email} kan inte raderas än: ${blocked.map((b) => `${b.name}: ${b.adminReason ?? b.reason}`).join("; ")}.`);
+  const gone = plans.filter((p) => p.action === "delete").length;
+  const left = plans.filter((p) => p.action === "leave").length;
+  await removeUser(user, plans, [
+    adminLogOp({ adminEmail, action: "user_deleted", targetType: "user", targetLabel: user.email, details: `${gone} företag raderade, lämnade ${left} företag` }),
+  ]);
+  revalidatePath("/admin");
+  back("ok", `${user.email} är raderad${gone ? ` tillsammans med ${gone} företag` : ""}.`);
 }
 
 export async function resetUserMfa(fd: FormData) {

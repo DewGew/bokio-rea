@@ -23,7 +23,7 @@ export default async function Connections({ searchParams }: { searchParams: SP }
 
   return (
     <>
-      <PageHeader title="Kopplingar" subtitle={`Ge Claude åtkomst till ${company.name} och fråga om bokföringen med vanliga ord.`} />
+      <PageHeader title="Kopplingar" subtitle={`Ge en AI-assistent (till exempel Claude eller ChatGPT) åtkomst till ${company.name} och fråga om bokföringen med vanliga ord.`} />
       <Flash error={error} notice={notice} />
       {!feature.available && (
         <p className="mb-6 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
@@ -34,7 +34,7 @@ export default async function Connections({ searchParams }: { searchParams: SP }
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <Card title="Aktiva kopplingar">
           {grants.length === 0 ? (
-            <Empty>Inga kopplingar ännu. Följ stegen till höger för att koppla Claude.</Empty>
+            <Empty>Inga kopplingar ännu. Följ stegen till höger för att koppla en AI-assistent.</Empty>
           ) : (
             <ul className="divide-y divide-line">
               {grants.map((g) => (
@@ -60,29 +60,34 @@ export default async function Connections({ searchParams }: { searchParams: SP }
           )}
         </Card>
 
-        <Card title="Koppla Claude">
+        <Card title="Koppla AI-assistent">
           <div className="space-y-4 px-5 pb-5 pt-1 text-[14px]">
             {MCP_ROLES.includes(role) ? (
               <>
                 <ol className="list-decimal space-y-2 pl-5">
                   <li>
-                    Öppna Claude (Desktop eller claude.ai) och gå till <strong>Inställningar → Kopplingar</strong> (Connectors).
+                    Öppna Claude (Desktop eller claude.ai) eller ChatGPT (chatgpt.com). I Claude går du till <strong>Inställningar → Kopplingar</strong> (Connectors),
+                    i ChatGPT till <strong>Inställningar → Pluginer</strong>.
                   </li>
                   <li>
-                    Välj <strong>Lägg till anpassad koppling</strong>, ge den namnet t.ex {company.name} och klistra in adressen:
+                    Välj <strong>Lägg till anpassad koppling (MCP-server)</strong>, ge den namnet t.ex. {company.name} och klistra in adressen i rutan Anslutning:
                   </li>
                 </ol>
                 <CopyField value={url} />
                 <ol start={3} className="list-decimal space-y-2 pl-5">
                   <li>
-                    Klicka på <strong>Anslut</strong>. Du kommer hit, loggar in, väljer företag och godkänner.
+                    Klicka på <strong>Anslut</strong> i Claude, eller <strong>Skapa som en plugin</strong> i ChatGPT. Du kommer hit, loggar in, väljer företag och behörighet och godkänner.
                   </li>
-                  <li>Fråga Claude t.ex. &quot;Hur går det för företaget i år?&quot; eller &quot;Vilka fakturor är förfallna?&quot;.</li>
+                  <li>Fråga AI-assistenten t.ex. &quot;Hur går det för företaget i år?&quot; eller &quot;Vilka fakturor är förfallna?&quot;.</li>
                 </ol>
-                <p className="text-muted">När du godkänner väljer du om kopplingen bara får läsa eller även bokföra. Allt Claude bokför märks med &quot;Skapad via Claude&quot;, och inget kan raderas. Kopplingen slutar fungera direkt om du kopplar från här eller om din behörighet ändras. En befintlig koppling som bara får läsa behöver kopplas om för att kunna bokföra.</p>
+                <p className="text-muted">
+                  När du godkänner väljer du om kopplingen bara får läsa eller även bokföra. Allt AI-assistenten bokför märks med &quot;Skapad via&quot; och assistentens namn,
+                  och inget kan raderas. Kopplingen slutar fungera direkt om du kopplar från här eller om din behörighet ändras. En befintlig koppling som bara får läsa
+                  behöver kopplas om för att kunna bokföra.
+                </p>
               </>
             ) : (
-              <p className="text-muted">Du behöver vara ägare eller ha full behörighet för att koppla Claude till företaget.</p>
+              <p className="text-muted">Du behöver vara ägare eller ha full behörighet för att koppla en AI-assistent till företaget.</p>
             )}
           </div>
         </Card>

@@ -5,7 +5,7 @@ import { db } from "./db";
 /** Funktioner som ingår i Pro. Varje funktion kan dessutom stängas av för hela appen. */
 export const FEATURES = {
   ai: { label: "AI-avläsning av kvitton", description: "Läser av belopp, datum och förslag på kontering från uppladdade underlag." },
-  mcp: { label: "Koppling till Claude", description: "Låter Claude läsa (och bokföra) i ett företag via MCP." },
+  mcp: { label: "Koppling till AI-assistent", description: "Låter en AI-assistent, till exempel Claude eller ChatGPT, läsa (och bokföra) i ett företag via MCP." },
   inbound: { label: "Kvitton via e-post", description: "Tar emot kvitton och leverantörsfakturor på företagets egen e-postadress." },
 } as const;
 
