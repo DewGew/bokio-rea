@@ -43,6 +43,10 @@ export function calculateTemplateLines(
   let debitTotal = 0;
   let creditTotal = 0;
   const output: CalculatedTemplateLine[] = [];
+  const remainderIndexes = raw.map((line, index) => line?.rule === "remainder" ? index : -1).filter(index => index >= 0);
+  if (remainderIndexes.length > 1 || (remainderIndexes.length === 1 && remainderIndexes[0] !== raw.length - 1)) {
+    throw new Error("En restbeloppsrad måste vara den sista raden och får bara finnas en gång.");
+  }
   for (const line of raw) {
     if (!line || !Number.isInteger(line.account) || line.account < 1000 || line.account > 8999) {
       throw new Error("En mallrad har ett ogiltigt konto.");
@@ -60,7 +64,9 @@ export function calculateTemplateLines(
         if (!Number.isFinite(line.value) || (line.value ?? -1) < 0) throw new Error("Fast belopp ska anges i kronor och får inte vara negativt.");
         amount = Math.round((line.value ?? 0) * 100); break;
       case "remainder":
-        amount = remainder; break;
+        amount = line.side === "debit" ? creditTotal - debitTotal : debitTotal - creditTotal;
+        if (amount < 0) throw new Error("Restbeloppsradens sida stämmer inte med obalansen i mallen.");
+        break;
       default: throw new Error("Mallen innehåller en okänd beloppsregel.");
     }
     if (!Number.isSafeInteger(amount) || amount < 0) throw new Error("Mallraden gav ett ogiltigt belopp.");
@@ -68,5 +74,6 @@ export function calculateTemplateLines(
     if (line.side === "debit") debitTotal += amount; else creditTotal += amount;
   }
   if (output.length < 2) throw new Error("En mall måste ha minst två konteringsrader.");
+  if (debitTotal !== creditTotal) throw new Error("Mallen balanserar inte. Lägg till en restbeloppsrad sist eller justera beloppen.");
   return output.filter(l => l.debit || l.credit);
 }
