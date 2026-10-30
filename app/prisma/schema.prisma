@@ -204,6 +204,7 @@ model Template {
   direction   String  @default("purchase") // purchase | sale | reverse
   keywords    String  @default("")
   description String  @default("") // förklaring som visas när man väljer mall
+  lines       Json    @default("[]") // fria konteringsrader med beloppsregler; tom lista = äldre mallformat
   usageCount  Int     @default(0) // för "Dina vanligaste mallar"
 }
 
