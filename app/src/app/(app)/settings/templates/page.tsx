@@ -3,8 +3,9 @@ import { requireCompany } from "@/lib/auth";
 import { Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { deleteTemplate, saveTemplate } from "../../registers/actions";
+import { TemplateLinesEditor } from "@/components/TemplateLinesEditor";
 
-const DIRECTION: Record<string, string> = { purchase: "Inköp / uttag", sale: "Försäljning / insättning", reverse: "Omvänd moms (utland)" };
+
 
 export default async function Templates({ searchParams }: { searchParams: SP }) {
   const { companyId } = await requireCompany();
@@ -26,9 +27,8 @@ export default async function Templates({ searchParams }: { searchParams: SP }) 
               <thead>
                 <tr>
                   <th>Mall</th>
-                  <th>Typ</th>
-                  <th>Konto</th>
-                  <th className="num">Moms</th>
+                  
+                  <th>Konteringsrader</th>
                   <th />
                 </tr>
               </thead>
@@ -39,9 +39,8 @@ export default async function Templates({ searchParams }: { searchParams: SP }) 
                       <span className="font-medium">{t.name}</span>
                       <span className="block text-xs text-muted">{t.category}</span>
                     </td>
-                    <td className="text-sm">{DIRECTION[t.direction] ?? t.direction}</td>
-                    <td className="text-sm">{t.costAccount} <span className="text-muted">{names.get(t.costAccount)}</span></td>
-                    <td className="num">{t.vatRate} %</td>
+                    
+                    <td className="text-sm">{Array.isArray(t.lines) && t.lines.length ? `${t.lines.length} rader` : `${t.costAccount} ${names.get(t.costAccount) ?? ""} · ${t.vatRate}% moms (äldre mall)`}</td>
                     <td className="text-right">
                       <form action={deleteTemplate}>
                         <input type="hidden" name="id" value={t.id} />
@@ -64,26 +63,19 @@ export default async function Templates({ searchParams }: { searchParams: SP }) 
               <label className="label" htmlFor="category">Kategori</label>
               <input id="category" name="category" placeholder="T.ex. Inköp" className="input" />
             </div>
+            
             <div>
-              <label className="label" htmlFor="direction">Typ</label>
-              <select id="direction" name="direction" className="input">
-                {Object.entries(DIRECTION).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="label" htmlFor="costAccount">Konto</label>
-              <select id="costAccount" name="costAccount" className="input">
-                {accounts.map((a) => <option key={a.number} value={a.number}>{a.number} {a.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="label" htmlFor="vatRate">Moms</label>
+              <label className="label" htmlFor="vatRate">Momsnivå för beräkning av netto och moms</label>
               <select id="vatRate" name="vatRate" className="input">
                 <option value="25">25 %</option>
                 <option value="12">12 %</option>
                 <option value="6">6 %</option>
                 <option value="0">0 %</option>
               </select>
+            </div>
+            <div>
+              <label className="label">Konteringsrader</label>
+              <TemplateLinesEditor accounts={accounts} />
             </div>
             <div>
               <label className="label" htmlFor="keywords">Sökord</label>
