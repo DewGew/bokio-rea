@@ -3,7 +3,7 @@ import { db } from "./db";
 import { BANK_ACCOUNT, INPUT_VAT, OUTPUT_VAT, PAYABLE_EXPENSES, RECEIVABLES, VAT_SETTLEMENT } from "./bas";
 import { vatFromGross } from "./money";
 import { calculateTemplateLines } from "./flexible-template-lines";
-import type { Country } from "./template-lines";
+import { templateLines, type Country } from "./template-lines";
 import { FiscalError, ensureFiscalYearFor } from "./fiscal";
 import { blocking, invoiceTotals, isVatTreatment, lineNet, salesAccount, validateInvoice, type ValidationInput, type VatTreatment, MIN_INVOICE_NUMBER } from "./invoice-rules";
 import { buildInvoiceDoc } from "./invoice-doc";
@@ -133,10 +133,9 @@ export async function bookWithTemplate(
     if (!tpl) throw new AccountingError("Mallen finns inte.");
     if (input.gross <= 0) throw new AccountingError("Beloppet måste vara större än noll.");
     const company = await t.company.findUniqueOrThrow({ where: { id: companyId }, select: { vatPeriod: true } });
-    const lines = calculateTemplateLines(tpl, input.gross, {
-      payAccount: input.paymentAccount,
-      noVat: company.vatPeriod === "none",
-    });
+    const lines = Array.isArray(tpl.lines) && tpl.lines.length
+      ? calculateTemplateLines(tpl, input.gross, { payAccount: input.paymentAccount, noVat: company.vatPeriod === "none" })
+      : templateLines(tpl, input.gross, { country: input.country, payAccount: input.paymentAccount, noVat: company.vatPeriod === "none" });
 
     const uploadIds = [...new Set([...(input.uploadIds ?? []), ...(input.uploadId ? [input.uploadId] : [])])];
     if (uploadIds.length) {
