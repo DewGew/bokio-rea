@@ -121,6 +121,7 @@ model Company {
   inboundEmails    InboundEmail[]
   oauthGrants      OAuthGrant[]
   sieExports SieExport[]
+  neMappings NeMapping[]
 }
 
 model FiscalYear {
@@ -556,4 +557,15 @@ model MfaChallenge {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// Egen koppling av ett konto till ett fält (R1–R10) i NE-bilagans räkenskapsschema, eller "none" för att lämna kontot utanför.
+model NeMapping {
+  id        Int     @id @default(autoincrement())
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  account   Int
+  field     String
+
+  @@unique([companyId, account])
 }

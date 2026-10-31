@@ -72,6 +72,10 @@ med eget namn, egen design och egen kod.
 - **Bokslut**: bolagsskatt, årets resultat, omföring till nästa år och ingående balanser; kan ångras.
 - **Import och export (SIE 4)**: exportera ett räkenskapsår eller importera från Fortnox, Visma, Bokio m.fl. med
   kontoplan, ingående balanser och verifikat (originalserier och nummer).
+- **Underlag för NE-bilaga** *(bara enskild firma)*: *Rapporter → NE-bilaga* kopplar BAS-konton till fälten R1–R10 i NE-bilagans
+  räkenskapsschema och räknar fram R11 (årets resultat) i hela kronor, med avstämning mot bokfört resultat. Kopplingen följer BAS
+  kopplingsschema och kan ändras per konto. Konton som saknar fält varnas för. Laddas ner som PDF. Det är ett underlag och inte en
+  färdig deklaration: egenavgifter, schablonavdrag, fonder och räntefördelning görs i deklarationen. Kontrollera mot blanketten SKV 2181.
 - **Utlägg**, **rapporter** (resultat, balans, huvudbok) och **inställningar** (företag, kontoplan, mallar).
 
 ## Abonnemang (Pro)

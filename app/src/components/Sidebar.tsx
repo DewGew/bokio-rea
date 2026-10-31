@@ -39,6 +39,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
       ["/reports/result", "Resultatrapport", "chart"],
       ["/reports/balance", "Balansrapport", "scale"],
       ["/reports/ledger", "Huvudbok", "list"],
+      ["/reports/ne", "NE-bilaga", "doc"],
     ],
   },
   {
@@ -65,7 +66,7 @@ function activeHref(path: string) {
   return ALL.filter((h) => (h === "/" ? path === "/" : path === h || path.startsWith(h + "/"))).sort((a, b) => b.length - a.length)[0];
 }
 
-type C = { id: number; name: string };
+type C = { id: number; name: string; companyType?: string };
 
 // Sidor för att lägga till bokföring döljs för användare med läsbehörighet.
 const WRITE_ONLY = new Set(["/verifications/new"]);
@@ -133,7 +134,7 @@ export function Sidebar({ company, companies, userName, readOnly = false, isAdmi
             <div key={i}>
               {group.title && <p className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted/80">{group.title}</p>}
               <ul className="space-y-px">
-                {group.items.filter(([href]) => !(readOnly && WRITE_ONLY.has(href))).map(([href, label, icon]) => {
+                {group.items.filter(([href]) => !(readOnly && WRITE_ONLY.has(href)) && !(href === "/reports/ne" && company.companyType !== "ef")).map(([href, label, icon]) => {
                   const on = active === href;
                   return (
                     <li key={href}>
