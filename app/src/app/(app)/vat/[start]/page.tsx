@@ -29,7 +29,7 @@ export default async function VatPeriod({ params, searchParams }: { params: Prom
       <PageHeader
         title={`Moms ${periodLabel(period)}`}
         subtitle={`${dateStr(start)} – ${dateStr(end)} · deklareras och betalas senast ${dateStr(period.deadline)}`}
-        actions={<Link href="/vat" className="btn-secondary">Alla perioder</Link>}
+        actions={<div className="flex flex-wrap gap-2"><a href={`/api/vat/export?start=${dateStr(start)}`} className="btn-primary">Ladda ner momsdeklaration (XML)</a><Link href="/vat" className="btn-secondary">Alla perioder</Link></div>}
       />
       <Flash error={error} notice={notice} />
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
@@ -69,6 +69,12 @@ export default async function VatPeriod({ params, searchParams }: { params: Prom
                 ))}
               </tbody>
             </table>
+          </Card>
+          <Card title="Exportera till Skatteverket">
+            <div className="space-y-2 p-4 text-sm">
+              <p className="text-muted">Ladda ner momsdeklarationen som XML och importera filen i Skatteverkets e-tjänst. Kontrollera alltid beloppen innan du signerar och skickar in.</p>
+              <a href={`/api/vat/export?start=${dateStr(start)}`} className="btn-primary block text-center">Ladda ner XML-fil</a>
+            </div>
           </Card>
           <Card title="Stäm av och lås">
             <div className="space-y-3 p-4 text-sm">
