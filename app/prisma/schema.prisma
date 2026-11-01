@@ -122,6 +122,7 @@ model Company {
   oauthGrants      OAuthGrant[]
   sieExports SieExport[]
   neMappings NeMapping[]
+  neScheme    String  @default("ej_k1") // ej_k1 (vanligt årsbokslut) | k1 (förenklat årsbokslut)
 }
 
 model FiscalYear {
