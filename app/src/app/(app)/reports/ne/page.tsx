@@ -2,11 +2,11 @@ import { requireCompany } from "@/lib/auth";
 import { fyLabel, pickFiscalYear } from "@/lib/fiscal";
 import { kr } from "@/lib/money";
 import { loadNe } from "@/lib/ne-data";
-import { NE_FIELDS, NE_NONE, type NeAccountRow } from "@/lib/ne";
+import { NE_FIELDS, NE_NONE, NE_SCHEMES, type NeAccountRow, type NeScheme } from "@/lib/ne";
 import { Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
 import { YearForm } from "@/components/YearSelect";
-import { setNeMapping } from "./actions";
+import { setNeMapping, setNeScheme } from "./actions";
 
 const wholeKr = (n: number) => kr(n * 100, { decimals: false });
 
@@ -88,6 +88,19 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
         </p>
       )}
 
+      <Card title="Vilket bokslut upprättar du?" className="no-print mb-4">
+        <form action={setNeScheme} className="space-y-3 px-5 pb-5 pt-1 text-[14px]">
+          <input type="hidden" name="fy" value={fy.id} />
+          {(Object.keys(NE_SCHEMES) as NeScheme[]).map((k) => (
+            <label key={k} className="flex items-start gap-3">
+              <input type="radio" name="scheme" value={k} defaultChecked={ne.scheme === k} disabled={readOnly} className="mt-1" />
+              <span><span className="font-medium">{NE_SCHEMES[k].label}</span> <span className="text-muted">({NE_SCHEMES[k].plan})</span><span className="block text-muted">{NE_SCHEMES[k].description}</span></span>
+            </label>
+          ))}
+          {!readOnly && <button className="btn-secondary">Spara val</button>}
+        </form>
+      </Card>
+
       <Card>
         <YearForm years={years} fy={fy} />
         <div className="overflow-x-auto">
@@ -133,15 +146,14 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
       <div className="mt-4 max-w-3xl space-y-2 text-[14px]">
         <p className={diff === 0 ? "text-success" : "text-warn"}>
           {diff === 0
-            ? `Stämmer med bokfört resultat enligt kontona 3000–8799 (${wholeKr(ne.booked)}).`
+            ? `Stämmer med bokfört resultat enligt kontona 3000–8989 (${wholeKr(ne.booked)}).`
             : `Avviker från bokfört resultat enligt kontona 3000–8799 (${wholeKr(ne.booked)}) med ${wholeKr(diff)}. ${
                 ne.unmapped.length || ne.excluded.length ? "Orsaken är konton som saknar fält eller lämnats utanför." : "Orsaken kan vara avrundning till hela kronor."
               }`}
         </p>
         <p className="text-muted">
           Det här är ett underlag och inte en färdig deklaration. Kontrollera fälten mot NE-blanketten (SKV 2181) för inkomståret innan du lämnar in. Egenavgifter, schablonavdrag,
-          periodiserings- och expansionsfond, räntefördelning och andra justeringar görs i själva deklarationen och ingår inte här. Kontona 8800–8999 (bokslutsdispositioner, skatt och
-          årets resultat) räknas inte med.
+          periodiserings- och expansionsfond, räntefördelning och andra justeringar görs i själva deklarationen och ingår inte här. Bokfört resultat på konto 899x räknas inte med. Kopplingen följer BAS kopplingstabell för NE och kan ändras per konto.
         </p>
       </div>
 
