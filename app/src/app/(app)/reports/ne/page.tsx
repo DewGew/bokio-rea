@@ -71,7 +71,7 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
     <>
       <PageHeader
         title="Underlag för NE-bilaga"
-        subtitle={`${company.name} · ${fyLabel(fy)}`}
+        subtitle={`${company.name} · ${fyLabel(fy)} · ${NE_SCHEMES[ne.scheme].label} (${NE_SCHEMES[ne.scheme].plan})`}
         actions={
           <div className="no-print flex gap-2">
             <a href={`/api/reports/ne?fy=${fy.id}`} className="btn-secondary">Ladda ner PDF</a>
