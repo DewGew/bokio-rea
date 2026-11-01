@@ -81,7 +81,7 @@ export async function GET(req: Request) {
   if (ne.unmapped.length) {
     ensure(30);
     line("Saknar fält", "", { f: bold, size: 9.5, gap: 3 });
-    for (const r of ne.unmapped) line(`${r.number}  ${r.name}`, krOre(r.amount), { size: 9, indent: 8, gap: 3 });
+    for (const r of ne.unmapped) {\n      line(`${r.number}  ${r.name}`, krOre(r.amount), { size: 9, indent: 8, gap: 3 });\n      if (r.note) line(`Obs: ${r.note}`, "", { size: 8, indent: 18, gap: 3 });\n    }
     y -= 6;
   }
   if (ne.excluded.length) {
