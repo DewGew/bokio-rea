@@ -70,12 +70,6 @@ export default async function VatPeriod({ params, searchParams }: { params: Prom
               </tbody>
             </table>
           </Card>
-          <Card title="Exportera till Skatteverket">
-            <div className="space-y-2 p-4 text-sm">
-              <p className="text-muted">Ladda ner momsdeklarationen som XML och importera filen i Skatteverkets e-tjänst. Kontrollera alltid beloppen innan du signerar och skickar in.</p>
-              <a href={`/api/vat/export?start=${dateStr(start)}`} className="btn-primary block text-center">Ladda ner XML-fil</a>
-            </div>
-          </Card>
           <Card title="Stäm av och lås">
             <div className="space-y-3 p-4 text-sm">
               {stored?.lockedAt ? (
