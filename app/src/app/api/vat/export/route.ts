@@ -1,4 +1,4 @@
-"import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireCompany } from "@/lib/auth";
 import { vatPeriods, vatReport } from "@/lib/vat";
 
