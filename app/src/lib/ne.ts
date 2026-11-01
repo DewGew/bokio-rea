@@ -63,9 +63,9 @@ function k1(a:number,vat:string):DefaultMapping{
  if(a>=5000&&a<=6999)return{field:"R6"};
  if(a>=7000&&a<=7699)return{field:"R7"};
  if(a>=7700&&a<=7799)return{field:null,note:"BAS K1 anger R9 eller R10 beroende på vilken tillgång nedskrivningen avser. Välj fält manuellt."};
- if(a>=7800&&a<=7819)return{field:"R10"};
+ if(a>=7810&&a<=7819)return{field:"R10"};
  if(a>=7820&&a<=7829)return{field:"R9"};
- if(a>=7830&&a<=7899)return{field:"R10"};
+ if(a>=7830&&a<=7839)return{field:"R10"};
  if(a>=7980&&a<=7989)return{field:null,note:"BAS K1 anger R9 eller R10 beroende på vilken tillgång ersättningsfonden avser. Välj fält manuellt."};
  if(a===8310||a===8330)return{field:"R4"};
  if(a>=8400&&a<=8499)return{field:"R8"};
