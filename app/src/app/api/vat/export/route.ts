@@ -7,17 +7,17 @@ export const dynamic = "force-dynamic";
 
 const XML_FIELDS: Record<string, string> = {
   "05": "ForsMomsEjAnnan",
-  "10": "MomsUtgHog",
-  "11": "MomsUtgMedel",
-  "12": "MomsUtgLag",
   "21": "InkopTjanstAnnatEg",
   "22": "InkopTjanstUtomEg",
-  "30": "MomsInkopUtgHog",
   "35": "ForsVaruAnnatEg",
   "39": "ForsTjSkskAnnatEg",
   "40": "ForsTjOvrUtomEg",
   "41": "ForsKopareSkskSverige",
   "42": "ForsOvrigt",
+  "10": "MomsUtgHog",
+  "11": "MomsUtgMedel",
+  "12": "MomsUtgLag",
+  "30": "MomsInkopUtgHog",
   "48": "MomsIngAvdr",
 };
 
