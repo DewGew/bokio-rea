@@ -20,10 +20,10 @@ test("vanligt årsbokslut hanterar intervall och räntekonton",()=>{
  assert.equal(defaultField(8910).field,"R8");assert.equal(defaultField(8990).field,null);
 });
 test("K1 använder separat kopplingstabell",()=>{
- assert.equal(defaultField(3101,"","k1").field,"R2");assert.equal(defaultField(3200,"","k1").field,"R3");
+ assert.equal(defaultField(3101,"","k1").field,"R2");assert.equal(defaultField(3200,"","k1").field,"R3");\n assert.equal(defaultField(3500,"","k1").field,"R1");assert.equal(defaultField(3305,"","k1").field,null);\n assert.equal(defaultField(3700,"","k1").field,null);assert.equal(defaultField(3900,"","k1").field,null);\n assert.equal(defaultField(7700,"","k1").field,null);assert.equal(defaultField(7980,"","k1").field,null);
  assert.equal(defaultField(3200,"","ej_k1").field,"R1");assert.equal(defaultField(7820,"","k1").field,"R9");
- assert.equal(defaultField(7832,"","k1").field,"R10");assert.equal(defaultField(8410,"","k1").field,"R8");assert.equal(defaultField(8910,"","k1").field,null);
- const r=computeNe(new Map([[3200,-100_000]]),new Map(),new Map(),"k1");assert.equal(r.fields.R3.kr,1000);assert.equal(r.scheme,"k1");
+ assert.equal(defaultField(7810,"","k1").field,"R10");assert.equal(defaultField(7832,"","k1").field,"R10");assert.equal(defaultField(8410,"","k1").field,"R8");assert.equal(defaultField(8910,"","k1").field,null);
+ const r=computeNe(new Map([[3200,-100_000],[3700,-50_000],[7700,25_000]]),new Map(),new Map(),"k1");assert.equal(r.fields.R3.kr,1000);assert.equal(r.scheme,"k1");\n assert.deepEqual(r.unmapped.map(x=>x.number),[3700,7700]);assert.ok(r.unmapped.every(x=>x.note));
 });
 test("fält summeras och R1–R10 ger resultatet",()=>{
  const r=computeNe(bal,accounts,new Map());assert.equal(r.fields.R1.kr,100000);assert.equal(r.fields.R2.kr,15000);assert.equal(r.fields.R4.kr,250);
