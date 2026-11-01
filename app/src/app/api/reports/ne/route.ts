@@ -3,7 +3,7 @@ import { apiCompany } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { fyLabel } from "@/lib/fiscal";
 import { loadNe } from "@/lib/ne-data";
-import { NE_FIELDS } from "@/lib/ne";
+import { NE_FIELDS, NE_SCHEMES } from "@/lib/ne";
 
 // Helvetica klarar å, ä och ö men inte smala mellanslag eller riktigt minustecken.
 const txt = (s: string) => s.replace(/[\u00a0\u2009\u202f]/g, " ").replace(/\u2212/g, "-").replace(/[^\x20-\x7e\u00c0-\u00ff]/g, "?");
@@ -48,7 +48,8 @@ export async function GET(req: Request) {
 
   line("Underlag för NE-bilaga", "", { f: bold, size: 16, gap: 8 });
   line(`${company.name} (${company.orgNumber})`, "", { size: 11 });
-  line(`Räkenskapsår ${fyLabel(fy)}`, "", { size: 11, gap: 14 });
+  line(`Räkenskapsår ${fyLabel(fy)}`, "", { size: 11, gap: 4 });
+  line(`${"${NE_SCHEMES[ne.scheme].label} (${NE_SCHEMES[ne.scheme].plan}), BAS kopplingstabell för NE"}`, "", { size: 9, gap: 14 });
 
   line("Räkenskapsschema, resultaträkning", "Hela kr", { f: bold, gap: 8 });
   const group = (title: string, kind: "income" | "cost") => {
@@ -60,13 +61,13 @@ export async function GET(req: Request) {
   group("Kostnader", "cost");
   line("R11  Årets resultat (överskott/underskott)", kr(ne.result), { f: bold, gap: 10 });
   line(
-    ne.result === ne.booked ? `Stämmer med bokfört resultat (${kr(ne.booked)} kr).` : `Bokfört resultat enligt konto 3000-8799: ${kr(ne.booked)} kr. Skillnad: ${kr(ne.result - ne.booked)} kr.`,
+    ne.result === ne.booked ? `Stämmer med bokfört resultat (${kr(ne.booked)} kr).` : `Bokfört resultat enligt konto 3000-8989: ${kr(ne.booked)} kr. Skillnad: ${kr(ne.result - ne.booked)} kr.`,
     "",
     { size: 9, gap: 8 },
   );
   if (ne.unmapped.length) line(`${ne.unmapped.length} konto(n) saknar fält och ingår inte i summorna.`, "", { size: 9, f: bold, gap: 8 });
   line("Underlag, inte en färdig deklaration. Kontrollera fälten mot NE-blanketten (SKV 2181) för inkomståret.", "", { size: 8.5, gap: 3 });
-  line("Egenavgifter, schablonavdrag, fonder och räntefördelning ingår inte. Konto 8800-8999 räknas inte med.", "", { size: 8.5, gap: 16 });
+  line("Egenavgifter, schablonavdrag, fonder och räntefördelning ingår inte. Konto 899x (bokfört resultat) räknas inte med.", "", { size: 8.5, gap: 16 });
 
   line("Konton per fält", "Belopp, kr", { f: bold, size: 12, gap: 8 });
   for (const f of NE_FIELDS) {
