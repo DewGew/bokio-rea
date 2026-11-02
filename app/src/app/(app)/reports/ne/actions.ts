@@ -4,7 +4,7 @@ import{revalidatePath}from"next/cache";
 import{db}from"@/lib/db";
 import{requireWriter}from"@/lib/auth";
 import{str,withParam}from"@/lib/action";
-import{NE_BALANCE_CODES,NE_CODES,NE_MAPPING_CODES,NE_FROM,NE_NONE,NE_SCHEMES,NE_TO,isNeScheme}from"@/lib/ne";
+import{NE_BALANCE_CODES,NE_CODES,NE_MAPPING_CODES,NE_NONE,NE_SCHEMES,NE_TO,isNeScheme}from"@/lib/ne";
 export async function setNeMapping(fd:FormData){
  const{companyId}=await requireWriter(),account=Number(str(fd,"account")),field=str(fd,"field"),fy=str(fd,"fy");
  const back=(key:"ok"|"error",msg:string):never=>redirect(withParam(`/reports/ne${fy?`?fy=${encodeURIComponent(fy)}`:""}`,key,msg));
