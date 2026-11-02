@@ -27,7 +27,7 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
       {editable ? <QuoteEditor key={quote.id} quote={{ id: quote.id, customerId: quote.customerId, date: dateStr(quote.date), validUntil: dateStr(quote.validUntil), notes: quote.notes, lines: quote.lines }} customers={customers} action={saveQuote} /> : <div className="space-y-4">
         <div className="flex items-center justify-between"><Badge status={status} /><span className="text-sm text-muted">Giltig till {dateStr(quote.validUntil)}</span></div>
         <div className="overflow-x-auto"><table className="table"><thead><tr><th>Beskrivning</th><th>Antal</th><th>À-pris</th><th>Moms</th><th className="num">Belopp</th></tr></thead><tbody>{quote.lines.map(l => <tr key={l.id}><td>{l.description}</td><td>{l.quantity} {l.unit}</td><td>{kr(l.unitPrice)}</td><td>{l.vatRate} %</td><td className="num">{kr(Math.round(l.quantity*l.unitPrice*(1-l.discountBp/10000)*(1+l.vatRate/100)))}</td></tr>)}</tbody></table></div>
-        {quote.notes && <p className="whitespace-pre-wrap text-sm">{quote.notes}</p>}
+        {quote.notes && <div><p className="mb-1 text-sm font-medium">Meddelande på offerten</p><p className="whitespace-pre-wrap text-sm">{quote.notes}</p></div>}
         <p className="text-right text-lg font-semibold">Totalt: {kr(total)}</p>
       </div>}
     </Card>
