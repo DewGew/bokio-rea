@@ -35,7 +35,7 @@ export function QuoteEditor({ quote, customers, action }: { quote: { id: number;
       </table>
       <button type="button" className="btn-secondary m-3" onClick={() => setLines(old => [...old, empty()])}>+ Lägg till rad</button>
     </div>
-    <div><label className="label" htmlFor="notes">Meddelande / villkor</label><textarea id="notes" name="notes" defaultValue={quote.notes} rows={3} className="input" /></div>
+    <div><label className="label" htmlFor="notes">Meddelande på offerten</label><textarea id="notes" name="notes" defaultValue={quote.notes} rows={3} className="input" /></div>
     <p className="text-right text-base font-semibold">Preliminärt totalbelopp inkl. moms: {money(total)}</p>
     <div className="flex justify-end"><button className="btn-primary">Spara offert</button></div>
   </form>;
