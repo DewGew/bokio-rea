@@ -29,7 +29,7 @@ export default async function VatPeriod({ params, searchParams }: { params: Prom
       <PageHeader
         title={`Moms ${periodLabel(period)}`}
         subtitle={`${dateStr(start)} – ${dateStr(end)} · deklareras och betalas senast ${dateStr(period.deadline)}`}
-        actions={<Link href="/vat" className="btn-secondary">Alla perioder</Link>}
+        actions={<div className="flex flex-wrap gap-2"><a href={`/api/vat/export?start=${dateStr(start)}`} className="btn-primary">Ladda ner momsdeklaration (XML)</a><Link href="/vat" className="btn-secondary">Alla perioder</Link></div>}
       />
       <Flash error={error} notice={notice} />
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
