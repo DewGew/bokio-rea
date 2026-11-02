@@ -2,7 +2,7 @@ import { requireCompany } from "@/lib/auth";
 import { fyLabel, pickFiscalYear } from "@/lib/fiscal";
 import { kr } from "@/lib/money";
 import { loadNe } from "@/lib/ne-data";
-import { NE_FIELDS, NE_NONE, NE_SCHEMES, type NeAccountRow, type NeScheme } from "@/lib/ne";
+import { NE_BALANCE_FIELDS, NE_FIELDS, NE_NONE, NE_SCHEMES, type NeAccountRow, type NeScheme } from "@/lib/ne";
 import { Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
 import { YearForm } from "@/components/YearSelect";
@@ -19,7 +19,7 @@ function MappingRow({ row, fy, readOnly }: { row: NeAccountRow; fy: number; read
       </td>
       <td>
         {row.name}
-        {row.note && row.source === "default" && <span className="block text-[12px] text-warn">{row.note}</span>}
+        {row.note && <span className="block text-[12px] text-warn">{row.note}</span>}
       </td>
       <td className="num whitespace-nowrap">{kr(row.amount)}</td>
       <td className="no-print">
@@ -31,7 +31,7 @@ function MappingRow({ row, fy, readOnly }: { row: NeAccountRow; fy: number; read
             <input type="hidden" name="fy" value={fy} />
             <select name="field" defaultValue={current} aria-label={`Fält för konto ${row.number}`} className="input w-auto py-1 text-[13px]">
               <option value="default">{row.source === "default" && row.field ? `Standard (${row.field})` : "Standard"}</option>
-              {NE_FIELDS.map((f) => (
+              {[...NE_BALANCE_FIELDS, ...NE_FIELDS].map((f) => (
                 <option key={f.code} value={f.code}>{f.code}</option>
               ))}
               <option value={NE_NONE}>Lämna utanför</option>
@@ -65,7 +65,7 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
   const income = NE_FIELDS.filter((f) => f.kind === "income");
   const cost = NE_FIELDS.filter((f) => f.kind === "cost");
   const diff = ne.result - ne.booked;
-  const allRows = [...NE_FIELDS.flatMap((f) => ne.fields[f.code].accounts), ...ne.unmapped, ...ne.excluded].sort((a, b) => a.number - b.number);
+  const allRows = [...NE_FIELDS.flatMap((f) => ne.fields[f.code].accounts), ...NE_BALANCE_FIELDS.flatMap((f) => ne.balanceFields[f.code].accounts), ...ne.unmapped, ...ne.excluded, ...ne.balanceUnmapped, ...ne.balanceExcluded].sort((a, b) => a.number - b.number);
 
   return (
     <>
@@ -81,10 +81,10 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
       />
       <Flash notice={notice} error={error} />
 
-      {ne.unmapped.length > 0 && (
+      {(ne.unmapped.length + ne.balanceUnmapped.length) > 0 && (
         <p className="no-print mb-4 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
-          <strong>{ne.unmapped.length === 1 ? "Ett konto har" : `${ne.unmapped.length} konton har`} saldo men saknar fält</strong> och ingår därför inte i summorna. Koppla
-          {ne.unmapped.length === 1 ? " det" : " dem"} i listan längst ned.
+          <strong>{ne.unmapped.length + ne.balanceUnmapped.length === 1 ? "Ett konto har" : `${ne.unmapped.length + ne.balanceUnmapped.length} konton har`} saldo men saknar fält</strong> och ingår därför inte i summorna. Koppla
+          {ne.unmapped.length + ne.balanceUnmapped.length === 1 ? " det" : " dem"} i listan längst ned.
         </p>
       )}
 
@@ -99,6 +99,25 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
           ))}
           {!readOnly && <button className="btn-secondary">Spara val</button>}
         </form>
+      </Card>
+
+      <Card title="Balansräkning / räkenskapsschema">
+        <div className="overflow-x-auto">
+          <table className="table">
+            <thead><tr><th>Fält</th><th>Benämning</th><th className="num">Belopp, hela kr</th></tr></thead>
+            <tbody>
+              {["Anläggningstillgångar","Omsättningstillgångar","Eget kapital","Obeskattade reserver","Avsättningar","Skulder"].flatMap((section) => [
+                <tr key={`section-${section}`} className="bg-surface-2"><th colSpan={3} className="text-ink">{section}</th></tr>,
+                ...NE_BALANCE_FIELDS.filter((f) => f.section === section).map((f) => (
+                  <tr key={f.code}><td className="font-medium">{f.code}</td><td>{f.name}</td><td className="num">{wholeKr(ne.balanceFields[f.code].kr)}</td></tr>
+                )),
+              ])}
+              <tr className="font-semibold"><td colSpan={2}>Summa tillgångar (B1–B9)</td><td className="num">{wholeKr(ne.balanceAssets)}</td></tr>
+              <tr className="font-semibold"><td colSpan={2}>Summa eget kapital och skulder (B10–B16)</td><td className="num">{wholeKr(ne.balanceEquityLiabilities)}</td></tr>
+              <tr><td colSpan={2}>Differens (ska vara 0)</td><td className={ne.balanceDifference === 0 ? "num text-success" : "num text-warn"}>{wholeKr(ne.balanceDifference)}</td></tr>
+            </tbody>
+          </table>
+        </div>
       </Card>
 
       <Card>
@@ -148,11 +167,11 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
           {diff === 0
             ? `Stämmer med bokfört resultat enligt kontona 3000–8989 (${wholeKr(ne.booked)}).`
             : `Avviker från bokfört resultat enligt kontona 3000–8799 (${wholeKr(ne.booked)}) med ${wholeKr(diff)}. ${
-                ne.unmapped.length || ne.excluded.length ? "Orsaken är konton som saknar fält eller lämnats utanför." : "Orsaken kan vara avrundning till hela kronor."
+                ne.unmapped.length || ne.excluded.length ? "Orsaken är resultatkonton som saknar fält eller lämnats utanför." : "Orsaken kan vara avrundning till hela kronor."
               }`}
         </p>
         <p className="text-muted">
-          Det här är ett underlag och inte en färdig deklaration. Kontrollera fälten mot NE-blanketten (SKV 2181) för inkomståret innan du lämnar in. Egenavgifter, schablonavdrag,
+          Det här är ett underlag och inte en färdig deklaration. Kontrollera fälten mot NE-blanketten (SKV 2161) för inkomståret innan du lämnar in. Egenavgifter, schablonavdrag,
           periodiserings- och expansionsfond, räntefördelning och andra justeringar görs i själva deklarationen och ingår inte här. Bokfört resultat på konto 899x räknas inte med. Kopplingen följer BAS kopplingstabell för NE och kan ändras per konto.
         </p>
       </div>
@@ -169,22 +188,27 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
               </tr>
             </thead>
             <tbody>
-              {ne.unmapped.length > 0 && (
+              {(ne.unmapped.length + ne.balanceUnmapped.length) > 0 && (
                 <>
                   <tr className="bg-warn-soft">
                     <th colSpan={4} className="text-warn">Saknar fält</th>
                   </tr>
-                  {ne.unmapped.map((r) => (
+                  {[...ne.unmapped, ...ne.balanceUnmapped].map((r) => (
                     <MappingRow key={r.number} row={r} fy={fy.id} readOnly={readOnly} />
                   ))}
                 </>
+              )}
+              {NE_BALANCE_FIELDS.map((f) =>
+                ne.balanceFields[f.code].accounts.length ? (
+                  <FieldGroup key={f.code} title={`${f.code} ${f.name}`} rows={ne.balanceFields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
+                ) : null,
               )}
               {NE_FIELDS.map((f) =>
                 ne.fields[f.code].accounts.length ? (
                   <FieldGroup key={f.code} title={`${f.code} ${f.name}`} rows={ne.fields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
                 ) : null,
               )}
-              {ne.excluded.length > 0 && <FieldGroup title="Lämnas utanför" rows={ne.excluded} fy={fy.id} readOnly={readOnly} />}
+              {(ne.excluded.length + ne.balanceExcluded.length) > 0 && <FieldGroup title="Lämnas utanför" rows={[...ne.excluded, ...ne.balanceExcluded]} fy={fy.id} readOnly={readOnly} />}
               {allRows.length === 0 && (
                 <tr>
                   <td colSpan={4} className="text-muted">Inga resultatkonton har saldo under räkenskapsåret.</td>
