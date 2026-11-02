@@ -52,6 +52,14 @@ test("balansräkningen omfattar B1-B16 och räknar B10 som tillgångar minus sku
  assert.equal(r.balanceFields.B10.kr,11500);
  assert.equal(r.balanceDifference,0);
 });
+test("momsfordran hamnar i B8 och momsskuld i B14",()=>{
+ const receivable=computeNe(new Map(),new Map(),new Map(),"ej_k1",new Map([[1650,125_000],[2650,75_000]]));
+ assert.equal(receivable.balanceFields.B8.kr,2000);
+ assert.equal(receivable.balanceFields.B14.kr,0);
+ const payable=computeNe(new Map(),new Map(),new Map(),"ej_k1",new Map([[2650,-200_000]]));
+ assert.equal(payable.balanceFields.B8.kr,0);
+ assert.equal(payable.balanceFields.B14.kr,2000);
+});
 test("balanskonton och konton utanför schemat ingår inte i resultaträkningen",()=>{
  const r=computeNe(bal,accounts,new Map()),all=Object.values(r.fields).flatMap(f=>f.accounts.map(a=>a.number));
  assert.ok(!all.includes(2641));assert.ok(!all.includes(8999));
