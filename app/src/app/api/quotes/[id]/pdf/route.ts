@@ -2,7 +2,7 @@ import { apiCompany } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { loadLogo } from "@/lib/company-logo";
 import { designFromCompany, invoicePdf } from "@/lib/invoice-pdf";
-import { invoiceTotals, isOrganisationNumber, lineNet } from "@/lib/invoice-rules";
+import { invoiceTotals, isOrganisationNumber, lineNet, lateInterestText, reminderFeeText } from "@/lib/invoice-rules";
 import type { InvoiceDoc } from "@/lib/invoice-doc";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -30,7 +30,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     },
     payment: {
       bankgiro: "", plusgiro: "", bankName: "", bankAccount: "", iban: "", bic: "", swishNumber: "", swishQr: false, paymentLink: "",
-      termsDays: 0, lateInterest: "", reminderFee: "",
+      termsDays: 0, lateInterest: lateInterestText(company.lateInterestRate), reminderFee: reminderFeeText(company.reminderFee),
     },
     lines: quote.lines.map(l => ({ description: l.description, quantity: l.quantity, unit: l.unit, unitPrice: l.unitPrice, vatRate: l.vatRate, discountBp: l.discountBp, type: l.type, periodStart: null, periodEnd: null, net: lineNet(l) })),
     totals: { net: totals.net, vat: totals.vat, total: totals.total, discount: totals.discount, byRate: [...totals.byRate.entries()].map(([rate, v]) => ({ rate, net: v.net, vat: v.vat })) },
