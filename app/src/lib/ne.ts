@@ -93,7 +93,9 @@ function k1(a:number,vat:string):DefaultMapping{
  return{field:null};
 }
 const inRange=(a:number,lo:number,hi:number)=>a>=lo&&a<=hi;
-function defaultBalanceField(a:number,scheme:NeScheme):NeBalanceField|null{
+function defaultBalanceField(a:number,scheme:NeScheme,balance=0):NeBalanceField|null{
+ // Nettomoms på 1650/2650 placeras efter saldots riktning: fordran i B8, skuld i B14.
+ if(a===1650||a===2650)return balance<0?"B14":"B8";
  if(scheme==="k1"){
   if(a===1000)return "B1";
   if(a===1110||a===1150)return "B2";
@@ -102,7 +104,7 @@ function defaultBalanceField(a:number,scheme:NeScheme):NeBalanceField|null{
   if(a===1300)return "B5";
   if(a===1400)return "B6";
   if(a===1500)return "B7";
-  if(a===1600||a===1650||a===1700)return "B8";
+  if(a===1600||a===1700)return "B8";
   if([1910,1920,1930,1940,1970].includes(a))return "B9";
   if(inRange(a,2010,2010)||inRange(a,2020,2040))return "B10";
   if([2330,2350,2390].includes(a))return "B13";
@@ -163,10 +165,10 @@ export function computeNe(bal:Map<number,number>,accounts:Map<number,{name:strin
   if(number<NE_BALANCE_FROM||number>=NE_FROM||balance===0)continue;
   const info=accounts.get(number),name=info?.name??`Konto ${number}`,override=overrides.get(number);
   if(override===NE_NONE){balanceExcluded.push({number,name,amount:balance,field:null,source:"none"});continue;}
-  const mapped=override&&NE_BALANCE_CODES.includes(override as NeBalanceField)?override as NeBalanceField:defaultBalanceField(number,scheme);
+  const mapped=override&&NE_BALANCE_CODES.includes(override as NeBalanceField)?override as NeBalanceField:defaultBalanceField(number,scheme,balance);
   if(!mapped){balanceUnmapped.push({number,name,amount:balance,field:null,source:"default",note:"Kontot saknar automatisk koppling till B1–B16. Kontrollera kontots innehåll och koppla det manuellt om det ska ingå."});continue;}
   const amount=Number(mapped.slice(1))<=9?balance:-balance;
-  balanceFields[mapped].accounts.push({number,name,amount,field:mapped,source:override?"override":"default",note:mapped==="B10"?"Kontoraden är en specifikation. B10-beloppet beräknas som tillgångar minus skulder enligt blanketten.":undefined});
+  balanceFields[mapped].accounts.push({number,name,amount,field:mapped,source:override?"override":"default",note:number===1650||number===2650?"Momssaldo: fordran redovisas i B8 och skuld i B14 beroende på saldots riktning.":mapped==="B10"?"Kontoraden är en specifikation. B10-beloppet beräknas som tillgångar minus skulder enligt blanketten.":undefined});
  }
  for(const c of NE_CODES)fields[c].kr=Math.round(fields[c].accounts.reduce((s,a)=>s+a.amount,0)/100);
  for(const c of NE_BALANCE_CODES)balanceFields[c].kr=Math.round(balanceFields[c].accounts.reduce((s,a)=>s+a.amount,0)/100);
