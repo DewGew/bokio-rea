@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
 
   // Innehållet är avsiktligt begränsat till ASCII (taggar och siffror), vilket är giltigt ISO-8859-1.
   const body = Buffer.from(lines.join("\r\n"), "latin1");
-  const filename = `momsdeklaration-${period.end.toISOString().slice(0, 7).replace("-", "")}.xml`;
+  const filename = `momsdeklaration-${orgNumber.slice(0, 6)}-${orgNumber.slice(6)}-${period.end.toISOString().slice(0, 7).replace("-", "")}.xml`;
 
   return new NextResponse(body, {
     headers: {
