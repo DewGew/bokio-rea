@@ -6,7 +6,8 @@ import { dateStr, kr } from "@/lib/money";
 import { invoiceTotals } from "@/lib/invoice-rules";
 import { Badge, Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { QuoteEditor } from "@/components/QuoteEditor";
-import { saveQuote, setQuoteStatus, convertQuote } from "../actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { saveQuote, setQuoteStatus, convertQuote, deleteQuote } from "../actions";
 
 export default async function QuotePage({ params, searchParams }: { params: Promise<{id:string}>; searchParams: SP }) {
   const { companyId } = await requireCompany();
@@ -31,7 +32,7 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
       </div>}
     </Card>
     {(editable || (status === "accepted" && !quote.invoiceId)) && <div className="mt-4 flex flex-wrap gap-2">
-      {quote.status === "draft" && <form action={setQuoteStatus}><input type="hidden" name="id" value={quote.id}/><input type="hidden" name="status" value="sent"/><button className="btn-secondary">Markera som skickad</button></form>}
+      {quote.status === "draft" && <><form action={setQuoteStatus}><input type="hidden" name="id" value={quote.id}/><input type="hidden" name="status" value="sent"/><button className="btn-secondary">Markera som skickad</button></form><form action={deleteQuote}><input type="hidden" name="id" value={quote.id}/><ConfirmButton className="btn-danger" message="Vill du ta bort offertutkastet? Åtgärden kan inte ångras.">Ta bort utkast</ConfirmButton></form></> }
       {quote.status === "sent" && <><form action={setQuoteStatus}><input type="hidden" name="id" value={quote.id}/><input type="hidden" name="status" value="accepted"/><button className="btn-primary">Markera som accepterad</button></form><form action={setQuoteStatus}><input type="hidden" name="id" value={quote.id}/><input type="hidden" name="status" value="rejected"/><button className="btn-secondary">Markera som avböjd</button></form></>}
       {status === "accepted" && !quote.invoiceId && <form action={convertQuote}><input type="hidden" name="id" value={quote.id}/><button className="btn-primary">Omvandla till fakturautkast</button></form>}
     </div>}
