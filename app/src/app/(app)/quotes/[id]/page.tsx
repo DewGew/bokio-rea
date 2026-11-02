@@ -8,8 +8,6 @@ import { Badge, Card, Flash, PageHeader, readParams, type SP } from "@/component
 import { QuoteEditor } from "@/components/QuoteEditor";
 import { saveQuote, setQuoteStatus, convertQuote } from "../actions";
 
-const labels: Record<string,string> = { draft:"Utkast", sent:"Skickad", accepted:"Accepterad", rejected:"Avböjd", expired:"Utgången", converted:"Fakturerad" };
-
 export default async function QuotePage({ params, searchParams }: { params: Promise<{id:string}>; searchParams: SP }) {
   const { companyId } = await requireCompany();
   const { id } = await params;
@@ -22,7 +20,7 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
   const editable = ["draft","sent"].includes(quote.status) && !expired;
   const total = invoiceTotals(quote.lines).total;
   return <>
-    <PageHeader title={`Offert #${quote.number ?? quote.id}`} subtitle={quote.customer.name} actions={<><Link href="/quotes" className="btn-secondary">Tillbaka</Link>{quote.invoiceId && <Link href={`/invoices/${quote.invoiceId}`} className="btn-primary">Öppna faktura</Link>}</>} />
+    <PageHeader title={`Offert #${quote.number ?? quote.id}`} subtitle={quote.customer.name} actions={<><Link href="/quotes" className="btn-secondary">Tillbaka</Link><a href={`/api/quotes/${quote.id}/pdf`} target="_blank" className="btn-secondary">Förhandsgranska PDF</a><a href={`/api/quotes/${quote.id}/pdf?download`} className="btn-secondary">Ladda ner PDF</a>{quote.invoiceId && <Link href={`/invoices/${quote.invoiceId}`} className="btn-primary">Öppna faktura</Link>}</>} />
     <Flash error={error} notice={notice} />
     <Card className="p-4">
       {editable ? <QuoteEditor key={quote.id} quote={{ id: quote.id, customerId: quote.customerId, date: dateStr(quote.date), validUntil: dateStr(quote.validUntil), notes: quote.notes, lines: quote.lines }} customers={customers} action={saveQuote} /> : <div className="space-y-4">
