@@ -1,7 +1,7 @@
 import "server-only";
 import {db} from "./db";
 import {balances} from "./accounting";
-import {NE_FROM,NE_MAPPING_CODES,NE_NONE,NE_TO,computeNe,isNeScheme,type NeChoice} from "./ne";
+import {NE_MAPPING_CODES,NE_NONE,NE_TO,computeNe,isNeScheme,type NeChoice} from "./ne";
 export async function loadNe(companyId:number,fy:{start:Date;end:Date}){
  const[bal,closing,accounts,maps,company]=await Promise.all([
   balances(companyId,{from:fy.start,to:fy.end}),
