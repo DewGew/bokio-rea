@@ -60,6 +60,16 @@ export async function saveQuote(fd: FormData) {
   }
 }
 
+export async function deleteQuote(fd: FormData) {
+  const { companyId } = await requireWriter();
+  const id = Number(str(fd, "id"));
+  const result = await db.quote.deleteMany({ where: { id, companyId, status: "draft", invoiceId: null } });
+  if (result.count === 0) redirect(withParam(`/quotes/${id}`, "error", "Endast offerter med status utkast kan tas bort."));
+  revalidatePath("/quotes");
+  revalidatePath("/", "layout");
+  redirect(withParam("/quotes", "ok", "Offertutkastet har tagits bort."));
+}
+
 export async function setQuoteStatus(fd: FormData) {
   const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
