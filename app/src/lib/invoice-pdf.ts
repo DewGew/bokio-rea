@@ -43,8 +43,9 @@ const luminance = (c: RGB) => 0.2126 * c.red + 0.7152 * c.green + 0.0722 * c.blu
 export async function invoicePdf(doc: InvoiceDoc, design: InvoiceDesign, logo: Logo) {
   const pdf = await PDFDocument.create();
   const credit = doc.kind === "credit";
+  const quote = doc.kind === "quote";
   const draft = doc.number == null;
-  const title = credit ? "Kreditfaktura" : "Faktura";
+  const title = credit ? "Kreditfaktura" : quote ? "Offert" : "Faktura";
   const numberText = draft ? "Utkast" : String(doc.number);
   pdf.setTitle(`${title} ${numberText} - ${doc.seller.name}`);
   pdf.setAuthor(doc.seller.name);
@@ -206,11 +207,11 @@ export async function invoicePdf(doc: InvoiceDoc, design: InvoiceDesign, logo: L
   ].filter(Boolean);
   const meta: [string, string][] = [
     [credit ? "Kreditfakturanr" : "Fakturanummer", numberText],
-    ["Fakturadatum", doc.date],
+    [quote ? "Offertdatum" : "Fakturadatum", doc.date],
     ...(credit && doc.creditOf ? ([["Avser faktura", `${doc.creditOf.number ?? "-"} (${doc.creditOf.date})`]] as [string, string][]) : []),
-    ...(!credit ? ([["Förfallodatum", doc.dueDate]] as [string, string][]) : []),
+    ...(!credit ? ([[quote ? "Giltig till" : "Förfallodatum", doc.dueDate]] as [string, string][]) : []),
     ...(doc.deliveryDate && doc.deliveryDate !== doc.date ? ([["Leveransdatum", doc.deliveryDate]] as [string, string][]) : []),
-    ...(!credit ? ([["Betalningsvillkor", `${doc.payment.termsDays} dagar`]] as [string, string][]) : []),
+    ...(!credit && !quote ? ([["Betalningsvillkor", `${doc.payment.termsDays} dagar`]] as [string, string][]) : []),
     ...(doc.ourReference ? ([["Vår referens", doc.ourReference]] as [string, string][]) : []),
     ...(doc.theirReference ? ([["Er referens", doc.theirReference]] as [string, string][]) : []),
     ...(doc.currency !== "SEK" ? ([["Valuta", doc.currency]] as [string, string][]) : []),
@@ -329,7 +330,7 @@ export async function invoicePdf(doc: InvoiceDoc, design: InvoiceDesign, logo: L
     y -= 14;
   }
   y -= 10;
-  const totalLabel = credit ? "KREDITERAT BELOPP" : "ATT BETALA";
+  const totalLabel = credit ? "KREDITERAT BELOPP" : quote ? "OFFERTSUMMA" : "ATT BETALA";
   const totalText = `${money(t.total)} ${cur}`;
   if (tpl === "modern") {
     roundRect(sx - 12, y - 12, right - sx + 12, 32, 8, accent);
@@ -371,7 +372,7 @@ export async function invoicePdf(doc: InvoiceDoc, design: InvoiceDesign, logo: L
   }
 
   // ---------- Betalning ----------
-  if (!credit) {
+  if (!credit && !quote) {
     const p = doc.payment;
     const swish = p.swishNumber && validSwish(p.swishNumber) ? swishDigits(p.swishNumber) : "";
     const showQr = !!swish && p.swishQr && t.total > 0 && !draft;
