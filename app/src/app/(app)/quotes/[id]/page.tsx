@@ -32,10 +32,10 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
         <p className="text-right text-lg font-semibold">Totalt: {kr(total)}</p>
       </div>}
     </Card>
-    {editable && <div className="mt-4 flex flex-wrap gap-2">
+    {(editable || (status === "accepted" && !quote.invoiceId)) && <div className="mt-4 flex flex-wrap gap-2">
       {quote.status === "draft" && <form action={setQuoteStatus}><input type="hidden" name="id" value={quote.id}/><input type="hidden" name="status" value="sent"/><button className="btn-secondary">Markera som skickad</button></form>}
       {quote.status === "sent" && <><form action={setQuoteStatus}><input type="hidden" name="id" value={quote.id}/><input type="hidden" name="status" value="accepted"/><button className="btn-primary">Markera som accepterad</button></form><form action={setQuoteStatus}><input type="hidden" name="id" value={quote.id}/><input type="hidden" name="status" value="rejected"/><button className="btn-secondary">Markera som avböjd</button></form></>}
-      {quote.status === "accepted" && <form action={convertQuote}><input type="hidden" name="id" value={quote.id}/><button className="btn-primary">Omvandla till fakturautkast</button></form>}
+      {status === "accepted" && !quote.invoiceId && <form action={convertQuote}><input type="hidden" name="id" value={quote.id}/><button className="btn-primary">Omvandla till fakturautkast</button></form>}
     </div>}
     {status === "accepted" && !quote.invoiceId && <p className="mt-3 text-sm text-muted">Offerten är accepterad. Omvandla den till ett fakturautkast när du vill fortsätta med faktureringen.</p>}
     <p className="mt-4 text-xs text-muted">En offert bokförs inte och påverkar inte momsredovisningen. Omvandling skapar ett separat fakturautkast som du granskar och utfärdar.</p>
