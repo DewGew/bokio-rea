@@ -5,8 +5,6 @@ import { invoiceTotals } from "@/lib/invoice-rules";
 import { dateStr, kr } from "@/lib/money";
 import { Badge, Card, Empty, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 
-const labels: Record<string, string> = { draft: "Utkast", sent: "Skickad", accepted: "Accepterad", rejected: "Avböjd", expired: "Utgången", converted: "Fakturerad" };
-
 export default async function Quotes({ searchParams }: { searchParams: SP }) {
   const { companyId } = await requireCompany();
   const { error, notice } = await readParams(searchParams);
