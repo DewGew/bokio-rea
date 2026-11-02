@@ -43,7 +43,7 @@ function ejK1(a:number,vat:string,balance:number):DefaultMapping{
   case 771:case 773:case 776:case 778:case 781:case 783:return{field:"R10"};
   case 772:case 777:case 782:case 784:return{field:"R9"};
   case 774:case 779:return{field:"R8"};
-  case 885:return{field:"R10",note:"Hör till R9 eller R10 beroende på tillgången."};
+  case 885:return{field:null,note:"BAS anger R9 eller R10 beroende på vilken tillgång nedskrivningen avser. Välj fält manuellt."};
  }
  if(g2===79)return{field:"R8"};
  if(R4_ONLY.has(g3))return{field:"R4"};
@@ -54,21 +54,20 @@ function ejK1(a:number,vat:string,balance:number):DefaultMapping{
 function k1(a:number,vat:string):DefaultMapping{
  if(a>=3000&&a<=3099)return{field:vat==="0"?"R2":"R1"};
  if(a>=3100&&a<=3199)return{field:"R2"};
- if(a>=3200&&a<=3299)return{field:"R3",note:"I K1-schemat är 32xx Bil- och bostadsförmån m.m."};
- if(a>=3300&&a<=3399)return{field:"R2",note:"Försäljning utanför Sverige är normalt momsfri."};
- if(a>=3400&&a<=3699)return{field:"R1"};
- if(a>=3700&&a<=3799)return{field:"R1",note:R1_R2};
+ if(a===3200)return{field:"R3",note:"I K1-schemat är 3200 Bil- och bostadsförmån m.m."};
+ if(a===3500)return{field:"R1"};
+ if(a>=3700&&a<=3799)return{field:null,note:"BAS K1 anger att 37xx kan höra till R1 eller R2. Klassificera utifrån vad som faktiskt bokförts."};
  if(a===3970||a===3980)return{field:"R2"};
- if(a>=3900&&a<=3999)return{field:"R1",note:R1_R2};
+ if(a>=3900&&a<=3999)return{field:null,note:"BAS K1 anger att 39xx kan höra till R1 eller R2. Klassificera utifrån vad som faktiskt bokförts."};
  if(a>=4000&&a<=4999)return{field:"R5"};
  if(a>=5000&&a<=6999)return{field:"R6"};
  if(a>=7000&&a<=7699)return{field:"R7"};
- if(a>=7700&&a<=7799)return{field:"R10",note:"Nedskrivningar hör till R9 eller R10 beroende på tillgången."};
- if(a>=7800&&a<=7819)return{field:"R10"};
+ if(a>=7700&&a<=7799)return{field:null,note:"BAS K1 anger R9 eller R10 beroende på vilken tillgång nedskrivningen avser. Välj fält manuellt."};
+ if(a>=7810&&a<=7819)return{field:"R10"};
  if(a>=7820&&a<=7829)return{field:"R9"};
- if(a>=7830&&a<=7899)return{field:"R10"};
- if(a>=7980&&a<=7989)return{field:"R10",note:"Ersättningsfonder hör till R9 eller R10."};
- if(a>=8300&&a<=8399)return{field:"R4"};
+ if(a>=7830&&a<=7839)return{field:"R10"};
+ if(a>=7980&&a<=7989)return{field:null,note:"BAS K1 anger R9 eller R10 beroende på vilken tillgång ersättningsfonden avser. Välj fält manuellt."};
+ if(a===8310||a===8330)return{field:"R4"};
  if(a>=8400&&a<=8499)return{field:"R8"};
  return{field:null};
 }
@@ -83,7 +82,7 @@ export function computeNe(bal:Map<number,number>,accounts:Map<number,{name:strin
   bookedOre+=-balance;const info=accounts.get(number),name=info?.name??`Konto ${number}`,override=overrides.get(number);
   if(override===NE_NONE){excluded.push({number,name,amount:-balance,field:null,source:"none"});continue;}
   const d:DefaultMapping=override?{field:override as NeField}:defaultField(number,info?.vatCode??"",scheme,balance);
-  if(!d.field){unmapped.push({number,name,amount:-balance,field:null,source:"default"});continue;}
+  if(!d.field){unmapped.push({number,name,amount:-balance,field:null,source:"default",note:d.note});continue;}
   const amount=kindOf(d.field)==="income"?-balance:balance;
   fields[d.field].accounts.push({number,name,amount,field:d.field,source:override?"override":"default",note:d.note});
  }
