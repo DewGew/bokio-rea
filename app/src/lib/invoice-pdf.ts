@@ -206,7 +206,7 @@ export async function invoicePdf(doc: InvoiceDoc, design: InvoiceDesign, logo: L
     b.reference ? `Att: ${b.reference}` : "",
   ].filter(Boolean);
   const meta: [string, string][] = [
-    [credit ? "Kreditfakturanr" : "Fakturanummer", numberText],
+    [quote ? "Offertnummer" : credit ? "Kreditfakturanr" : "Fakturanummer", numberText],
     [quote ? "Offertdatum" : "Fakturadatum", doc.date],
     ...(credit && doc.creditOf ? ([["Avser faktura", `${doc.creditOf.number ?? "-"} (${doc.creditOf.date})`]] as [string, string][]) : []),
     ...(!credit ? ([[quote ? "Giltig till" : "Förfallodatum", doc.dueDate]] as [string, string][]) : []),
