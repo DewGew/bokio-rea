@@ -49,7 +49,7 @@ export async function GET(req: Request) {
   line("Underlag för NE-bilaga (SKV 2161)", "", { f: bold, size: 16, gap: 8 });
   line(`${company.name} (${company.orgNumber})`, "", { size: 11 });
   line(`Räkenskapsår ${fyLabel(fy)}`, "", { size: 11, gap: 4 });
-  line(`${"${NE_SCHEMES[ne.scheme].label} (${NE_SCHEMES[ne.scheme].plan}), BAS kopplingstabell för NE"}`, "", { size: 9, gap: 14 });
+  line(`${NE_SCHEMES[ne.scheme].label} (${NE_SCHEMES[ne.scheme].plan}), BAS kopplingstabell för NE`, "", { size: 9, gap: 14 });
 
     line("Balansräkning / räkenskapsschema", "Hela kr", { f: bold, size: 12, gap: 8 });
   for (const section of ["Anläggningstillgångar", "Omsättningstillgångar", "Eget kapital", "Obeskattade reserver", "Avsättningar", "Skulder"]) {
