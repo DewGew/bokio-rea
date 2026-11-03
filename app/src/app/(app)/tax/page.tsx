@@ -33,7 +33,7 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
         <div className="card p-5"><p className="text-[13px] text-muted">Bokfört resultat hittills</p><p className="mt-1 text-2xl font-semibold tabular-nums">{money(profit)}</p></div>
         <div className="card p-5"><p className="text-[13px] text-muted">Fördelade resultatandelar</p><p className="mt-1 text-2xl font-semibold tabular-nums">{pct(shares)}</p><p className="mt-1 text-xs text-muted">Andelarna bör tillsammans vara 100 %.</p></div>
       </div>
-      {company.companyType === "hb" && shares !== 100 && partners.length > 0 && (
+      {company.companyType === "hb" && Math.abs(shares - 100) > 0.01 && partners.length > 0 && (
         <div className="mb-5 rounded-xl bg-warn-soft p-4 text-sm text-warn">Resultatandelarna summerar till {pct(shares)}. Justera dem till 100 % för en fullständig fördelning.</div>
       )}
       <div className="space-y-5">
@@ -52,7 +52,7 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
                   <form action={saveTaxPartnerAction} className="grid gap-3 sm:grid-cols-2">
                     <input type="hidden" name="id" value={partner.id} />
                     <label className="text-sm sm:col-span-2">Namn<input className="input mt-1" name="name" defaultValue={partner.name} required maxLength={100} /></label>
-                    <label className="text-sm">Resultatandel (%)<input className="input mt-1" name="sharePercent" type="number" min="0" max="100" step="0.01" defaultValue={partner.sharePercent} required /></label>
+                    {company.companyType === "hb" ? <label className="text-sm">Resultatandel (%)<input className="input mt-1" name="sharePercent" type="number" min="0" max="100" step="0.01" defaultValue={partner.sharePercent} required /></label> : <input type="hidden" name="sharePercent" value="100" />}
                     <label className="text-sm">Födelseår<input className="input mt-1" name="birthYear" type="number" min="1900" max={year} defaultValue={partner.birthYear} required /></label>
                     <label className="text-sm">Kommunalskatt (%)<input className="input mt-1" name="municipalityTaxRate" type="number" min="0" max="60" step="0.01" defaultValue={partner.municipalityTaxRate} required /></label>
                     <label className="text-sm">Verksamhetstyp<select className="input mt-1" name="activityType" defaultValue={partner.activityType}><option value="active">Aktiv näringsverksamhet</option><option value="passive">Passiv näringsverksamhet</option></select></label>
