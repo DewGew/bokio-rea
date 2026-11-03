@@ -85,6 +85,7 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
                       <div className="flex justify-between gap-3"><dt className="text-muted">{partner.activityType === "active" ? "Egenavgifter" : "Särskild löneskatt"}</dt><dd className="tabular-nums">{money(estimate.socialContributions)}</dd></div>
                       <div className="mt-2 flex justify-between border-t border-line pt-3 font-semibold"><dt>Att reservera</dt><dd className="tabular-nums">{money(estimate.totalToReserve)}</dd></div>
                       <p className="pt-1 text-[11px] leading-relaxed text-muted">* Beräknad som skillnaden mellan skatt på lön + verksamhet och skatt på enbart lönen, efter jobbskatteavdrag.</p>
+                      {partner.activityType === "active" && partner.birthYear >= 1959 && <p className="pt-1 text-[11px] leading-relaxed text-warn">Om du får hel ålderspension eller hel sjuk-/aktivitetsersättning kan schablonavdraget och egenavgifterna vara lägre än uppskattningen. Dessa undantag kan inte anges i verktyget.</p>}
                       
                     </dl>
                   ) : (
