@@ -22,7 +22,7 @@ export async function saveTaxPartnerAction(fd: FormData) {
   if (!["ef", "hb"].includes(company.companyType)) return;
   const id = Number(field(fd, "id"));
   const name = field(fd, "name").slice(0, 100);
-  const sharePercent = Number(field(fd, "sharePercent"));
+  const sharePercent = company.companyType === "ef" ? 100 : Number(field(fd, "sharePercent"));
   const birthYear = Number(field(fd, "birthYear"));
   const municipalityTaxRate = Number(field(fd, "municipalityTaxRate"));
   const activityType = field(fd, "activityType");
