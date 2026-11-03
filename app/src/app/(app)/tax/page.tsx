@@ -42,7 +42,7 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
           const deduction = partner.activityType === "active" ? Math.max(0, partnerProfit * 0.25) : 0;
           const taxable = Math.max(0, partnerProfit - deduction);
           const rate = partner.activityType === "active" ? 0.2897 : 0.2426;
-          const contributions = Math.max(0, partnerProfit) * rate;
+          const contributions = Math.max(0, partner.activityType === "active" ? taxable : partnerProfit) * rate;
           const incomeTax = taxable * partner.municipalityTaxRate / 100;
           const total = contributions + incomeTax;
           return (
