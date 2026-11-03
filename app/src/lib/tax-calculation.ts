@@ -26,25 +26,41 @@ export type TaxEstimate = {
 const PRICE_BASE_AMOUNT_2026 = 59_200;
 const MUNICIPAL_TAX_THRESHOLD_2026 = 643_000;
 
-function basicAllowance2026(earnedAndBusinessIncome: number): number {
+function ordinaryBasicAllowance2026(income: number): number {
+  const pbb = PRICE_BASE_AMOUNT_2026;
+  if (income <= 0) return 0;
+
+  if (income <= 0.99 * pbb) return 0.423 * pbb;
+  if (income <= 2.72 * pbb) return 0.423 * pbb + 0.2 * (income - 0.99 * pbb);
+  if (income <= 3.11 * pbb) return 0.77 * pbb;
+  if (income <= 7.88 * pbb) return 0.77 * pbb - 0.1 * (income - 3.11 * pbb);
+  return 0.293 * pbb;
+}
+
+function enhancedBasicAllowanceAddition2026(income: number): number {
+  const pbb = PRICE_BASE_AMOUNT_2026;
+  if (income <= 0.91 * pbb) return 0.687 * pbb;
+  if (income <= 1.11 * pbb) return 0.885 * pbb - income * 0.2;
+  if (income <= 1.965 * pbb) return 0.6 * pbb + income * 0.057;
+  if (income <= 2.72 * pbb) return 0.333 * pbb + income * 0.1949;
+  if (income <= 3.11 * pbb) return income * 0.3949 - 0.212 * pbb;
+  if (income <= 3.24 * pbb) return income * 0.4949 - 0.523 * pbb;
+  if (income <= 5 * pbb) return income * 0.356 - 0.073 * pbb;
+  if (income <= 7.88 * pbb) return 0.017 * pbb + income * 0.338;
+  if (income <= 8.08 * pbb) return 0.703 * pbb + income * 0.251;
+  if (income <= 11.16 * pbb) return 2.732 * pbb;
+  if (income <= 12.84 * pbb) return 9.651 * pbb - income * 0.62;
+  return 1.691 * pbb;
+}
+
+function basicAllowance2026(earnedAndBusinessIncome: number, birthYear: number): number {
   const income = Math.max(0, earnedAndBusinessIncome);
   if (income === 0) return 0;
 
-  const pbb = PRICE_BASE_AMOUNT_2026;
-  let amount: number;
-  if (income <= 0.99 * pbb) {
-    amount = 0.423 * pbb;
-  } else if (income <= 2.72 * pbb) {
-    amount = 0.423 * pbb + 0.2 * (income - 0.99 * pbb);
-  } else if (income <= 3.11 * pbb) {
-    amount = 0.77 * pbb;
-  } else if (income <= 7.88 * pbb) {
-    amount = 0.77 * pbb - 0.1 * (income - 3.11 * pbb);
-  } else {
-    amount = 0.293 * pbb;
-  }
-
-  return Math.min(income, Math.ceil(amount / 100) * 100);
+  const ordinary = ordinaryBasicAllowance2026(income);
+  const enhanced = birthYear <= 1959 ? enhancedBasicAllowanceAddition2026(income) : 0;
+  // The ordinary and enhanced portions are added before rounding, as prescribed by Skatteverket.
+  return Math.min(income, Math.ceil((ordinary + enhanced) / 100) * 100);
 }
 
 function jobTaxCredit2026(
@@ -84,7 +100,7 @@ function incomeTaxAfterCredits2026(
   taxRate: number,
   birthYear: number,
 ) {
-  const allowance = Math.min(basicAllowance2026(totalIncome), Math.max(0, allowanceEligibleIncome));
+  const allowance = Math.min(basicAllowance2026(totalIncome, birthYear), Math.max(0, allowanceEligibleIncome));
   const taxableIncome = Math.max(0, Math.floor((totalIncome - allowance) / 100) * 100);
   const municipalTax = taxableIncome * taxRate;
   const stateTax = Math.max(0, taxableIncome - MUNICIPAL_TAX_THRESHOLD_2026) * 0.2;
