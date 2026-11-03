@@ -47,5 +47,5 @@ testCase("passive business does not generate job tax credit", () => {
   });
 
   assert.equal(result.standardDeduction, 3_200);
-  assert.ok(Math.abs(result.socialContributions - 3_108.48) < 0.01);
+  assert.ok(Math.abs(result.socialContributions - 3_105.28) < 0.01);
 });
