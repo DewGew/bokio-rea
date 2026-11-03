@@ -10,7 +10,7 @@ import { BarChart } from "@/components/BarChart";
 
 export default async function Dashboard({ searchParams }: { searchParams: SP }) {
   const { notice } = await readParams(searchParams);
-  const { companyId } = await requireCompany();
+  const { companyId, company } = await requireCompany();
   const now = new Date();
   // Räkenskapsåret och momsperioden som pågår idag.
   const [fy, periods] = await Promise.all([currentFiscalYear(companyId), vatPeriods(companyId)]);
@@ -146,6 +146,15 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
             <Link href="/reports/balance" className="btn-secondary justify-start">Balansrapport</Link>
           </div>
         </Card>
+
+        {(company.companyType === "ef" || company.companyType === "hb") && (
+          <Card title="Årets skatt" action={<Link href="/tax" className="text-sm text-brand">Öppna →</Link>}>
+            <div className="p-4">
+              <p className="text-sm text-muted">Se en uppskattning av årets skatt och egenavgifter utifrån företagets resultat och dina personliga skatteuppgifter.</p>
+              <Link href="/tax" className="btn-secondary mt-3 inline-flex">Visa skatteberäkning</Link>
+            </div>
+          </Card>
+        )}
       </div>
     </>
   );
