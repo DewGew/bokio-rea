@@ -12,7 +12,8 @@ export async function addTaxPartnerAction(fd: FormData) {
   if (!["ef", "hb"].includes(company.companyType)) return;
   const name = field(fd, "name").slice(0, 100);
   if (!name) return;
-  await db.taxPartner.create({ data: { companyId, name } });
+  if (company.companyType === "ef" && await db.taxPartner.count({ where: { companyId } })) return;
+  await db.taxPartner.create({ data: { companyId, name, sharePercent: company.companyType === "ef" ? 100 : 0 } });
   refresh();
 }
 
