@@ -27,6 +27,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
     title: "Försäljning",
     items: [
       ["/invoices", "Fakturor", "doc"],
+      ["/quotes", "Offerter", "doc"],
       ["/customers", "Kunder", "people"],
       ["/articles", "Artiklar", "tag"],
       ["/invoices/design", "Fakturadesign", "palette"],

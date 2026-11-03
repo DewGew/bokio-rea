@@ -99,6 +99,7 @@ model Company {
   lateInterestRate Float? // dröjsmålsränta i procent per år; null = enligt räntelagen
   reminderFee      Int     @default(0) // påminnelseavgift i öre (högst 60 kr och bara om den är avtalad); 0 = ingen
   invoiceCounter   Int     @default(0) // senast utdelade fakturanummer (räknas upp atomiskt)
+  quoteCounter     Int     @default(0) // senast utdelade offertnummer
   showOcr          Boolean @default(false) // visa OCR-nummer (fakturanummer + kontrollsiffra) på fakturor, kräver bankgiro eller plusgiro
 
   // Kvitton via e-post: hemlig token i adressen (kvitton+<token>@...) och valfri lista över tillåtna avsändare
@@ -113,6 +114,7 @@ model Company {
   customers        Customer[]
   articles         Article[]
   invoices         Invoice[]
+  quotes           Quote[]
   expenses         Expense[]
   vatPeriods       VatPeriod[]
   fiscalYears      FiscalYear[]
@@ -249,6 +251,7 @@ model Customer {
   country    String    @default("SE") // landskod (ISO 3166-1 alfa-2)
   vatNumber  String    @default("") // köparens momsregistreringsnummer (krävs vid omvänd betalningsskyldighet och EU-handel)
   invoices   Invoice[]
+  quotes     Quote[]
 }
 
 model Article {
@@ -587,4 +590,39 @@ model TaxPartner {
   createdAt           DateTime @default(now())
 
   @@index([companyId])
+}
+
+
+// Offerter har en egen nummerserie och bokförs först när de omvandlas till fakturor.
+model Quote {
+  id          Int        @id @default(autoincrement())
+  companyId   Int
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number      Int?
+  customerId  Int
+  customer    Customer   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  date        DateTime
+  validUntil  DateTime
+  status      String     @default("draft") // draft | sent | accepted | rejected | expired | converted
+  notes       String     @default("")
+  invoiceId   Int?       @unique
+  lines       QuoteLine[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId, date])
+}
+
+model QuoteLine {
+  id          Int      @id @default(autoincrement())
+  quoteId     Int
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float
+  unit        String   @default("st")
+  unitPrice   Int
+  vatRate     Int      @default(25)
+  discountBp  Int      @default(0)
+  type        String   @default("service")
 }
