@@ -82,8 +82,8 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
           );
         })}
         {partners.length === 0 && <Card><p className="p-5 text-sm text-muted">Lägg till ägaren eller delägarna för att se en uppskattning av årets skatt.</p></Card>}
-        {canWrite && (
-          <Card title={company.companyType === "hb" ? "Lägg till delägare" : "Lägg till skatteprofil"}>
+        {canWrite && (company.companyType === "hb" || partners.length === 0) && (
+          <Card title={company.companyType === "hb" ? "Lägg till delägare" : "Lägg till ägare"}>
             <form action={addTaxPartnerAction} className="flex flex-wrap items-end gap-3 p-5">
               <label className="min-w-[220px] flex-1 text-sm">Namn<input className="input mt-1" name="name" placeholder={company.companyType === "hb" ? "Delägarens namn" : "Ägarens namn"} required maxLength={100} /></label>
               <button className="btn-primary" type="submit">Lägg till</button>
