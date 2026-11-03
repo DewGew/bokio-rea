@@ -5,6 +5,7 @@ import { currentFiscalYear, fyLabel } from "@/lib/fiscal";
 import { kr } from "@/lib/money";
 import { Card, Flash, PageHeader } from "@/components/ui";
 import { addTaxPartnerAction, deleteTaxPartnerAction, saveTaxPartnerAction } from "./actions";
+import { estimateAnnualTax } from "@/lib/tax-calculation";
 
 const money = (value: number) => kr(Math.round(value * 100));
 const pct = (value: number) => value.toLocaleString("sv-SE", { maximumFractionDigits: 2 }) + " %";
@@ -24,6 +25,7 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
   const shares = partners.reduce((sum, partner) => sum + partner.sharePercent, 0);
   const canWrite = role !== "read";
   const year = new Date().getFullYear();
+  const taxYear = fy.end.getFullYear();
 
   return (
     <>
@@ -39,12 +41,14 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
       <div className="space-y-5">
         {partners.map((partner) => {
           const partnerProfit = profit * partner.sharePercent / 100;
-          const deduction = partner.activityType === "active" ? Math.max(0, partnerProfit * 0.25) : 0;
-          const taxable = Math.max(0, partnerProfit - deduction);
-          const rate = partner.activityType === "active" ? 0.2897 : 0.2426;
-          const contributions = Math.max(0, partner.activityType === "active" ? taxable : partnerProfit) * rate;
-          const incomeTax = taxable * partner.municipalityTaxRate / 100;
-          const total = contributions + incomeTax;
+          const estimate = estimateAnnualTax({
+            taxYear,
+            birthYear: partner.birthYear,
+            municipalityTaxRate: partner.municipalityTaxRate,
+            otherEmploymentIncome: partner.otherIncome,
+            businessProfit: partnerProfit,
+            activityType: partner.activityType === "passive" ? "passive" : "active",
+          });
           return (
             <Card key={partner.id} title={partner.name}>
               <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.8fr)]">
@@ -55,6 +59,7 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
                     {company.companyType === "hb" ? <label className="text-sm">Resultatandel (%)<input className="input mt-1" name="sharePercent" type="number" min="0" max="100" step="0.01" defaultValue={partner.sharePercent} required /></label> : <input type="hidden" name="sharePercent" value="100" />}
                     <label className="text-sm">Födelseår<input className="input mt-1" name="birthYear" type="number" min="1900" max={year} defaultValue={partner.birthYear} required /></label>
                     <label className="text-sm">Kommunalskatt (%)<input className="input mt-1" name="municipalityTaxRate" type="number" min="0" max="60" step="0.01" defaultValue={partner.municipalityTaxRate} required /></label>
+                    <label className="text-sm">Övrig arbetsinkomst per år (t.ex. lön)<input className="input mt-1" name="otherIncome" type="number" min="0" max="100000000" step="1" defaultValue={partner.otherIncome} required /></label>
                     <label className="text-sm">Verksamhetstyp<select className="input mt-1" name="activityType" defaultValue={partner.activityType}><option value="active">Aktiv näringsverksamhet</option><option value="passive">Passiv näringsverksamhet</option></select></label>
                     <div className="flex items-center gap-2 sm:col-span-2"><button className="btn-primary" type="submit">Spara uppgifter</button></div>
                   </form>
@@ -63,18 +68,27 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
                     <div><dt className="text-muted">Resultatandel</dt><dd>{pct(partner.sharePercent)}</dd></div>
                     <div><dt className="text-muted">Födelseår</dt><dd>{partner.birthYear}</dd></div>
                     <div><dt className="text-muted">Kommunalskatt</dt><dd>{pct(partner.municipalityTaxRate)}</dd></div>
+                    <div><dt className="text-muted">Övrig arbetsinkomst</dt><dd>{money(partner.otherIncome)}</dd></div>
                     <div><dt className="text-muted">Verksamhet</dt><dd>{partner.activityType === "active" ? "Aktiv" : "Passiv"}</dd></div>
                   </dl>
                 )}
                 <div className="rounded-xl bg-surface-2 p-4">
                   <p className="mb-3 text-sm font-semibold">Uppskattning för delägaren</p>
-                  <dl className="space-y-2 text-sm">
-                    <div className="flex justify-between gap-3"><dt className="text-muted">Andel av resultatet</dt><dd className="font-medium tabular-nums">{money(partnerProfit)}</dd></div>
-                    {partner.activityType === "active" && <div className="flex justify-between gap-3"><dt className="text-muted">Schablonavdrag (25 %)</dt><dd className="tabular-nums">−{money(deduction)}</dd></div>}
-                    <div className="flex justify-between gap-3"><dt className="text-muted">Beräknad inkomstskatt</dt><dd className="tabular-nums">{money(incomeTax)}</dd></div>
-                    <div className="flex justify-between gap-3"><dt className="text-muted">{partner.activityType === "active" ? "Egenavgifter (schablon)" : "Särskild löneskatt (schablon)"}</dt><dd className="tabular-nums">{money(contributions)}</dd></div>
-                    <div className="mt-2 flex justify-between border-t border-line pt-3 font-semibold"><dt>Att reservera</dt><dd className="tabular-nums">{money(total)}</dd></div>
-                  </dl>
+                  {estimate.supported ? (
+                    <dl className="space-y-2 text-sm">
+                      <div className="flex justify-between gap-3"><dt className="text-muted">Andel av resultatet</dt><dd className="font-medium tabular-nums">{money(partnerProfit)}</dd></div>
+                      <div className="flex justify-between gap-3"><dt className="text-muted">Övrig arbetsinkomst</dt><dd className="tabular-nums">{money(partner.otherIncome)}</dd></div>
+                      <div className="flex justify-between gap-3"><dt className="text-muted">Schablonavdrag ({partner.activityType === "active" ? "25" : "20"} %)</dt><dd className="tabular-nums">−{money(estimate.standardDeduction)}</dd></div>
+                      <div className="flex justify-between gap-3"><dt className="text-muted">Överskott efter schablonavdrag</dt><dd className="tabular-nums">{money(estimate.businessIncomeAfterDeduction)}</dd></div>
+                      <div className="flex justify-between gap-3"><dt className="text-muted">Grundavdrag, sammanlagt</dt><dd className="tabular-nums">−{money(estimate.basicAllowance)}</dd></div>
+                      <div className="flex justify-between gap-3"><dt className="text-muted">Inkomstskatt på verksamheten*</dt><dd className="tabular-nums">{money(estimate.incomeTaxOnBusiness)}</dd></div>
+                      <div className="flex justify-between gap-3"><dt className="text-muted">{partner.activityType === "active" ? "Egenavgifter" : "Särskild löneskatt"}</dt><dd className="tabular-nums">{money(estimate.socialContributions)}</dd></div>
+                      <div className="mt-2 flex justify-between border-t border-line pt-3 font-semibold"><dt>Att reservera</dt><dd className="tabular-nums">{money(estimate.totalToReserve)}</dd></div>
+                      <p className="pt-1 text-[11px] leading-relaxed text-muted">* Beräknad som skillnaden mellan skatt på lön + verksamhet och skatt på enbart lönen, efter jobbskatteavdrag.</p>
+                    </dl>
+                  ) : (
+                    <p className="text-sm text-muted">Den här uppskattningen använder 2026 års skatteregler. Välj ett räkenskapsår som slutar under 2026 för att visa belopp.</p>
+                  )}
                 </div>
                 {canWrite && <form action={deleteTaxPartnerAction} className="lg:col-span-2"><input type="hidden" name="id" value={partner.id} /><button className="text-sm text-danger hover:underline" type="submit">Ta bort delägare</button></form>}
               </div>
@@ -93,8 +107,8 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
       </div>
       <Card className="mt-6">
         <div className="space-y-2 p-5 text-xs leading-relaxed text-muted">
-          <p><strong>Viktigt:</strong> Detta är en förenklad testberäkning, inte en fullständig skatteberäkning eller skatterådgivning. Inkomstskatten beräknas med angiven kommunalskattesats på resultatet efter schablonavdrag för aktiv verksamhet.</p>
-          <p>Beräkningen tar ännu inte hänsyn till grundavdrag, jobbskatteavdrag, statlig inkomstskatt, åldersberoende avgiftsnivåer, andra inkomster, avdrag eller individuella skattereduktioner. Skattesatserna för egenavgifter och särskild löneskatt är schabloner. Kontrollera alltid mot Skatteverkets beräkning innan du använder beloppen.</p>
+          <p><strong>Viktigt:</strong> Detta är en uppskattning enligt 2026 års förenklade regler, inte en fullständig skatteberäkning eller skatterådgivning. Den förutsätter att övrig arbetsinkomst är lön och att inkomsten beskattas i Sverige.</p>
+          <p>Beräkningen tar hänsyn till grundavdrag, jobbskatteavdrag, kommunalskatt, brytpunkt för statlig inkomstskatt samt schablonavdrag och grundnivåer för sociala avgifter. Den omfattar inte kyrkoavgift, begravningsavgift, public service-avgift, individuella avdrag, alla nedsättningar av egenavgifter, sjuk-/aktivitetsersättning eller särskilda personliga skattereduktioner. Kontrollera alltid mot Skatteverkets beräkning.</p>
         </div>
       </Card>
     </>
