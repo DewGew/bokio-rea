@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
 import { balances, invoiceTotals, sumRange } from "@/lib/accounting";
 import { kr } from "@/lib/money";
+import { estimateAnnualTax } from "@/lib/tax-calculation";
 import { periodLabel, vatPeriods, vatReport } from "@/lib/vat";
 import { currentFiscalYear, fyLabel } from "@/lib/fiscal";
 import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
@@ -10,7 +11,7 @@ import { BarChart } from "@/components/BarChart";
 
 export default async function Dashboard({ searchParams }: { searchParams: SP }) {
   const { notice } = await readParams(searchParams);
-  const { companyId } = await requireCompany();
+  const { companyId, company } = await requireCompany();
   const now = new Date();
   // Räkenskapsåret och momsperioden som pågår idag.
   const [fy, periods] = await Promise.all([currentFiscalYear(companyId), vatPeriods(companyId)]);
@@ -18,7 +19,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const vatPeriod = periods.find((p) => p.current) ?? null;
   const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
   // Alla frågor körs parallellt; varje databasrundresa kostar tid, särskilt i serverless.
-  const [yearBal, allBal, openInvoices, toBook, pendingExpenses, drafts, vat, lines, bankToBook] = await Promise.all([
+  const [yearBal, allBal, openInvoices, toBook, pendingExpenses, drafts, vat, lines, bankToBook, taxYearBal, taxPartners] = await Promise.all([
     balances(companyId, { from: yearStart, to: now }),
     balances(companyId),
     db.invoice.findMany({ where: { companyId, status: "sent" }, include: { lines: true } }),
@@ -32,11 +33,27 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
       select: { debit: true, credit: true, accountNumber: true, verification: { select: { date: true } }, account: { select: { name: true } } },
     }),
     db.bankTransaction.count({ where: { companyId, status: "new" } }),
+    (company.companyType === "ef" || company.companyType === "hb") ? balances(companyId, { from: fy.start, to: fy.end }) : Promise.resolve(new Map<number, number>()),
+    (company.companyType === "ef" || company.companyType === "hb") ? db.taxPartner.findMany({ where: { companyId }, orderBy: { id: "asc" } }) : Promise.resolve([]),
   ]);
   const result = -sumRange(yearBal, 3000, 8989);
   const bank = sumRange(allBal, 1900, 1999);
   const unpaid = openInvoices.reduce((s, i) => s + invoiceTotals(i.lines).total, 0);
   const overdue = openInvoices.filter((i) => i.dueDate < now).reduce((s, i) => s + invoiceTotals(i.lines).total, 0);
+  const taxYear = now.getFullYear();
+  const taxProfit = -sumRange(taxYearBal, 3000, 8989) / 100;
+  const estimatedTax = taxPartners.reduce((sum, partner) => {
+    const estimate = estimateAnnualTax({
+      taxYear,
+      birthYear: partner.birthYear,
+      municipalityTaxRate: partner.municipalityTaxRate,
+      otherEmploymentIncome: partner.otherIncome,
+      businessProfit: taxProfit * partner.sharePercent / 100,
+      activityType: partner.activityType === "passive" ? "passive" : "active",
+    });
+    return sum + (estimate.supported ? estimate.totalToReserve : 0);
+  }, 0);
+  const hasTaxEstimate = taxPartners.length > 0 && taxYear === 2026;
 
   const months = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + i, 1));
@@ -88,6 +105,9 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
           value={vat ? kr(Math.abs(vat.toPay)) : "–"}
           hint={vat ? (vat.toPay >= 0 ? "Att betala" : "Att få tillbaka") : "Ej momsregistrerat"}
         />
+        {(company.companyType === "ef" || company.companyType === "hb") && (
+          <Stat label="Årets skatt" value={hasTaxEstimate ? kr(Math.round(estimatedTax) * 100, { decimals: false }) : "–"} hint={hasTaxEstimate ? "Att betala" : "Fyll i uppgifter under Årets skatt"} />
+        )}
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
@@ -146,6 +166,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
             <Link href="/reports/balance" className="btn-secondary justify-start">Balansrapport</Link>
           </div>
         </Card>
+
       </div>
     </>
   );
