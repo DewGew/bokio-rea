@@ -103,3 +103,45 @@ testCase("2026 enhanced job tax credit applies from birth year 1959", () => {
   assert.equal(result.standardDeduction, 4_000);
   assert.ok(result.combinedJobTaxCredit > 0);
 });
+
+
+testCase("2026 enhanced basic allowance follows the official 2026 formula", () => {
+  const result = estimateAnnualTax({
+    taxYear: 2026,
+    birthYear: 1959,
+    municipalityTaxRate: 34,
+    otherEmploymentIncome: 200_000,
+    businessProfit: 0,
+    activityType: "active",
+  });
+
+  // Skatteverket example: ordinary part 43,995.20 + enhanced part 66,878.40,
+  // rounded up together to 110,900 SEK.
+  assert.equal(result.basicAllowance, 110_900);
+});
+
+testCase("2026 enhanced basic allowance reaches the correct high-income maximum", () => {
+  const result = estimateAnnualTax({
+    taxYear: 2026,
+    birthYear: 1958,
+    municipalityTaxRate: 34,
+    otherEmploymentIncome: 540_000,
+    businessProfit: 16_000,
+    activityType: "active",
+  });
+
+  assert.equal(result.basicAllowance, 179_100);
+});
+
+testCase("2026 enhanced basic allowance is capped at eligible earned income", () => {
+  const result = estimateAnnualTax({
+    taxYear: 2026,
+    birthYear: 1959,
+    municipalityTaxRate: 34,
+    otherEmploymentIncome: 45_000,
+    businessProfit: 16_000,
+    activityType: "active",
+  });
+
+  assert.equal(result.basicAllowance, 57_000);
+});
