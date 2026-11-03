@@ -37,7 +37,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     footer: company.invoiceFooter,
   };
   const bytes = await invoicePdf(doc, designFromCompany(company), await loadLogo(company));
-  const name = `Offert-${quote.number ?? quote.id}-${company.name}.pdf`.replace(/[^\w.\-åäöÅÄÖ]+/g, "_");
+  const name = `Offert-${quote.number ?? "Utkast"}-${company.name}.pdf`.replace(/[^\w.\-åäöÅÄÖ]+/g, "_");
   const download = new URL(req.url).searchParams.has("download");
   return new Response(new Uint8Array(bytes), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `${download ? "attachment" : "inline"}; filename*=UTF-8''${encodeURIComponent(name)}`, "Cache-Control": "private, no-store" } });
 }
