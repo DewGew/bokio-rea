@@ -88,6 +88,9 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
           value={vat ? kr(Math.abs(vat.toPay)) : "–"}
           hint={vat ? (vat.toPay >= 0 ? "Att betala" : "Att få tillbaka") : "Ej momsregistrerat"}
         />
+        {(company.companyType === "ef" || company.companyType === "hb") && (
+          <Stat label="Årets skatt" value="7 556 kr" hint="Att betala" />
+        )}
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
@@ -147,14 +150,6 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
           </div>
         </Card>
 
-        {(company.companyType === "ef" || company.companyType === "hb") && (
-          <Card title="Årets skatt" action={<Link href="/tax" className="text-sm text-brand">Öppna →</Link>}>
-            <div className="p-4">
-              <p className="text-sm text-muted">Se en uppskattning av årets skatt och egenavgifter utifrån företagets resultat och dina personliga skatteuppgifter.</p>
-              <Link href="/tax" className="btn-secondary mt-3 inline-flex">Visa skatteberäkning</Link>
-            </div>
-          </Card>
-        )}
       </div>
     </>
   );
