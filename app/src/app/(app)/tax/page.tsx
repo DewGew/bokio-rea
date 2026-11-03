@@ -78,14 +78,14 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
                     <dl className="space-y-2 text-sm">
                       <div className="flex justify-between gap-3"><dt className="text-muted">Andel av resultatet</dt><dd className="font-medium tabular-nums">{money(partnerProfit)}</dd></div>
                       <div className="flex justify-between gap-3"><dt className="text-muted">Övrig arbetsinkomst</dt><dd className="tabular-nums">{money(partner.otherIncome)}</dd></div>
-                      <div className="flex justify-between gap-3"><dt className="text-muted">Schablonavdrag ({partner.activityType === "active" ? "25" : "20"} %)</dt><dd className="tabular-nums">−{money(estimate.standardDeduction)}</dd></div>
+                      <div className="flex justify-between gap-3"><dt className="text-muted">Schablonavdrag ({partner.activityType === "active" ? (partner.birthYear <= 1937 ? "0" : partner.birthYear <= 1958 ? "10" : "25") : "20"} %)</dt><dd className="tabular-nums">−{money(estimate.standardDeduction)}</dd></div>
                       <div className="flex justify-between gap-3"><dt className="text-muted">Överskott efter schablonavdrag</dt><dd className="tabular-nums">{money(estimate.businessIncomeAfterDeduction)}</dd></div>
                       <div className="flex justify-between gap-3"><dt className="text-muted">Grundavdrag, sammanlagt</dt><dd className="tabular-nums">−{money(estimate.basicAllowance)}</dd></div>
                       <div className="flex justify-between gap-3"><dt className="text-muted">Inkomstskatt på verksamheten*</dt><dd className="tabular-nums">{money(estimate.incomeTaxOnBusiness)}</dd></div>
                       <div className="flex justify-between gap-3"><dt className="text-muted">{partner.activityType === "active" ? "Egenavgifter" : "Särskild löneskatt"}</dt><dd className="tabular-nums">{money(estimate.socialContributions)}</dd></div>
                       <div className="mt-2 flex justify-between border-t border-line pt-3 font-semibold"><dt>Att reservera</dt><dd className="tabular-nums">{money(estimate.totalToReserve)}</dd></div>
                       <p className="pt-1 text-[11px] leading-relaxed text-muted">* Beräknad som skillnaden mellan skatt på lön + verksamhet och skatt på enbart lönen, efter jobbskatteavdrag.</p>
-                      {partner.birthYear <= 1959 && <p className="pt-1 text-[11px] leading-relaxed text-warn">Observera: Förhöjt grundavdrag för personer födda 1959 eller tidigare är ännu inte fullt beräknat. Inkomstskatten är därför extra osäker för denna åldersgrupp.</p>}
+                      
                     </dl>
                   ) : (
                     <p className="text-sm text-muted">Den här uppskattningen använder 2026 års skatteregler. Välj ett räkenskapsår som slutar under 2026 för att visa belopp.</p>
