@@ -583,6 +583,7 @@ model TaxPartner {
   birthYear           Int     @default(1980)
   municipalityTaxRate Float   @default(32)
   activityType        String  @default("active") // active | passive
+  otherIncome         Float   @default(0) // årlig övrig arbetsinkomst, t.ex. lön
   createdAt           DateTime @default(now())
 
   @@index([companyId])
