@@ -64,3 +64,42 @@ testCase("2026 basic allowance has the correct minimum at high income", () => {
   assert.ok(Math.abs(result.incomeTaxOnBusiness - 4_080) < 1);
   assert.ok(Math.abs(result.totalToReserve - 7_556.4) < 1);
 });
+
+testCase("2026 active business standard deduction follows the age-based contribution group", () => {
+  const born1958 = estimateAnnualTax({
+    taxYear: 2026,
+    birthYear: 1958,
+    municipalityTaxRate: 34,
+    otherEmploymentIncome: 45_000,
+    businessProfit: 16_000,
+    activityType: "active",
+  });
+  const born1937 = estimateAnnualTax({
+    taxYear: 2026,
+    birthYear: 1937,
+    municipalityTaxRate: 34,
+    otherEmploymentIncome: 45_000,
+    businessProfit: 16_000,
+    activityType: "active",
+  });
+
+  assert.equal(born1958.standardDeduction, 1_600);
+  assert.equal(born1958.businessIncomeAfterDeduction, 14_400);
+  assert.ok(Math.abs(born1958.socialContributions - 1_468.8) < 0.01);
+  assert.equal(born1937.standardDeduction, 0);
+  assert.equal(born1937.socialContributions, 0);
+});
+
+testCase("2026 enhanced job tax credit applies from birth year 1959", () => {
+  const result = estimateAnnualTax({
+    taxYear: 2026,
+    birthYear: 1959,
+    municipalityTaxRate: 34,
+    otherEmploymentIncome: 45_000,
+    businessProfit: 16_000,
+    activityType: "active",
+  });
+
+  assert.equal(result.standardDeduction, 4_000);
+  assert.ok(result.combinedJobTaxCredit > 0);
+});
