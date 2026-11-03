@@ -64,8 +64,8 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
     toBook > 0 && { href: "/uploads", text: `${toBook} underlag att bokföra` },
     pendingExpenses > 0 && { href: "/expenses", text: `${pendingExpenses} utlägg att bokföra` },
     drafts > 0 && { href: "/invoices?status=draft", text: `${drafts} fakturautkast` },
-    quoteDrafts > 0 && { href: "/quotes?status=draft", text: `${quoteDrafts} offertutkast` },
-    sentQuotes > 0 && { href: "/quotes?status=sent", text: `${sentQuotes} skickade offerter att följa upp` },
+    quoteDrafts > 0 && { href: "/quotes", text: `${quoteDrafts} offertutkast` },
+    sentQuotes > 0 && { href: "/quotes", text: `${sentQuotes} skickade offerter att följa upp` },
     overdue > 0 && { href: "/invoices?status=overdue", text: `Förfallna fakturor på ${kr(overdue)}` },
   ].filter(Boolean) as { href: string; text: string }[];
 
