@@ -21,17 +21,14 @@ const parseLines = (raw: string) => {
 };
 
 export async function createQuote(fd: FormData) {
-  const { companyId, company } = await requireWriter();
+  const { companyId } = await requireWriter();
   const customerId = Number(str(fd, "customerId"));
   const customer = await db.customer.findFirst({ where: { id: customerId, companyId } });
   if (!customer) redirect(withParam("/quotes/new", "error", "Välj en kund."));
   const date = parseDate(str(fd, "date"));
   const validUntil = parseDate(str(fd, "validUntil"));
   if (!date || !validUntil || validUntil < date) redirect(withParam("/quotes/new", "error", "Ange giltiga datum. Giltig till måste vara efter offertdatum."));
-  const quote = await db.$transaction(async (tx) => {
-    const c = await tx.company.update({ where: { id: companyId }, data: { quoteCounter: { increment: 1 } }, select: { quoteCounter: true } });
-    return tx.quote.create({ data: { companyId, customerId, number: c.quoteCounter, date, validUntil, status: "draft" } });
-  });
+  const quote = await db.quote.create({ data: { companyId, customerId, date, validUntil, status: "draft" } });
   redirect(`/quotes/${quote.id}`);
 }
 
@@ -76,9 +73,18 @@ export async function setQuoteStatus(fd: FormData) {
   const status = str(fd, "status");
   if (!["sent", "accepted", "rejected"].includes(status)) redirect(withParam(`/quotes/${id}`, "error", "Ogiltig status."));
   const quote = await db.quote.findFirst({ where: { id, companyId } });
-  if (!quote || quote.status === "converted" || quote.status === "expired") redirect(withParam(`/quotes/${id}`, "error", "Offerten kan inte ändra status."));
+  if (!quote || quote.status === "converted" || quote.status === "expired" || quote.status === "rejected") redirect(withParam(`/quotes/${id}`, "error", "Offerten kan inte ändra status."));
+  if (status === "sent" && quote.status !== "draft") redirect(withParam(`/quotes/${id}`, "error", "Endast utkast kan markeras som skickade."));
+  if (["accepted", "rejected"].includes(status) && quote.status !== "sent") redirect(withParam(`/quotes/${id}`, "error", "Endast skickade offerter kan få denna status."));
   if (status === "accepted" && quote.validUntil < new Date(new Date().toISOString().slice(0, 10))) redirect(withParam(`/quotes/${id}`, "error", "Offertens giltighetstid har passerat."));
-  await db.quote.update({ where: { id }, data: { status } });
+  await db.$transaction(async (tx) => {
+    if (status === "sent" && quote.number == null) {
+      const company = await tx.company.update({ where: { id: companyId }, data: { quoteCounter: { increment: 1 } }, select: { quoteCounter: true } });
+      await tx.quote.update({ where: { id }, data: { status, number: company.quoteCounter } });
+    } else {
+      await tx.quote.update({ where: { id }, data: { status } });
+    }
+  });
   revalidatePath("/quotes");
   redirect(withParam(`/quotes/${id}`, "ok", "Offertens status är uppdaterad."));
 }
