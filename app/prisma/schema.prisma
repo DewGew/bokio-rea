@@ -123,6 +123,7 @@ model Company {
   sieExports SieExport[]
   neMappings NeMapping[]
   neScheme    String  @default("ej_k1") // ej_k1 (vanligt årsbokslut) | k1 (förenklat årsbokslut)
+  taxPartners TaxPartner[]
 }
 
 model FiscalYear {
@@ -569,4 +570,21 @@ model NeMapping {
   field     String
 
   @@unique([companyId, account])
+}
+
+
+// Delägarnas personliga skatteuppgifter för uppskattning av årets skatt. Kräver inget användarkonto.
+model TaxPartner {
+  id                  Int     @id @default(autoincrement())
+  companyId           Int
+  company             Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name                String
+  sharePercent        Float   @default(100)
+  birthYear           Int     @default(1980)
+  municipalityTaxRate Float   @default(32)
+  otherIncome         Int     @default(0) // uppskattad annan årsinkomst i kronor
+  activityType        String  @default("active") // active | passive
+  createdAt           DateTime @default(now())
+
+  @@index([companyId])
 }
