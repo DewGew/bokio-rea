@@ -49,3 +49,18 @@ testCase("passive business does not generate job tax credit", () => {
   assert.equal(result.standardDeduction, 3_200);
   assert.ok(Math.abs(result.socialContributions - 3_105.28) < 0.01);
 });
+
+testCase("2026 basic allowance has the correct minimum at high income", () => {
+  const result = estimateAnnualTax({
+    taxYear: 2026,
+    birthYear: 1974,
+    municipalityTaxRate: 34,
+    otherEmploymentIncome: 540_000,
+    businessProfit: 16_000,
+    activityType: "active",
+  });
+
+  assert.equal(result.basicAllowance, 17_400);
+  assert.ok(Math.abs(result.incomeTaxOnBusiness - 4_080) < 1);
+  assert.ok(Math.abs(result.totalToReserve - 7_556.4) < 1);
+});
