@@ -82,7 +82,7 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
                   <p className="mb-3 text-sm font-semibold">Uppskattning för {partner.name}</p>
                   {estimate.supported ? (
                     <dl className="space-y-2 text-sm">
-                      <div className="flex justify-between gap-3"><dt className="text-muted">Andel av resultatet</dt><dd className="font-medium tabular-nums">{money(partnerProfit)}</dd></div>
+                      <div className="flex justify-between gap-3"><dt className="text-muted">{company.companyType === "ef" ? "Vinst" : "Andel av resultatet"}</dt><dd className="font-medium tabular-nums">{money(partnerProfit)}</dd></div>
                       <div className="flex justify-between gap-3"><dt className="text-muted">Övrig arbetsinkomst</dt><dd className="tabular-nums">{money(partner.otherIncome)}</dd></div>
                       <div className="flex justify-between gap-3"><dt className="text-muted">Schablonavdrag ({partner.activityType === "active" ? (partner.birthYear <= 1937 ? "0" : partner.birthYear <= 1958 ? "10" : "25") : "20"} %)</dt><dd className="tabular-nums">−{money(estimate.standardDeduction)}</dd></div>
                       <div className="flex justify-between gap-3"><dt className="text-muted">Överskott efter schablonavdrag</dt><dd className="tabular-nums">{money(estimate.businessIncomeAfterDeduction)}</dd></div>
