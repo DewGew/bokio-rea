@@ -33,7 +33,13 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
       <Flash error={params.error} notice={params.ok} />
       <div className="mb-6 grid gap-3 sm:grid-cols-2">
         <div className="card p-5"><p className="text-[13px] text-muted">Bokfört resultat hittills</p><p className="mt-1 text-2xl font-semibold tabular-nums">{money(profit)}</p></div>
-{company.companyType === "hb" &&         <div className="card p-5"><p className="text-[13px] text-muted">Fördelade resultatandelar</p><p className="mt-1 text-2xl font-semibold tabular-nums">{pct(shares)}</p><p className="mt-1 text-xs text-muted">Andelarna bör tillsammans vara 100 %.</p></div>}
+{company.companyType === "hb" && (
+          <div className="card p-5">
+            <p className="text-[13px] text-muted">Fördelade resultatandelar</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums">{pct(shares)}</p>
+            <p className="mt-1 text-xs text-muted">Andelarna bör tillsammans vara 100 %.</p>
+          </div>
+        )}
       </div>
       {company.companyType === "hb" && Math.abs(shares - 100) > 0.01 && partners.length > 0 && (
         <div className="mb-5 rounded-xl bg-warn-soft p-4 text-sm text-warn">Resultatandelarna summerar till {pct(shares)}. Justera dem till 100 % för en fullständig fördelning.</div>
