@@ -74,7 +74,7 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
         subtitle={`${company.name} · ${fyLabel(fy)} · ${NE_SCHEMES[ne.scheme].label} (${NE_SCHEMES[ne.scheme].plan})`}
         actions={
           <div className="no-print flex gap-2">
-            <a href={`/api/reports/ne?fy=${fy.id}`} className="btn-secondary">Ladda ner PDF</a>
+            <a href={`/api/reports/ne?fy=${fy.id}`} target="_blank" rel="noopener noreferrer" className="btn-secondary">Ladda ner PDF</a>
             <PrintButton />
           </div>
         }
