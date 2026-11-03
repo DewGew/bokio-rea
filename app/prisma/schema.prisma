@@ -582,7 +582,6 @@ model TaxPartner {
   sharePercent        Float   @default(100)
   birthYear           Int     @default(1980)
   municipalityTaxRate Float   @default(32)
-  otherIncome         Int     @default(0) // uppskattad annan årsinkomst i kronor
   activityType        String  @default("active") // active | passive
   createdAt           DateTime @default(now())
 
