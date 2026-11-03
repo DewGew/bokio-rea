@@ -25,11 +25,11 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
   const shares = partners.reduce((sum, partner) => sum + partner.sharePercent, 0);
   const canWrite = role !== "read";
   const year = new Date().getFullYear();
-  const taxYear = fy.end.getFullYear();
+  const taxYear = new Date().getFullYear();
 
   return (
     <>
-      <PageHeader title="Årets skatt" subtitle={"Preliminär uppskattning för räkenskapsår " + fyLabel(fy)} />
+      <PageHeader title="Årets skatt" subtitle={"Preliminär uppskattning för räkenskapsår " + fyLabel(fy) + " (inkomstår " + taxYear + ")"} />
       <Flash error={params.error} notice={params.ok} />
       <div className="mb-6 grid gap-3 sm:grid-cols-2">
         <div className="card p-5"><p className="text-[13px] text-muted">Bokfört resultat hittills</p><p className="mt-1 text-2xl font-semibold tabular-nums">{money(profit)}</p></div>
