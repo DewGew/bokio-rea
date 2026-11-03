@@ -33,7 +33,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
       select: { debit: true, credit: true, accountNumber: true, verification: { select: { date: true } }, account: { select: { name: true } } },
     }),
     db.bankTransaction.count({ where: { companyId, status: "new" } }),
-    (company.companyType === "ef" || company.companyType === "hb") ? balances(companyId, { from: fy.start, to: fy.end }) : Promise.resolve([]),
+    (company.companyType === "ef" || company.companyType === "hb") ? balances(companyId, { from: fy.start, to: fy.end }) : Promise.resolve(new Map<number, number>()),
     (company.companyType === "ef" || company.companyType === "hb") ? db.taxPartner.findMany({ where: { companyId }, orderBy: { id: "asc" } }) : Promise.resolve([]),
   ]);
   const result = -sumRange(yearBal, 3000, 8989);
