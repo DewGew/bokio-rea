@@ -34,13 +34,17 @@ function basicAllowance2026(earnedAndBusinessIncome: number): number {
   let amount: number;
   if (income <= 0.99 * pbb) {
     amount = 0.423 * pbb;
-  } else if (income <= 3.11 * pbb) {
+  } else if (income <= 2.72 * pbb) {
     amount = 0.423 * pbb + 0.2 * (income - 0.99 * pbb);
-  } else {
+  } else if (income <= 3.11 * pbb) {
+    amount = 0.77 * pbb;
+  } else if (income <= 7.88 * pbb) {
     amount = 0.77 * pbb - 0.1 * (income - 3.11 * pbb);
+  } else {
+    amount = 0.293 * pbb;
   }
 
-  return Math.min(income, Math.ceil(Math.max(0, amount) / 100) * 100);
+  return Math.min(income, Math.ceil(amount / 100) * 100);
 }
 
 function jobTaxCredit2026(workIncome: number, basicAllowance: number, taxRate: number): number {
