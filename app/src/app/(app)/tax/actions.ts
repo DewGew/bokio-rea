@@ -13,7 +13,7 @@ export async function addTaxPartnerAction(fd: FormData) {
   const name = field(fd, "name").slice(0, 100);
   if (!name) return;
   if (company.companyType === "ef" && await db.taxPartner.count({ where: { companyId } })) return;
-  await db.taxPartner.create({ data: { companyId, name, sharePercent: company.companyType === "ef" ? 100 : 0 } });
+  await db.taxPartner.create({ data: { companyId, name, sharePercent: company.companyType === "ef" ? 100 : 0, otherIncome: 0 } });
   refresh();
 }
 
@@ -26,14 +26,16 @@ export async function saveTaxPartnerAction(fd: FormData) {
   const birthYear = Number(field(fd, "birthYear"));
   const municipalityTaxRate = Number(field(fd, "municipalityTaxRate"));
   const activityType = field(fd, "activityType");
+  const otherIncome = Number(field(fd, "otherIncome") || 0);
   const year = new Date().getFullYear();
   if (!Number.isInteger(id) || !name || !Number.isFinite(sharePercent) || sharePercent < 0 || sharePercent > 100 ||
       !Number.isInteger(birthYear) || birthYear < 1900 || birthYear > year ||
       !Number.isFinite(municipalityTaxRate) || municipalityTaxRate < 0 || municipalityTaxRate > 60 ||
+      !Number.isFinite(otherIncome) || otherIncome < 0 || otherIncome > 100000000 ||
       !["active", "passive"].includes(activityType)) return;
   await db.taxPartner.updateMany({
     where: { id, companyId },
-    data: { name, sharePercent, birthYear, municipalityTaxRate, activityType },
+    data: { name, sharePercent, birthYear, municipalityTaxRate, activityType, otherIncome },
   });
   refresh();
 }
