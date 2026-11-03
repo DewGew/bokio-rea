@@ -33,7 +33,7 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
       <Flash error={params.error} notice={params.ok} />
       <div className="mb-6 grid gap-3 sm:grid-cols-2">
         <div className="card p-5"><p className="text-[13px] text-muted">Bokfört resultat hittills</p><p className="mt-1 text-2xl font-semibold tabular-nums">{money(profit)}</p></div>
-        <div className="card p-5"><p className="text-[13px] text-muted">Fördelade resultatandelar</p><p className="mt-1 text-2xl font-semibold tabular-nums">{pct(shares)}</p><p className="mt-1 text-xs text-muted">Andelarna bör tillsammans vara 100 %.</p></div>
+{company.companyType === "hb" &&         <div className="card p-5"><p className="text-[13px] text-muted">Fördelade resultatandelar</p><p className="mt-1 text-2xl font-semibold tabular-nums">{pct(shares)}</p><p className="mt-1 text-xs text-muted">Andelarna bör tillsammans vara 100 %.</p></div>}
       </div>
       {company.companyType === "hb" && Math.abs(shares - 100) > 0.01 && partners.length > 0 && (
         <div className="mb-5 rounded-xl bg-warn-soft p-4 text-sm text-warn">Resultatandelarna summerar till {pct(shares)}. Justera dem till 100 % för en fullständig fördelning.</div>
@@ -73,7 +73,7 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
                   </dl>
                 )}
                 <div className="rounded-xl bg-surface-2 p-4">
-                  <p className="mb-3 text-sm font-semibold">Uppskattning för delägaren</p>
+                  <p className="mb-3 text-sm font-semibold">Uppskattning för {partner.name}</p>
                   {estimate.supported ? (
                     <dl className="space-y-2 text-sm">
                       <div className="flex justify-between gap-3"><dt className="text-muted">Andel av resultatet</dt><dd className="font-medium tabular-nums">{money(partnerProfit)}</dd></div>
@@ -92,7 +92,7 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
                     <p className="text-sm text-muted">Den här uppskattningen använder 2026 års skatteregler. Välj ett räkenskapsår som slutar under 2026 för att visa belopp.</p>
                   )}
                 </div>
-                {canWrite && <form action={deleteTaxPartnerAction} className="lg:col-span-2"><input type="hidden" name="id" value={partner.id} /><button className="text-sm text-danger hover:underline" type="submit">Ta bort delägare</button></form>}
+                {canWrite && <form action={deleteTaxPartnerAction} className="lg:col-span-2"><input type="hidden" name="id" value={partner.id} /><button className="text-sm text-danger hover:underline" type="submit">Ta bort</button></form>}
               </div>
             </Card>
           );
