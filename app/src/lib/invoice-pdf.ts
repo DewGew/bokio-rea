@@ -233,8 +233,8 @@ export async function invoicePdf(doc: InvoiceDoc, design: InvoiceDesign, logo: L
     return yy;
   };
   const y1 = block(cx[0], "Från", s.name === brand ? s.name : brand, sellerLines);
-  const y2 = block(cx[1], credit ? "Kreditfaktura till" : "Faktureras till", b.name, buyerLines);
-  label(credit ? "Kreditfakturauppgifter" : "Fakturauppgifter", cx[2], y);
+  const y2 = block(cx[1], quote ? "Offereras till" : credit ? "Kreditfaktura till" : "Faktureras till", b.name, buyerLines);
+  label(quote ? "Offertuppgifter" : credit ? "Kreditfakturauppgifter" : "Fakturauppgifter", cx[2], y);
   let y3 = y - 14;
   for (const [k, v] of meta) {
     text(k, cx[2], y3, { size: 8.6, color: MUTED });
