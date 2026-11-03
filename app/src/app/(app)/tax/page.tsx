@@ -7,7 +7,7 @@ import { Card, Flash, PageHeader } from "@/components/ui";
 import { addTaxPartnerAction, deleteTaxPartnerAction, saveTaxPartnerAction } from "./actions";
 import { estimateAnnualTax } from "@/lib/tax-calculation";
 
-const money = (value: number) => kr(Math.round(value * 100));
+const money = (value: number) => kr(Math.round(value) * 100, { decimals: false });
 const pct = (value: number) => value.toLocaleString("sv-SE", { maximumFractionDigits: 2 }) + " %";
 
 export default async function AnnualTaxPage({ searchParams }: { searchParams: Promise<{ error?: string; ok?: string }> }) {
