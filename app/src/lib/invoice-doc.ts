@@ -20,7 +20,7 @@ export type DocLine = {
 
 export type InvoiceDoc = {
   version: 1;
-  kind: "invoice" | "credit";
+  kind: "invoice" | "credit" | "quote";
   number: number | null;
   status: string;
   date: string;
