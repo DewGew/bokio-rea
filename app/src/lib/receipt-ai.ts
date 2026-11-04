@@ -13,11 +13,12 @@ const ENDPOINT = `${(process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/a
 export const aiEnabled = () => !!process.env.OPENROUTER_API_KEY;
 
 /** Höjs när avläsningen förbättras, så att sparade avläsningar från en äldre version görs om. */
-export const AI_VERSION = 2;
+export const AI_VERSION = 3;
 
 export type ReceiptData = {
   supplier: string | null;
   supplierOrgNumber: string | null;
+  invoiceNumber?: string | null;
   documentType: "receipt" | "invoice" | "other";
   date: string | null; // ÅÅÅÅ-MM-DD
   dueDate: string | null;
@@ -39,10 +40,11 @@ function schema(templates: TemplateInfo[]) {
   return {
   type: "object",
   additionalProperties: false,
-  required: ["supplier", "supplierOrgNumber", "documentType", "date", "dueDate", "total", "currency", "vat", "country", "description", "templateId", "confidence"],
+  required: ["supplier", "supplierOrgNumber", "invoiceNumber", "documentType", "date", "dueDate", "total", "currency", "vat", "country", "description", "templateId", "confidence"],
   properties: {
     supplier: { type: ["string", "null"], description: "Säljarens/leverantörens namn" },
     supplierOrgNumber: { type: ["string", "null"], description: "Säljarens organisationsnummer eller momsregistreringsnummer om det står" },
+    invoiceNumber: { type: ["string", "null"], description: "Leverantörens fakturanummer, om dokumentet är en faktura" },
     documentType: { type: "string", enum: ["receipt", "invoice", "other"] },
     date: { type: ["string", "null"], description: "Köp-/fakturadatum, ÅÅÅÅ-MM-DD" },
     dueDate: { type: ["string", "null"], description: "Förfallodatum för fakturor, ÅÅÅÅ-MM-DD" },
@@ -68,7 +70,7 @@ function prompt(templates: TemplateInfo[]) {
   return [
     "Du läser av svenska och utländska kvitton och leverantörsfakturor för bokföring i ett svenskt företag.",
     "Underlaget är ett inköp som företaget gjort. Svara bara med data enligt JSON-schemat. Gissa inte: sätt null om en uppgift inte går att läsa (gäller inte templateId).",
-    "Belopp anges som tal med punkt som decimaltecken (t.ex. 1249.50), totalen inklusive moms.",
+    "Belopp anges som tal med punkt som decimaltecken (t.ex. 1249.50), totalen inklusive moms. Läs av fakturanummer exakt när det finns.",
     "Om momsen inte står uttryckligen men det är ett svenskt kvitto, beräkna den inte – lämna vat tom.",
     "country: SE om säljaren är svensk, EU om säljaren finns i ett annat EU-land (t.ex. Irland för Google/Meta/Adobe/Microsoft), OUTSIDE_EU annars (t.ex. USA).",
     "description: vad som köpts, på svenska och generellt (t.ex. 'Pärlor och pyssel', 'Kontorsstol', 'Lunch') – inte bara produktnamnet.",
@@ -146,6 +148,7 @@ export function normalize(raw: Record<string, unknown>, templates: { id: number 
   return {
     supplier: typeof raw.supplier === "string" && raw.supplier.trim() ? raw.supplier.trim().slice(0, 120) : null,
     supplierOrgNumber: typeof raw.supplierOrgNumber === "string" && raw.supplierOrgNumber.trim() ? raw.supplierOrgNumber.trim().slice(0, 40) : null,
+    invoiceNumber: typeof raw.invoiceNumber === "string" && raw.invoiceNumber.trim() ? raw.invoiceNumber.trim().slice(0, 80) : null,
     documentType: doc,
     date: isoDate(raw.date),
     dueDate: isoDate(raw.dueDate),

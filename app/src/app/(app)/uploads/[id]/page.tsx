@@ -25,11 +25,11 @@ export default async function UploadPage({ params, searchParams }: { params: Pro
   const { id } = await params;
   const { get, error, notice } = await readParams(searchParams);
   const tab = get("tab") ?? "template";
-  const u = await db.upload.findFirst({ where: { id: Number(id) || -1, companyId }, include: { verification: true, expense: true, inboundEmail: true } });
+  const u = await db.upload.findFirst({ where: { id: Number(id) || -1, companyId }, include: { verification: true, expense: true, supplierInvoice: true, inboundEmail: true } });
   if (!u) notFound();
   // Mejl utan bilaga sparas som text och visas som text (aldrig som HTML).
   const text = u.mimeType === "text/plain" ? Buffer.from((await readStored(u)) ?? new Uint8Array()).toString("utf8") : null;
-  const done = u.verification || u.expense;
+  const done = u.verification || u.expense || u.supplierInvoice;
 
   const [templates, accounts] = await Promise.all([
     db.template.findMany({ where: { companyId }, orderBy: [{ category: "asc" }, { name: "asc" }] }),
@@ -45,6 +45,7 @@ export default async function UploadPage({ params, searchParams }: { params: Pro
         actions={
           <>
             <Link href="/uploads" className="btn-secondary">Tillbaka</Link>
+            {!done && <Link href={`/supplier-invoices/new?uploadId=${u.id}`} className="btn-primary">Registrera leverantörsfaktura</Link>}
             {!done && (
               <form action={deleteUpload}>
                 <input type="hidden" name="uploadId" value={u.id} />
@@ -83,6 +84,7 @@ export default async function UploadPage({ params, searchParams }: { params: Pro
                   .
                 </p>
               )}
+              {u.supplierInvoice && !u.verification && <p>Registrerad som <Link href="/supplier-invoices" className="text-brand">leverantörsfaktura</Link>.</p>}
               {u.expense && !u.verification && (
                 <p>
                   Registrerad som <Link href="/expenses" className="text-brand">utlägg</Link>.
