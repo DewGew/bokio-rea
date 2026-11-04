@@ -11,8 +11,8 @@ export default async function Uploads({ searchParams }: { searchParams: SP }) {
   const { get, error, notice } = await readParams(searchParams);
   const showBooked = get("show") === "all";
   const uploads = await db.upload.findMany({
-    where: showBooked ? { companyId } : { companyId, verificationId: null, expense: null },
-    include: { verification: true, expense: true, inboundEmail: { select: { fromAddress: true } } },
+    where: showBooked ? { companyId } : { companyId, verificationId: null, expense: null, supplierInvoice: null },
+    include: { verification: true, expense: true, supplierInvoice: true, inboundEmail: { select: { fromAddress: true } } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -60,7 +60,9 @@ export default async function Uploads({ searchParams }: { searchParams: SP }) {
                     <p className="text-xs text-muted">
                       {u.verification
                         ? `Bokförd ${u.verification.series}${u.verification.number}`
-                        : u.expense
+                        : u.supplierInvoice
+                          ? "Registrerad som leverantörsfaktura"
+                          : u.expense
                           ? "Registrerad som utlägg"
                           : u.inboundEmail
                             ? `Från e-post: ${u.inboundEmail.fromAddress}`

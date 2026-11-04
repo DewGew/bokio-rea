@@ -163,6 +163,7 @@ export function FiscalYearsTable({ years }: { years: FyRow[] }) {
 
   return (
     <div className="space-y-4">
+      <p className="text-[13px] text-muted">Endast det senaste räkenskapsåret kan tas bort. Det måste vara öppet och sakna verifikat, SIE-exporter och låsta momsperioder. Minst ett räkenskapsår måste alltid finnas kvar.</p>
       <ul className="divide-y divide-line overflow-hidden rounded-xl ring-1 ring-line">
         {[...years].reverse().map((y, idx) => {
           const isFirst = y.id === years[0].id;
@@ -196,7 +197,7 @@ export function FiscalYearsTable({ years }: { years: FyRow[] }) {
                     <form action={action}>
                       <input type="hidden" name="intent" value="remove" />
                       <input type="hidden" name="id" value={y.id} />
-                      <ConfirmButton className="btn-danger px-3 py-1.5 text-[13px]" message="Ta bort räkenskapsåret?">
+                      <ConfirmButton className="btn-danger px-3 py-1.5 text-[13px]" message={"Ta bort räkenskapsåret " + y.label + "? Åtgärden kan inte ångras."}>
                         Ta bort
                       </ConfirmButton>
                     </form>

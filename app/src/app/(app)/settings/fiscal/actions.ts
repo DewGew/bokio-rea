@@ -86,14 +86,33 @@ async function addFiscalYear(): Promise<SettingsState> {
   return done(`Räkenskapsåret ${fyLabel({ start, end })} är skapat.`);
 }
 
-/** Tar bort det senaste räkenskapsåret om det är tomt. */
+/** Tar bara bort det senaste, öppna och helt oanvända räkenskapsåret. */
 async function removeFiscalYear(fd: FormData): Promise<SettingsState> {
   const { companyId } = await requireWriter();
   const all = await fiscalYears(companyId);
   const last = all[all.length - 1];
-  if (!last || last.id !== Number(str(fd, "id")) || all.length === 1) return { error: "Bara det senaste räkenskapsåret kan tas bort, och minst ett måste finnas." };
-  if (await db.verification.count({ where: { fiscalYearId: last.id } })) return { error: "Räkenskapsåret har verifikat och kan inte tas bort." };
-  await db.fiscalYear.delete({ where: { id: last.id } });
+  if (!last || last.id !== Number(str(fd, "id")) || all.length === 1) {
+    return { error: "Bara det senaste räkenskapsåret kan tas bort, och minst ett måste finnas." };
+  }
+  if (last.closedAt) return { error: "Ett stängt räkenskapsår kan inte tas bort." };
+
+  const [verifications, exports, lockedVat] = await Promise.all([
+    db.verification.count({ where: { companyId, fiscalYearId: last.id } }),
+    db.sieExport.count({ where: { companyId, fiscalYearId: last.id } }),
+    db.vatPeriod.count({
+      where: {
+        companyId,
+        lockedAt: { not: null },
+        start: { lte: last.end },
+        end: { gte: last.start },
+      },
+    }),
+  ]);
+  if (verifications) return { error: "Räkenskapsåret innehåller verifikat. Ta inte bort bokföring; rätta eller återställ den på rätt sätt först." };
+  if (exports) return { error: "Det finns en SIE-export för räkenskapsåret. Exporthistoriken måste bevaras." };
+  if (lockedVat) return { error: "Räkenskapsåret innehåller låsta momsperioder och kan inte tas bort." };
+
+  await db.fiscalYear.delete({ where: { id: last.id, companyId } });
   return done("Räkenskapsåret är borttaget.");
 }
 

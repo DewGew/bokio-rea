@@ -50,7 +50,11 @@ export function Stat({ label, value, hint, tone }: { label: string; value: strin
 
 const BADGE: Record<string, [string, string]> = {
   draft: ["Utkast", "bg-fill text-muted"],
-  sent: ["Obetald", "bg-warn-soft text-warn"],
+  sent: ["Skickad", "bg-warn-soft text-warn"],
+  accepted: ["Accepterad", "bg-success-soft text-success"],
+  converted: ["Omvandlad", "bg-brand-soft text-brand"],
+  rejected: ["Avböjd", "bg-danger-soft text-danger"],
+  expired: ["Utgången", "bg-fill text-muted"],
   overdue: ["Förfallen", "bg-danger-soft text-danger"],
   paid: ["Betald", "bg-success-soft text-success"],
   credited: ["Krediterad", "bg-fill text-muted"],

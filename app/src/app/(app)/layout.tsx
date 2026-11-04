@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="md:flex md:min-h-screen">
       <Sidebar
-        company={{ id: company.id, name: company.name }}
+        company={{ id: company.id, name: company.name, companyType: company.companyType }}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
         userName={user.name}
         readOnly={role === "read"}

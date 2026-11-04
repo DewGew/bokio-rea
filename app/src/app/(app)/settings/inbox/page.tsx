@@ -57,17 +57,17 @@ export default async function InboxSettings({ searchParams }: { searchParams: SP
             <ol className="list-decimal space-y-1.5 pl-5">
               <li>Skapa ett konto på postmarkapp.com och en server. Öppna <strong>Default Inbound Stream</strong> och kopiera den inkommande adressen.</li>
               <li>
-                Sätt webhook-adressen till <code className="rounded bg-surface-2 px-1">https://inbound:HEMLIGHET@din-app/api/inbound/postmark</code>.
+                Sätt webhook-adressen till <code className="break-all rounded bg-surface-2 px-1">https://inbound:HEMLIGHET@din-app/api/inbound/postmark</code>.
               </li>
               <li>
-                Lägg in <code className="rounded bg-surface-2 px-1">INBOUND_ADDRESS</code> (den inkommande adressen) och <code className="rounded bg-surface-2 px-1">INBOUND_WEBHOOK_SECRET</code> (samma hemlighet) i Vercel och gör Redeploy.
+                Lägg in <code className="break-all rounded bg-surface-2 px-1">INBOUND_ADDRESS</code> (den inkommande adressen) och <code className="break-all rounded bg-surface-2 px-1">INBOUND_WEBHOOK_SECRET</code> (samma hemlighet) i Vercel och gör Redeploy.
               </li>
             </ol>
           </div>
         </Card>
       ) : (
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+          <div className="min-w-0 space-y-6">
             {confirmation && (
               <div className="rounded-2xl bg-brand-soft p-4 text-[14px] text-brand">
                 <p className="font-semibold">Gmail vill att du bekräftar vidarebefordran</p>
@@ -86,7 +86,7 @@ export default async function InboxSettings({ searchParams }: { searchParams: SP
                     </p>
                     {canWrite && (
                       <form action={regenerateInboxAction}>
-                        <ConfirmButton className="btn-secondary" message="Skapa en ny adress? Den gamla slutar fungera direkt.">
+                        <ConfirmButton className="btn-secondary w-full sm:w-auto" message="Skapa en ny adress? Den gamla slutar fungera direkt.">
                           Byt adress
                         </ConfirmButton>
                       </form>
@@ -111,17 +111,17 @@ export default async function InboxSettings({ searchParams }: { searchParams: SP
                     const [label, cls] = STATUS[m.status] ?? [m.status, "bg-fill text-muted"];
                     return (
                       <li key={m.id} className="px-5 py-3 text-[14px]">
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                           <div className="min-w-0">
-                            <p className="truncate font-medium">{m.subject || "(utan ämne)"}</p>
-                            <p className="truncate text-[13px] text-muted">
+                            <p className="break-words font-medium sm:truncate">{m.subject || "(utan ämne)"}</p>
+                            <p className="break-all text-[13px] text-muted sm:truncate sm:break-normal">
                               {m.fromAddress} · {when(m.createdAt)}
                               {m.fileCount > 0 && ` · ${m.fileCount} ${m.fileCount === 1 ? "underlag" : "underlag"}`}
                             </p>
                           </div>
-                          <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${cls}`}>{label}</span>
+                          <span className={`w-fit shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${cls}`}>{label}</span>
                         </div>
-                        {m.detail && m.status !== "forwarding_confirmation" && <p className="mt-1 text-[12px] text-muted">{m.detail}</p>}
+                        {m.detail && m.status !== "forwarding_confirmation" && <p className="mt-1 break-words text-[12px] text-muted">{m.detail}</p>}
                       </li>
                     );
                   })}
@@ -130,7 +130,7 @@ export default async function InboxSettings({ searchParams }: { searchParams: SP
             </Card>
           </div>
 
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <Card title="Så vidarebefordrar du automatiskt">
               <div className="space-y-4 px-5 pb-5 pt-1 text-[14px]">
                 <div>
@@ -138,7 +138,7 @@ export default async function InboxSettings({ searchParams }: { searchParams: SP
                   <ol className="mt-1 list-decimal space-y-1 pl-5 text-muted">
                     <li>Inställningar → Vidarebefordran och POP/IMAP → Lägg till en adress för vidarebefordran. Klistra in adressen ovan.</li>
                     <li>Gmail skickar ett bekräftelsemejl hit – länken och koden visas överst på den här sidan.</li>
-                    <li>Skapa ett filter, t.ex. <code className="rounded bg-surface-2 px-1">from:(kvitto@leverantor.se) has:attachment</code>, och välj &quot;Vidarebefordra till&quot; kvittoadressen.</li>
+                    <li>Skapa ett filter, t.ex. <code className="break-all rounded bg-surface-2 px-1">from:(kvitto@leverantor.se) has:attachment</code>, och välj &quot;Vidarebefordra till&quot; kvittoadressen.</li>
                   </ol>
                 </div>
                 <div>
