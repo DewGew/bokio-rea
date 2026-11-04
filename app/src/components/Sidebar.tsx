@@ -30,11 +30,9 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
       ["/quotes", "Offerter", "doc"],
       ["/customers", "Kunder", "people"],
       ["/articles", "Artiklar", "tag"],
-      ["/invoices/design", "Fakturadesign", "palette"],
     ],
   },
-  { title: "Inköp", items: [["/supplier-invoices", "Leverantörsfakturor", "doc"]] },
-  { title: "Utgifter", items: [["/expenses", "Utlägg", "card"]] },
+  { title: "Inköp", items: [["/supplier-invoices", "Leverantörsfakturor", "doc"], ["/expenses", "Utlägg", "card"]] },
   {
     title: "Rapporter",
     items: [
@@ -52,6 +50,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
       ["/settings/fiscal", "Räkenskapsår och moms", "calendar"],
       ["/settings/accounts", "Kontoplan", "grid"],
       ["/settings/templates", "Bokföringsmallar", "wand"],
+      ["/invoices/design", "Fakturadesign", "palette"],
       ["/settings/import-export", "Import och export", "upload"],
       ["/settings/users", "Användare och behörighet", "people"],
       ["/settings/connections", "Kopplingar", "plug"],
