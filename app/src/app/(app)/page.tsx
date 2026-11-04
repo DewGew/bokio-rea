@@ -106,7 +106,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
           hint={vat ? (vat.toPay >= 0 ? "Att betala" : "Att få tillbaka") : "Ej momsregistrerat"}
         />
         {(company.companyType === "ef" || company.companyType === "hb") && (
-          <Stat label="Årets skatt" value={hasTaxEstimate ? kr(Math.round(estimatedTax) * 100, { decimals: false }) : "–"} hint={hasTaxEstimate ? "Att betala" : "Fyll i uppgifter under Årets skatt"} />
+          <Stat label="Årets skatt" value={hasTaxEstimate ? kr(estimatedTax * 100) : "–"} hint={hasTaxEstimate ? "Att betala" : "Fyll i uppgifter under Årets skatt"} />
         )}
       </div>
 
