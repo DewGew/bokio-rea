@@ -33,6 +33,7 @@ const NAV: { title?: string; items: [string, string, IconName][] }[] = [
       ["/invoices/design", "Fakturadesign", "palette"],
     ],
   },
+  { title: "Inköp", items: [["/supplier-invoices", "Leverantörsfakturor", "doc"]] },
   { title: "Utgifter", items: [["/expenses", "Utlägg", "card"]] },
   {
     title: "Rapporter",

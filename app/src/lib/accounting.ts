@@ -355,6 +355,59 @@ export async function creditInvoice(companyId: number, id: number, actor: Actor 
   });
 }
 
+
+/** Bokför leverantörsfaktura enligt fakturametoden: kostnad, ingående moms och skuld på 2440. */
+export async function bookSupplierInvoice(companyId: number, id: number) {
+  return tx(async (t) => {
+    const inv = await t.supplierInvoice.findFirst({ where: { id, companyId }, include: { supplier: true } });
+    if (!inv) throw new AccountingError("Leverantörsfakturan finns inte.");
+    if (inv.status !== "pending") throw new AccountingError("Fakturan är redan bokförd eller betald.");
+    const company = await t.company.findUniqueOrThrow({ where: { id: companyId }, select: { vatPeriod: true, accountingMethod: true } });
+    if (company.accountingMethod === "cash") throw new AccountingError("Företaget använder kontantmetoden. Registrera fakturan som betald när den betalas.");
+    const vat = company.vatPeriod === "none" ? 0 : inv.vatAmount;
+    const v = await createVerification(t, companyId, {
+      date: inv.date,
+      description: `Leverantörsfaktura ${inv.invoiceNumber} – ${inv.supplier.name}`,
+      lines: [
+        { account: inv.costAccount, debit: inv.amount - vat },
+        { account: INPUT_VAT, debit: vat },
+        { account: 2440, credit: inv.amount },
+      ],
+    });
+    if (inv.uploadId) await t.upload.update({ where: { id: inv.uploadId }, data: { verificationId: v.id } });
+    await t.supplierInvoice.update({ where: { id }, data: { status: "booked", verificationId: v.id } });
+    return v;
+  });
+}
+
+/** Betalar en leverantörsfaktura. Kontantmetoden kostnadsför först vid betalningen. */
+export async function paySupplierInvoice(companyId: number, id: number, date: Date, account = BANK_ACCOUNT) {
+  return tx(async (t) => {
+    const inv = await t.supplierInvoice.findFirst({ where: { id, companyId }, include: { supplier: true } });
+    if (!inv) throw new AccountingError("Leverantörsfakturan finns inte.");
+    if (inv.status === "paid") throw new AccountingError("Fakturan är redan betald.");
+    const company = await t.company.findUniqueOrThrow({ where: { id: companyId }, select: { vatPeriod: true, accountingMethod: true } });
+    const vat = company.vatPeriod === "none" ? 0 : inv.vatAmount;
+    const lines: LineInput[] = inv.status === "booked"
+      ? [{ account: 2440, debit: inv.amount }, { account, credit: inv.amount }]
+      : company.accountingMethod === "cash"
+        ? [{ account: inv.costAccount, debit: inv.amount - vat }, { account: INPUT_VAT, debit: vat }, { account, credit: inv.amount }]
+        : [];
+    if (!lines.length) throw new AccountingError("Bokför fakturan innan den betalas.");
+    const v = await createVerification(t, companyId, {
+      date,
+      description: `Betalning leverantörsfaktura ${inv.invoiceNumber} – ${inv.supplier.name}`,
+      lines,
+    });
+    if (inv.uploadId) await t.upload.update({ where: { id: inv.uploadId }, data: { verificationId: v.id } });
+    await t.supplierInvoice.update({
+      where: { id },
+      data: { status: "paid", verificationId: inv.verificationId ?? (company.accountingMethod === "cash" ? v.id : null), paymentVerificationId: v.id },
+    });
+    return v;
+  });
+}
+
 export async function bookExpense(companyId: number, id: number) {
   return tx(async (t) => {
     const e = await t.expense.findFirst({ where: { id, companyId } });

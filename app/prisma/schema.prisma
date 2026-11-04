@@ -116,6 +116,8 @@ model Company {
   invoices         Invoice[]
   quotes           Quote[]
   expenses         Expense[]
+  suppliers        Supplier[]
+  supplierInvoices SupplierInvoice[]
   vatPeriods       VatPeriod[]
   fiscalYears      FiscalYear[]
   bankTransactions BankTransaction[]
@@ -177,6 +179,8 @@ model Verification {
   invoicePays      Invoice[]          @relation("InvoicePayment")
   expenses         Expense[]          @relation("ExpenseVerification")
   expensePays      Expense[]          @relation("ExpensePayment")
+  supplierInvoices SupplierInvoice[] @relation("SupplierInvoiceVerification")
+  supplierInvoicePays SupplierInvoice[] @relation("SupplierInvoicePayment")
   bankTransactions BankTransaction[]
 
   @@unique([companyId, series, fiscalYearId, number])
@@ -235,6 +239,7 @@ model Upload {
   verificationId Int?
   verification   Verification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
   expense        Expense?
+  supplierInvoice SupplierInvoice?
 }
 
 model Customer {
@@ -349,6 +354,43 @@ model Expense {
   paymentVerificationId Int?
   paymentVerification   Verification? @relation("ExpensePayment", fields: [paymentVerificationId], references: [id])
   createdAt             DateTime      @default(now())
+}
+
+model Supplier {
+  id               Int               @id @default(autoincrement())
+  companyId        Int
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name             String
+  orgNumber        String            @default("")
+  supplierInvoices SupplierInvoice[]
+
+  @@unique([companyId, name])
+}
+
+model SupplierInvoice {
+  id                    Int           @id @default(autoincrement())
+  companyId             Int
+  company               Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  supplierId            Int
+  supplier              Supplier      @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  invoiceNumber         String
+  date                  DateTime
+  dueDate               DateTime
+  amount                Int
+  vatAmount             Int           @default(0)
+  costAccount           Int           @default(6991)
+  description           String        @default("")
+  status                String        @default("pending")
+  uploadId              Int?          @unique
+  upload                Upload?       @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+  verificationId        Int?
+  verification          Verification? @relation("SupplierInvoiceVerification", fields: [verificationId], references: [id])
+  paymentVerificationId Int?
+  paymentVerification   Verification? @relation("SupplierInvoicePayment", fields: [paymentVerificationId], references: [id])
+  createdAt             DateTime      @default(now())
+
+  @@unique([companyId, supplierId, invoiceNumber])
+  @@index([companyId, status, dueDate])
 }
 
 model VatPeriod {
