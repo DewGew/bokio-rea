@@ -19,10 +19,11 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const vatPeriod = periods.find((p) => p.current) ?? null;
   const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
   // Alla frågor körs parallellt; varje databasrundresa kostar tid, särskilt i serverless.
-  const [yearBal, allBal, openInvoices, toBook, pendingExpenses, drafts, quoteDrafts, sentQuotes, vat, lines, bankToBook, taxYearBal, taxPartners] = await Promise.all([
+  const [yearBal, allBal, openInvoices, unpaidSupplierInvoices, toBook, pendingExpenses, drafts, quoteDrafts, sentQuotes, vat, lines, bankToBook, taxYearBal, taxPartners] = await Promise.all([
     balances(companyId, { from: yearStart, to: now }),
     balances(companyId),
     db.invoice.findMany({ where: { companyId, status: "sent" }, include: { lines: true } }),
+    db.supplierInvoice.aggregate({ where: { companyId, status: { in: ["pending", "booked"] } }, _sum: { amount: true } }),
     db.upload.count({ where: { companyId, verificationId: null, expense: null } }),
     db.expense.count({ where: { companyId, status: "pending" } }),
     db.invoice.count({ where: { companyId, status: "draft" } }),
@@ -42,6 +43,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const bank = sumRange(allBal, 1900, 1999);
   const unpaid = openInvoices.reduce((s, i) => s + invoiceTotals(i.lines).total, 0);
   const overdue = openInvoices.filter((i) => i.dueDate < now).reduce((s, i) => s + invoiceTotals(i.lines).total, 0);
+  const unpaidSupplierTotal = unpaidSupplierInvoices._sum.amount ?? 0;
   const taxYear = now.getFullYear();
   const taxProfit = -sumRange(taxYearBal, 3000, 8989) / 100;
   const estimatedTax = taxPartners.reduce((sum, partner) => {
@@ -104,6 +106,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
         <Stat label="Årets resultat" value={kr(result)} tone={result < 0 ? "danger" : "success"} />
         <Stat label="Saldo bank och kassa" value={kr(bank)} hint="Enligt bokföringen (19xx)" />
         <Stat label="Obetalda kundfakturor" value={kr(unpaid)} hint={overdue ? `varav förfallet ${kr(overdue)}` : "Inget förfallet"} tone={overdue ? "warn" : undefined} />
+        <Stat label="Obetalda leverantörsfakturor" value={kr(unpaidSupplierTotal)} />
         <Stat
           label={vatPeriod ? `Preliminär moms, ${periodLabel(vatPeriod)}` : "Moms"}
           value={vat ? kr(Math.abs(vat.toPay)) : "–"}
