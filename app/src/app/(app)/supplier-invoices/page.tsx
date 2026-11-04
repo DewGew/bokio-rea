@@ -53,7 +53,7 @@ export default async function SupplierInvoices({ searchParams }: { searchParams:
             <thead><tr><th>Fakturanr</th><th>Leverantör</th><th>Fakturadatum</th><th className="hidden md:table-cell">Förfaller</th><th>Status</th><th className="num">Belopp</th><th>Åtgärd</th></tr></thead>
             <tbody>
               {list.map((r) => <tr key={r.id}>
-                <td><Link href={r.status === "pending" ? `/supplier-invoices/${r.id}/edit` : "#"} className="font-medium text-brand">{r.invoiceNumber}</Link></td>
+                <td>{r.status === "pending" ? <Link href={`/supplier-invoices/${r.id}/edit`} className="font-medium text-brand">{r.invoiceNumber}</Link> : <span className="font-medium">{r.invoiceNumber}</span>}</td>
                 <td>{r.supplier.name}</td>
                 <td className="whitespace-nowrap">{dateStr(r.date)}</td>
                 <td className="hidden whitespace-nowrap md:table-cell">{dateStr(r.dueDate)}</td>
