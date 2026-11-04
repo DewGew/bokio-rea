@@ -31,6 +31,7 @@ export default async function SupplierInvoices({ searchParams }: { searchParams:
       {pending.length ? <div className="overflow-x-auto"><table className="table"><thead><tr><th>Leverantör</th><th>Fakturanr</th><th>Datum</th><th>Förfallodatum</th><th className="num">Belopp</th><th /></tr></thead><tbody>
         {pending.map((r) => <tr key={r.id}><td>{r.supplier.name}</td><td>{r.invoiceNumber}</td><td>{dateStr(r.date)}</td><td>{dateStr(r.dueDate)}</td><td className="num">{kr(r.amount)}</td><td><div className="flex items-center gap-2">
           {r.upload && <a href={`/api/files/${r.upload.id}`} target="_blank" className="text-brand">Bilaga</a>}
+          <Link href={`/supplier-invoices/${r.id}/edit`} className="btn-secondary">Ändra</Link>
           {company.accountingMethod === "cash"
             ? <form action={paySupplierInvoiceAction} className="flex items-center gap-2"><input type="hidden" name="id" value={r.id} /><input type="date" name="date" defaultValue={today.toISOString().slice(0,10)} className="input w-auto" /><ConfirmButton>Registrera betalning</ConfirmButton></form>
             : <form action={bookSupplierInvoiceAction}><input type="hidden" name="id" value={r.id} /><ConfirmButton>Bokför</ConfirmButton></form>}
