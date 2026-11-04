@@ -79,7 +79,8 @@ export async function updateSupplierInvoice(fd: FormData) {
   }, `/supplier-invoices/${id}/edit`);
   redirect(withParam("/supplier-invoices", "ok", `Leverantörsfaktura ${invoice.invoiceNumber} uppdaterad.`));
 }
-\nexport async function bookSupplierInvoiceAction(fd: FormData) {
+
+export async function bookSupplierInvoiceAction(fd: FormData) {
   const { companyId } = await requireWriter();
   const id = Number(str(fd, "id"));
   const v = await attempt(() => bookSupplierInvoice(companyId, id), "/supplier-invoices");
