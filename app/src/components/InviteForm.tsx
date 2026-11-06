@@ -16,7 +16,7 @@ export function InviteForm({ companyName }: { companyName: string }) {
     const body = `Hej!\n\nDu är inbjuden till ${companyName} i Kapima Bokför med ${label}.\n\nÖppna länken för att gå med:\n${state.link}\n\nLänken gäller i 14 dagar.`;
     return (
       <div className="space-y-4">
-        <div className="flex items-start gap-3 rounded-2xl bg-success-soft p-4 text-success">
+        <div className="flex items-start gap-3 rounded-xl bg-success-soft p-4 text-success">
           <Icon name="check" className="mt-0.5 h-5 w-5 shrink-0" />
           <p className="text-[15px]">
             Inbjudan till <strong>{state.email}</strong> är skapad. Skicka länken till personen – den visas bara nu.
@@ -56,7 +56,7 @@ export function InviteForm({ companyName }: { companyName: string }) {
         {(["read", "full"] as const).map((r) => (
           <label
             key={r}
-            className={`flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 transition ${role === r ? "bg-brand-soft ring-brand" : "bg-surface-2 ring-transparent"}`}
+            className={`flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 transition ${role === r ? "bg-surface-2 ring-brand" : "bg-surface-2 ring-transparent"}`}
           >
             <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} className="mt-1 h-4 w-4 accent-[var(--brand)]" />
             <span>

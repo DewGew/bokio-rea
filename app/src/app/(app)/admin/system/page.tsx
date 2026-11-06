@@ -2,7 +2,7 @@ import { dateTime, requireAdmin } from "@/lib/admin";
 import { activitySummary, configStatus, databaseStatus, errorOverview } from "@/lib/admin-system";
 import { pingStorage } from "@/lib/storage";
 import { AdminTabs } from "@/components/AdminTabs";
-import { Card, PageHeader, Stat } from "@/components/ui";
+import { Card, PageHeader, Stat, StatPanel } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +19,12 @@ export default async function AdminSystem() {
       <PageHeader title="Administration" subtitle="Driftstatus och fel. Inga företags uppgifter visas, bara systemets tillstånd." />
       <AdminTabs active="/admin/system" />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-4">
+      <StatPanel className="mb-6">
         <Stat label="Databas" value={dbs.ok ? `${dbs.ms} ms` : "Fel"} tone={dbs.ok ? "success" : "danger"} />
         <Stat label="Fillagring" value={storage.ok ? "OK" : "Fel"} hint={storage.backend} tone={storage.ok ? "success" : "danger"} />
         <Stat label="Aktiva sessioner" value={String(activity.activeSessions)} />
         <Stat label="Misslyckade inloggningar (14 d)" value={String(totals.login)} tone={totals.login > 50 ? "warn" : undefined} />
-      </div>
+      </StatPanel>
 
       <div className="space-y-6">
         <Card title="Status">
@@ -77,7 +77,7 @@ export default async function AdminSystem() {
           <div className="overflow-x-auto">
             <table className="w-full text-[14px]">
               <thead>
-                <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
+                <tr className="text-left text-[12px] text-muted">
                   <th className="px-5 py-2">Dag</th>
                   <th className="px-3 py-2">Misslyckade inloggningar</th>
                   <th className="px-3 py-2">Fel vid inkommande mejl</th>

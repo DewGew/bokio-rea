@@ -63,7 +63,7 @@ export function SieImporter() {
     const r = state.result;
     return (
       <div className="space-y-4">
-        <div className="flex items-start gap-3 rounded-2xl bg-success-soft p-4 text-success">
+        <div className="flex items-start gap-3 rounded-xl bg-success-soft p-4 text-success">
           <Icon name="check" className="mt-0.5 h-5 w-5" />
           <div className="text-[15px]">
             <p className="font-semibold">Importen är klar – räkenskapsår {r.fiscalYear}</p>
@@ -95,8 +95,8 @@ export function SieImporter() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-dashed border-[var(--line-strong)] p-5">
-        <span className="grid h-11 w-11 place-items-center rounded-full bg-brand-soft text-brand">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-dashed border-[var(--line-strong)] p-5">
+        <span className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface-2 text-muted">
           <Icon name="upload" className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">

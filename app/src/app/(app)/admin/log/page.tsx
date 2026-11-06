@@ -16,7 +16,7 @@ export default async function AdminLog() {
         <div className="overflow-x-auto">
           <table className="w-full text-[14px]">
             <thead>
-              <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
+              <tr className="text-left text-[12px] text-muted">
                 <th className="px-5 py-2">Tid</th>
                 <th className="px-3 py-2">Administratör</th>
                 <th className="px-3 py-2">Åtgärd</th>

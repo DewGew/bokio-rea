@@ -60,7 +60,7 @@ export default async function Users({ searchParams }: { searchParams: SP }) {
                       )}
                     </div>
                   ) : (
-                    <span className="rounded-full bg-fill px-2.5 py-0.5 text-[12px] font-semibold">{ROLES[m.role as Role]?.label ?? m.role}</span>
+                    <span className="rounded-md bg-fill px-2 py-0.5 text-[12px] font-medium">{ROLES[m.role as Role]?.label ?? m.role}</span>
                   )}
                 </li>
               ))}

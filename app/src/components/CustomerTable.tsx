@@ -67,7 +67,7 @@ export function CustomerTable({ rows }: { rows: Row[] }) {
                     <Link href={`/customers/${c.id}`} className="font-medium hover:text-brand" onClick={(e) => e.stopPropagation()}>
                       {c.name}
                     </Link>
-                    {c.unpaid > 0 && <span className="ml-2 whitespace-nowrap rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-semibold text-warn">Obetalt {kr(c.unpaid, { decimals: false })}</span>}
+                    {c.unpaid > 0 && <span className="ml-2 whitespace-nowrap rounded-md bg-warn-soft px-2 py-0.5 text-[11px] font-medium text-warn">Obetalt {kr(c.unpaid, { decimals: false })}</span>}
                     <span className="block text-[12px] text-muted md:hidden">{c.orgNumber}</span>
                   </td>
                   <td className="hidden md:table-cell">{c.orgNumber}</td>

@@ -82,7 +82,7 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
       <Flash notice={notice} error={error} />
 
       {(ne.unmapped.length + ne.balanceUnmapped.length) > 0 && (
-        <p className="no-print mb-4 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+        <p className="no-print mb-4 rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
           <strong>{ne.unmapped.length + ne.balanceUnmapped.length === 1 ? "Ett konto har" : `${ne.unmapped.length + ne.balanceUnmapped.length} konton har`} saldo men saknar fält</strong> och ingår därför inte i summorna. Koppla
           {ne.unmapped.length + ne.balanceUnmapped.length === 1 ? " det" : " dem"} i listan längst ned.
         </p>

@@ -6,7 +6,7 @@ import { kr } from "@/lib/money";
 import { estimateAnnualTax } from "@/lib/tax-calculation";
 import { periodLabel, vatPeriods, vatReport } from "@/lib/vat";
 import { currentFiscalYear, fyLabel } from "@/lib/fiscal";
-import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
+import { Card, Flash, PageHeader, readParams, Stat, StatPanel, type SP } from "@/components/ui";
 import { BarChart } from "@/components/BarChart";
 
 export default async function Dashboard({ searchParams }: { searchParams: SP }) {
@@ -106,7 +106,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
       />
 
       <Flash notice={notice} />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <StatPanel>
         <Stat label="Årets resultat" value={kr(result)} tone={result < 0 ? "danger" : "success"} />
         <Stat label="Saldo bank och kassa" value={kr(bank)} hint="Enligt bokföringen (19xx)" />
         <Stat label="Obetalda kundfakturor" value={kr(unpaid)} hint={overdue ? `varav förfallet ${kr(overdue)}` : "Inget förfallet"} tone={overdue ? "warn" : undefined} />
@@ -119,7 +119,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
         {(company.companyType === "ef" || company.companyType === "hb") && (
           <Stat label="Årets skatt" value={hasTaxEstimate ? kr(estimatedTax * 100) : "–"} hint={hasTaxEstimate ? "Att betala" : "Fyll i uppgifter under Årets skatt"} />
         )}
-      </div>
+      </StatPanel>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card title="Inkomster och kostnader, senaste 12 månaderna" className="xl:col-span-2">
