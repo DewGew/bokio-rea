@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
 import { dateStr, kr } from "@/lib/money";
-import { Badge, Card, Empty, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
+import { Badge, Card, Empty, Flash, PageHeader, readParams, Stat, StatPanel, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ExpenseFields } from "@/components/ExpenseFields";
 import { bookExpenseAction, createExpense, deleteExpense, payExpensesAction } from "./actions";
@@ -22,11 +22,11 @@ export default async function Expenses({ searchParams }: { searchParams: SP }) {
     <>
       <PageHeader title="Utlägg" subtitle="När någon betalat för företaget med egna pengar" />
       <Flash error={error} notice={notice} />
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <StatPanel className="mb-6">
         <Stat label="Att bokföra" value={kr(pending.reduce((s, e) => s + e.amount, 0))} hint={`${pending.length} st`} tone={pending.length ? "warn" : undefined} />
         <Stat label="Att betala ut" value={kr(unpaid.reduce((s, e) => s + e.amount, 0))} hint={`${unpaid.length} st`} />
         <Stat label="Utbetalt" value={kr(paid.reduce((s, e) => s + e.amount, 0))} hint={`${paid.length} st`} tone="brand" />
-      </div>
+      </StatPanel>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
         <div className="space-y-6">

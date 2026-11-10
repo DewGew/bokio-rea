@@ -40,10 +40,10 @@ export default async function FiscalSettings() {
           {company.vatPeriod !== "none" && next && (
             <Card title="Nästa momsdeklaration">
               <div className="flex items-center gap-4 px-5 pb-5 pt-1">
-                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-brand-soft text-center text-brand">
+                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-lg border border-line bg-surface-2 text-center text-ink">
                   <span>
                     <span className="block text-[22px] font-semibold leading-none">{next.deadline.getUTCDate()}</span>
-                    <span className="text-[11px] font-semibold uppercase">{next.deadline.toLocaleDateString("sv-SE", { month: "short", timeZone: "UTC" })}</span>
+                    <span className="text-[12px] font-medium text-muted">{next.deadline.toLocaleDateString("sv-SE", { month: "short", timeZone: "UTC" })}</span>
                   </span>
                 </div>
                 <div className="text-[14px]">

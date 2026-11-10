@@ -1,0 +1,1573 @@
+diff --git a/app/src/app/(app)/admin/companies/[id]/page.tsx b/app/src/app/(app)/admin/companies/[id]/page.tsx
+index 4e778f5..f3777e6 100644
+--- a/app/src/app/(app)/admin/companies/[id]/page.tsx
++++ b/app/src/app/(app)/admin/companies/[id]/page.tsx
+@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
+ import { dateTime, requireAdmin } from "@/lib/admin";
+ import { fyLabel } from "@/lib/fiscal";
+ import { dateStr } from "@/lib/money";
+-import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
++import { Card, Flash, PageHeader, readParams, Stat, StatPanel, type SP } from "@/components/ui";
+ import { ConfirmButton } from "@/components/ConfirmButton";
+ import { companyBookkeeping } from "@/lib/company-delete";
+ import { FEATURES, FEATURE_KEYS, planLabel } from "@/lib/features";
+@@ -53,17 +53,17 @@ export default async function AdminCompany({ params, searchParams }: { params: P
+       </div>
+       <Flash notice={notice} error={error} />
+       {company.lockedAt && (
+-        <p className="mb-4 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
++        <p className="mb-4 rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+           <strong>Låst {dateTime(company.lockedAt)}.</strong> {company.lockedReason}
+         </p>
+       )}
+ 
+-      <div className="mb-6 grid gap-4 sm:grid-cols-4">
++      <StatPanel className="mb-6">
+         <Stat label="Verifikationer" value={String(totalVer)} />
+         <Stat label="Fakturor (utfärdade)" value={`${invoices} (${issued})`} />
+         <Stat label="Kunder" value={String(customers)} />
+         <Stat label="Uppladdade filer" value={`${uploads._count._all} · ${mb(uploads._sum.size ?? 0)}`} />
+-      </div>
++      </StatPanel>
+ 
+       <div className="space-y-6">
+         <Card title="Användare">
+@@ -97,7 +97,7 @@ export default async function AdminCompany({ params, searchParams }: { params: P
+         <Card title="Räkenskapsår">
+           <table className="w-full text-[14px]">
+             <thead>
+-              <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
++              <tr className="text-left text-[12px] text-muted">
+                 <th className="px-5 py-2">År</th>
+                 <th className="px-3 py-2">Verifikationer</th>
+                 <th className="px-3 py-2">Senaste bokföring</th>
+diff --git a/app/src/app/(app)/admin/connections/page.tsx b/app/src/app/(app)/admin/connections/page.tsx
+index 68c8d11..864413f 100644
+--- a/app/src/app/(app)/admin/connections/page.tsx
++++ b/app/src/app/(app)/admin/connections/page.tsx
+@@ -26,7 +26,7 @@ export default async function AdminConnections({ searchParams }: { searchParams:
+         <div className="overflow-x-auto">
+           <table className="w-full text-[14px]">
+             <thead>
+-              <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
++              <tr className="text-left text-[12px] text-muted">
+                 <th className="px-5 py-2">Program</th>
+                 <th className="px-3 py-2">Användare</th>
+                 <th className="px-3 py-2">Företag</th>
+diff --git a/app/src/app/(app)/admin/features/page.tsx b/app/src/app/(app)/admin/features/page.tsx
+index 7cc8f7b..0705b28 100644
+--- a/app/src/app/(app)/admin/features/page.tsx
++++ b/app/src/app/(app)/admin/features/page.tsx
+@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/admin";
+ import { FEATURES, FEATURE_KEYS, globalSwitches } from "@/lib/features";
+ import { AdminTabs } from "@/components/AdminTabs";
+ import { ConfirmButton } from "@/components/ConfirmButton";
+-import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
++import { Card, Flash, PageHeader, readParams, Stat, StatPanel, type SP } from "@/components/ui";
+ import { setFeatureSwitch } from "../actions";
+ 
+ export const dynamic = "force-dynamic";
+@@ -32,10 +32,10 @@ export default async function AdminFeatures({ searchParams }: { searchParams: SP
+       <AdminTabs active="/admin/features" />
+       <Flash notice={notice} error={error} />
+ 
+-      <div className="mb-6 grid gap-4 sm:grid-cols-2">
++      <StatPanel className="mb-6">
+         <Stat label="Företag med Pro" value={String(pro)} tone="brand" />
+         <Stat label="Basföretag" value={String(free)} />
+-      </div>
++      </StatPanel>
+ 
+       <Card title="Funktioner">
+         <ul className="divide-y divide-line">
+diff --git a/app/src/app/(app)/admin/log/page.tsx b/app/src/app/(app)/admin/log/page.tsx
+index 3f20048..29c7f83 100644
+--- a/app/src/app/(app)/admin/log/page.tsx
++++ b/app/src/app/(app)/admin/log/page.tsx
+@@ -16,7 +16,7 @@ export default async function AdminLog() {
+         <div className="overflow-x-auto">
+           <table className="w-full text-[14px]">
+             <thead>
+-              <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
++              <tr className="text-left text-[12px] text-muted">
+                 <th className="px-5 py-2">Tid</th>
+                 <th className="px-3 py-2">Administratör</th>
+                 <th className="px-3 py-2">Åtgärd</th>
+diff --git a/app/src/app/(app)/admin/page.tsx b/app/src/app/(app)/admin/page.tsx
+index e2d666c..62eb465 100644
+--- a/app/src/app/(app)/admin/page.tsx
++++ b/app/src/app/(app)/admin/page.tsx
+@@ -2,7 +2,7 @@ import Link from "next/link";
+ import { db } from "@/lib/db";
+ import { dateTime, isAdminEmail, requireAdmin } from "@/lib/admin";
+ import { dateStr } from "@/lib/money";
+-import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
++import { Card, Flash, PageHeader, readParams, Stat, StatPanel, type SP } from "@/components/ui";
+ import { planLabel } from "@/lib/features";
+ import { AdminTabs } from "@/components/AdminTabs";
+ import { ConfirmButton } from "@/components/ConfirmButton";
+@@ -36,18 +36,18 @@ export default async function Admin({ searchParams }: { searchParams: SP }) {
+       <AdminTabs active="/admin" />
+       <Flash notice={notice} error={error} />
+ 
+-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
++      <StatPanel className="mb-6">
+         <Stat label="Företag" value={String(companies.length)} />
+         <Stat label="Användare" value={String(users.length)} />
+         <Stat label="Aktiva sessioner" value={String(sessions)} />
+-      </div>
++      </StatPanel>
+ 
+       <div className="space-y-6">
+         <Card title="Användare">
+           <div className="overflow-x-auto">
+             <table className="w-full text-[14px]">
+               <thead>
+-                <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
++                <tr className="text-left text-[12px] text-muted">
+                   <th className="px-5 py-2">Namn</th>
+                   <th className="px-3 py-2">E-post</th>
+                   <th className="px-3 py-2">Företag</th>
+@@ -117,7 +117,7 @@ export default async function Admin({ searchParams }: { searchParams: SP }) {
+           <div className="overflow-x-auto">
+             <table className="w-full text-[14px]">
+               <thead>
+-                <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
++                <tr className="text-left text-[12px] text-muted">
+                   <th className="px-5 py-2">Namn</th>
+                   <th className="px-3 py-2">Org.nr</th>
+                   <th className="px-3 py-2">Plan</th>
+diff --git a/app/src/app/(app)/admin/storage/page.tsx b/app/src/app/(app)/admin/storage/page.tsx
+index 5d35d11..800ef4d 100644
+--- a/app/src/app/(app)/admin/storage/page.tsx
++++ b/app/src/app/(app)/admin/storage/page.tsx
+@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/admin";
+ import { findOrphans } from "@/lib/admin-system";
+ import { AdminTabs } from "@/components/AdminTabs";
+ import { ConfirmButton } from "@/components/ConfirmButton";
+-import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
++import { Card, Flash, PageHeader, readParams, Stat, StatPanel, type SP } from "@/components/ui";
+ import { deleteOrphans } from "../actions";
+ 
+ export const dynamic = "force-dynamic";
+@@ -29,17 +29,17 @@ export default async function AdminStorage({ searchParams }: { searchParams: SP
+       <AdminTabs active="/admin/storage" />
+       <Flash notice={notice} error={error} />
+ 
+-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
++      <StatPanel className="mb-6">
+         <Stat label="Uppladdade filer" value={String(total._count._all)} />
+         <Stat label="Total storlek" value={mb(total._sum.size ?? 0)} />
+         <Stat label="Genomsnitt per fil" value={total._count._all ? mb((total._sum.size ?? 0) / total._count._all) : "–"} />
+-      </div>
++      </StatPanel>
+ 
+       <div className="space-y-6">
+         <Card title="Störst lagringsanvändning (20 företag)">
+           <table className="w-full text-[14px]">
+             <thead>
+-              <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
++              <tr className="text-left text-[12px] text-muted">
+                 <th className="px-5 py-2">Företag</th>
+                 <th className="px-3 py-2">Filer</th>
+                 <th className="px-5 py-2">Storlek</th>
+diff --git a/app/src/app/(app)/admin/system/page.tsx b/app/src/app/(app)/admin/system/page.tsx
+index a68c6c5..f5749ca 100644
+--- a/app/src/app/(app)/admin/system/page.tsx
++++ b/app/src/app/(app)/admin/system/page.tsx
+@@ -2,7 +2,7 @@ import { dateTime, requireAdmin } from "@/lib/admin";
+ import { activitySummary, configStatus, databaseStatus, errorOverview } from "@/lib/admin-system";
+ import { pingStorage } from "@/lib/storage";
+ import { AdminTabs } from "@/components/AdminTabs";
+-import { Card, PageHeader, Stat } from "@/components/ui";
++import { Card, PageHeader, Stat, StatPanel } from "@/components/ui";
+ 
+ export const dynamic = "force-dynamic";
+ 
+@@ -19,12 +19,12 @@ export default async function AdminSystem() {
+       <PageHeader title="Administration" subtitle="Driftstatus och fel. Inga företags uppgifter visas, bara systemets tillstånd." />
+       <AdminTabs active="/admin/system" />
+ 
+-      <div className="mb-6 grid gap-4 sm:grid-cols-4">
++      <StatPanel className="mb-6">
+         <Stat label="Databas" value={dbs.ok ? `${dbs.ms} ms` : "Fel"} tone={dbs.ok ? "success" : "danger"} />
+         <Stat label="Fillagring" value={storage.ok ? "OK" : "Fel"} hint={storage.backend} tone={storage.ok ? "success" : "danger"} />
+         <Stat label="Aktiva sessioner" value={String(activity.activeSessions)} />
+         <Stat label="Misslyckade inloggningar (14 d)" value={String(totals.login)} tone={totals.login > 50 ? "warn" : undefined} />
+-      </div>
++      </StatPanel>
+ 
+       <div className="space-y-6">
+         <Card title="Status">
+@@ -77,7 +77,7 @@ export default async function AdminSystem() {
+           <div className="overflow-x-auto">
+             <table className="w-full text-[14px]">
+               <thead>
+-                <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
++                <tr className="text-left text-[12px] text-muted">
+                   <th className="px-5 py-2">Dag</th>
+                   <th className="px-3 py-2">Misslyckade inloggningar</th>
+                   <th className="px-3 py-2">Fel vid inkommande mejl</th>
+diff --git a/app/src/app/(app)/closing/page.tsx b/app/src/app/(app)/closing/page.tsx
+index 6cf8dc9..53cd664 100644
+--- a/app/src/app/(app)/closing/page.tsx
++++ b/app/src/app/(app)/closing/page.tsx
+@@ -29,7 +29,7 @@ export default async function Closing() {
+                       <p className="text-[15px] font-semibold">{fyLabel(y)}</p>
+                       <p className="text-[13px] text-muted">{fyRange(y)}</p>
+                     </div>
+-                    <span className={`rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${tone}`}>{status}</span>
++                    <span className={`rounded-md px-2 py-0.5 text-[12px] font-medium ${tone}`}>{status}</span>
+                     <span className="text-muted">›</span>
+                   </Link>
+                 </li>
+diff --git a/app/src/app/(app)/customers/[id]/page.tsx b/app/src/app/(app)/customers/[id]/page.tsx
+index 4e970eb..310c05c 100644
+--- a/app/src/app/(app)/customers/[id]/page.tsx
++++ b/app/src/app/(app)/customers/[id]/page.tsx
+@@ -6,7 +6,7 @@ import { invoiceTotals } from "@/lib/accounting";
+ import { dateStr, kr } from "@/lib/money";
+ import { displayStatus } from "@/lib/invoice-status";
+ import { countryName } from "@/lib/invoice-doc";
+-import { Badge, Card, Empty, Money, PageHeader, Stat } from "@/components/ui";
++import { Badge, Card, Empty, Money, PageHeader, Stat, StatPanel } from "@/components/ui";
+ 
+ type Link_ = { key: string; date: Date; title: string; detail: string; href: string; amount: number };
+ 
+@@ -78,12 +78,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
+         }
+       />
+ 
+-      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
++      <StatPanel className="mb-6">
+         <Stat label="Fakturor" value={String(issued.filter((i) => i.kind !== "credit").length)} hint={invoices.length > issued.length ? `+ ${invoices.length - issued.length} utkast` : undefined} />
+         <Stat label="Fakturerat (inkl. moms)" value={kr(sum(issued.filter((i) => i.status !== "credited" && i.kind !== "credit")))} />
+         <Stat label="Obetalt" value={kr(sum(unpaid))} tone={unpaid.length ? "warn" : undefined} hint={unpaid.length ? `${unpaid.length} ${unpaid.length === 1 ? "faktura" : "fakturor"}` : "Inget obetalt"} />
+         <Stat label="Förfallet" value={kr(sum(overdue))} tone={overdue.length ? "danger" : undefined} />
+-      </div>
++      </StatPanel>
+ 
+       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+         <div className="space-y-6">
+diff --git a/app/src/app/(app)/expenses/page.tsx b/app/src/app/(app)/expenses/page.tsx
+index 848d724..c9f28bd 100644
+--- a/app/src/app/(app)/expenses/page.tsx
++++ b/app/src/app/(app)/expenses/page.tsx
+@@ -2,7 +2,7 @@ import Link from "next/link";
+ import { db } from "@/lib/db";
+ import { requireCompany } from "@/lib/auth";
+ import { dateStr, kr } from "@/lib/money";
+-import { Badge, Card, Empty, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
++import { Badge, Card, Empty, Flash, PageHeader, readParams, Stat, StatPanel, type SP } from "@/components/ui";
+ import { ConfirmButton } from "@/components/ConfirmButton";
+ import { ExpenseFields } from "@/components/ExpenseFields";
+ import { bookExpenseAction, createExpense, deleteExpense, payExpensesAction } from "./actions";
+@@ -22,11 +22,11 @@ export default async function Expenses({ searchParams }: { searchParams: SP }) {
+     <>
+       <PageHeader title="Utlägg" subtitle="När någon betalat för företaget med egna pengar" />
+       <Flash error={error} notice={notice} />
+-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
++      <StatPanel className="mb-6">
+         <Stat label="Att bokföra" value={kr(pending.reduce((s, e) => s + e.amount, 0))} hint={`${pending.length} st`} tone={pending.length ? "warn" : undefined} />
+         <Stat label="Att betala ut" value={kr(unpaid.reduce((s, e) => s + e.amount, 0))} hint={`${unpaid.length} st`} />
+         <Stat label="Utbetalt" value={kr(paid.reduce((s, e) => s + e.amount, 0))} hint={`${paid.length} st`} tone="brand" />
+-      </div>
++      </StatPanel>
+ 
+       <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+         <div className="space-y-6">
+diff --git a/app/src/app/(app)/invoices/[id]/page.tsx b/app/src/app/(app)/invoices/[id]/page.tsx
+index 9787b17..1157722 100644
+--- a/app/src/app/(app)/invoices/[id]/page.tsx
++++ b/app/src/app/(app)/invoices/[id]/page.tsx
+@@ -123,7 +123,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
+       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+         <Card className="overflow-hidden">
+           <div className="bg-surface-2 p-3 sm:p-6">
+-            <div className="mx-auto max-w-[640px] overflow-hidden rounded-md shadow-xl ring-1 ring-black/5">
++            <div className="mx-auto max-w-[640px] overflow-hidden rounded-md ring-1 ring-line-strong">
+               <PdfPreview src={`/api/invoices/${invoice.id}/pdf?v=${invoice.status}`} label={`${label} ${invoice.number}`} />
+             </div>
+             <p className="mt-3 text-center text-[13px] text-muted">
+diff --git a/app/src/app/(app)/invoices/page.tsx b/app/src/app/(app)/invoices/page.tsx
+index bc1abe8..42f9c7d 100644
+--- a/app/src/app/(app)/invoices/page.tsx
++++ b/app/src/app/(app)/invoices/page.tsx
+@@ -4,7 +4,7 @@ import { requireCompany } from "@/lib/auth";
+ import { invoiceTotals } from "@/lib/accounting";
+ import { dateStr, kr } from "@/lib/money";
+ import { displayStatus } from "@/lib/invoice-status";
+-import { Badge, Card, Empty, Flash, PageHeader, readParams, Segmented, Stat, type SP } from "@/components/ui";
++import { Badge, Card, Empty, Flash, PageHeader, readParams, Segmented, Stat, StatPanel, type SP } from "@/components/ui";
+ 
+ const FILTERS = [
+   ["all", "Alla"],
+@@ -39,11 +39,11 @@ export default async function Invoices({ searchParams }: { searchParams: SP }) {
+           </>
+         } />
+       <Flash error={error} notice={notice} />
+-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
++      <StatPanel className="mb-6">
+         <Stat label="Obetalt (inkl. moms)" value={kr(sum(["sent", "overdue"]))} />
+         <Stat label="Förfallet (inkl. moms)" value={kr(sum(["overdue"]))} tone={sum(["overdue"]) ? "danger" : undefined} />
+         <Stat label="Betalt i år (inkl. moms)" value={kr(rows.filter((r) => r.status === "paid" && r.paidDate && r.paidDate.getUTCFullYear() === new Date().getUTCFullYear()).reduce((a, r) => a + r.total, 0))} tone="success" />
+-      </div>
++      </StatPanel>
+       <Card>
+         <div className="px-4 pb-3 pt-4">
+           <Segmented active={filter} items={FILTERS.map(([key, label]) => ({ key, label, href: `/invoices?status=${key}` }))} />
+diff --git a/app/src/app/(app)/layout.tsx b/app/src/app/(app)/layout.tsx
+index 368ec0b..1ca83a8 100644
+--- a/app/src/app/(app)/layout.tsx
++++ b/app/src/app/(app)/layout.tsx
+@@ -22,24 +22,24 @@ export default async function AppLayout({ children }: { children: React.ReactNod
+       <main className="min-w-0 flex-1 px-4 pb-16 pt-6 sm:px-6 md:px-10 md:pt-10">
+         <div className="mx-auto max-w-[1180px]">
+           {company.lockedAt && !user.lockedAt && (
+-            <p className="no-print mb-6 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
++            <p className="no-print mb-6 rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+               <strong>{company.name} är låst av en administratör.</strong> Du kan se allt men inte ändra något.
+               {company.lockedReason ? ` Orsak: ${company.lockedReason}` : ""}
+             </p>
+           )}
+           {isAdminEmail(user.email) && !user.mfaEnabledAt && mfaAvailable() && (
+-            <p className="no-print mb-6 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
++            <p className="no-print mb-6 rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+               <strong>Administratörer måste ha tvåfaktorsinloggning.</strong> <Link href="/settings/account/mfa" className="underline">Aktivera den nu</Link> för att komma åt administrationen.
+             </p>
+           )}
+           {user.lockedAt && (
+-            <p className="no-print mb-6 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
++            <p className="no-print mb-6 rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+               <strong>Ditt konto är låst av en administratör.</strong> Du kan se allt men inte ändra något i något av dina företag.
+               {user.lockedReason ? ` Orsak: ${user.lockedReason}` : ""}
+             </p>
+           )}
+           {role === "read" && !locked && (
+-            <p className="no-print mb-6 rounded-2xl bg-brand-soft px-4 py-3 text-[14px] text-brand">
++            <p className="no-print mb-6 rounded-xl bg-surface-2 ring-1 ring-line px-4 py-3 text-[14px] text-brand">
+               <strong>Läsbehörighet.</strong> Du kan se bokföring, rapporter och underlag i {company.name}, men inte ändra något.
+             </p>
+           )}
+diff --git a/app/src/app/(app)/loading.tsx b/app/src/app/(app)/loading.tsx
+index fd05134..82df0e8 100644
+--- a/app/src/app/(app)/loading.tsx
++++ b/app/src/app/(app)/loading.tsx
+@@ -2,17 +2,19 @@
+ export default function Loading() {
+   return (
+     <div aria-busy="true" aria-label="Laddar" className="animate-pulse">
+-      <div className="mb-7 space-y-2">
+-        <div className="h-9 w-56 rounded-lg bg-fill" />
++      <div className="mb-8 space-y-2">
++        <div className="h-8 w-56 rounded-lg bg-fill" />
+         <div className="h-4 w-80 max-w-full rounded-md bg-fill/70" />
+       </div>
+-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+-        {[0, 1, 2, 3].map((i) => (
+-          <div key={i} className="card h-[104px] p-5">
+-            <div className="h-3 w-24 rounded bg-fill" />
+-            <div className="mt-3 h-6 w-32 rounded bg-fill" />
+-          </div>
+-        ))}
++      <div className="card overflow-hidden">
++        <div className="-ml-px -mt-px grid sm:grid-cols-2 lg:grid-cols-4">
++          {[0, 1, 2, 3].map((i) => (
++            <div key={i} className="h-[92px] border-l border-t border-line px-5 py-4">
++              <div className="h-3 w-24 rounded bg-fill" />
++              <div className="mt-3 h-6 w-32 rounded bg-fill" />
++            </div>
++          ))}
++        </div>
+       </div>
+       <div className="card mt-6 space-y-4 p-5">
+         <div className="h-4 w-40 rounded bg-fill" />
+diff --git a/app/src/app/(app)/page.tsx b/app/src/app/(app)/page.tsx
+index 8449223..06355b2 100644
+--- a/app/src/app/(app)/page.tsx
++++ b/app/src/app/(app)/page.tsx
+@@ -6,7 +6,7 @@ import { kr } from "@/lib/money";
+ import { estimateAnnualTax } from "@/lib/tax-calculation";
+ import { periodLabel, vatPeriods, vatReport } from "@/lib/vat";
+ import { currentFiscalYear, fyLabel } from "@/lib/fiscal";
+-import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
++import { Card, Flash, PageHeader, readParams, Stat, StatPanel, type SP } from "@/components/ui";
+ import { BarChart } from "@/components/BarChart";
+ 
+ export default async function Dashboard({ searchParams }: { searchParams: SP }) {
+@@ -106,7 +106,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP })
+       />
+ 
+       <Flash notice={notice} />
+-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
++      <StatPanel>
+         <Stat label="Årets resultat" value={kr(result)} tone={result < 0 ? "danger" : "success"} />
+         <Stat label="Saldo bank och kassa" value={kr(bank)} hint="Enligt bokföringen (19xx)" />
+         <Stat label="Obetalda kundfakturor" value={kr(unpaid)} hint={overdue ? `varav förfallet ${kr(overdue)}` : "Inget förfallet"} tone={overdue ? "warn" : undefined} />
+@@ -119,7 +119,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP })
+         {(company.companyType === "ef" || company.companyType === "hb") && (
+           <Stat label="Årets skatt" value={hasTaxEstimate ? kr(estimatedTax * 100) : "–"} hint={hasTaxEstimate ? "Att betala" : "Fyll i uppgifter under Årets skatt"} />
+         )}
+-      </div>
++      </StatPanel>
+ 
+       <div className="mt-6 grid gap-6 xl:grid-cols-3">
+         <Card title="Inkomster och kostnader, senaste 12 månaderna" className="xl:col-span-2">
+diff --git a/app/src/app/(app)/reports/ne/page.tsx b/app/src/app/(app)/reports/ne/page.tsx
+index 7c4dcb8..407e26b 100644
+--- a/app/src/app/(app)/reports/ne/page.tsx
++++ b/app/src/app/(app)/reports/ne/page.tsx
+@@ -82,7 +82,7 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
+       <Flash notice={notice} error={error} />
+ 
+       {(ne.unmapped.length + ne.balanceUnmapped.length) > 0 && (
+-        <p className="no-print mb-4 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
++        <p className="no-print mb-4 rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+           <strong>{ne.unmapped.length + ne.balanceUnmapped.length === 1 ? "Ett konto har" : `${ne.unmapped.length + ne.balanceUnmapped.length} konton har`} saldo men saknar fält</strong> och ingår därför inte i summorna. Koppla
+           {ne.unmapped.length + ne.balanceUnmapped.length === 1 ? " det" : " dem"} i listan längst ned.
+         </p>
+diff --git a/app/src/app/(app)/settings/account/mfa/page.tsx b/app/src/app/(app)/settings/account/mfa/page.tsx
+index c603c1e..7f96f25 100644
+--- a/app/src/app/(app)/settings/account/mfa/page.tsx
++++ b/app/src/app/(app)/settings/account/mfa/page.tsx
+@@ -26,7 +26,7 @@ export default async function MfaPage({ searchParams }: { searchParams: SP }) {
+       <PageHeader title="Tvåfaktorsinloggning" subtitle="Skydda kontot med en kod från en autentiseringsapp, till exempel Google Authenticator, Microsoft Authenticator eller 1Password." />
+       <Flash notice={notice} error={error} />
+       {admin && !enabled && (
+-        <p className="mb-6 max-w-3xl rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
++        <p className="mb-6 max-w-3xl rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+           <strong>Tvåfaktorsinloggning krävs för administratörer.</strong> Aktivera den nedan för att komma åt administrationen.
+           {get("required") ? " Du skickades hit eftersom du försökte öppna administrationen." : ""}
+         </p>
+diff --git a/app/src/app/(app)/settings/connections/page.tsx b/app/src/app/(app)/settings/connections/page.tsx
+index 8cc08ac..c99a9c7 100644
+--- a/app/src/app/(app)/settings/connections/page.tsx
++++ b/app/src/app/(app)/settings/connections/page.tsx
+@@ -26,7 +26,7 @@ export default async function Connections({ searchParams }: { searchParams: SP }
+       <PageHeader title="Kopplingar" subtitle={`Ge en AI-assistent (till exempel Claude eller ChatGPT) åtkomst till ${company.name} och fråga om bokföringen med vanliga ord.`} />
+       <Flash error={error} notice={notice} />
+       {!feature.available && (
+-        <p className="mb-6 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
++        <p className="mb-6 rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+           {featureMessage(feature, "mcp")} Befintliga kopplingar fungerar inte förrän funktionen är tillgänglig igen.
+         </p>
+       )}
+diff --git a/app/src/app/(app)/settings/fiscal/page.tsx b/app/src/app/(app)/settings/fiscal/page.tsx
+index 09c449f..2a5fff2 100644
+--- a/app/src/app/(app)/settings/fiscal/page.tsx
++++ b/app/src/app/(app)/settings/fiscal/page.tsx
+@@ -40,10 +40,10 @@ export default async function FiscalSettings() {
+           {company.vatPeriod !== "none" && next && (
+             <Card title="Nästa momsdeklaration">
+               <div className="flex items-center gap-4 px-5 pb-5 pt-1">
+-                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-brand-soft text-center text-brand">
++                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-lg border border-line bg-surface-2 text-center text-ink">
+                   <span>
+                     <span className="block text-[22px] font-semibold leading-none">{next.deadline.getUTCDate()}</span>
+-                    <span className="text-[11px] font-semibold uppercase">{next.deadline.toLocaleDateString("sv-SE", { month: "short", timeZone: "UTC" })}</span>
++                    <span className="text-[12px] font-medium text-muted">{next.deadline.toLocaleDateString("sv-SE", { month: "short", timeZone: "UTC" })}</span>
+                   </span>
+                 </div>
+                 <div className="text-[14px]">
+diff --git a/app/src/app/(app)/settings/inbox/page.tsx b/app/src/app/(app)/settings/inbox/page.tsx
+index 152534c..cf76d17 100644
+--- a/app/src/app/(app)/settings/inbox/page.tsx
++++ b/app/src/app/(app)/settings/inbox/page.tsx
+@@ -16,7 +16,7 @@ const STATUS: Record<string, [string, string]> = {
+   feature_off: ["Funktionen avstängd", "bg-warn-soft text-warn"],
+   limit: ["Över gränsen", "bg-danger-soft text-danger"],
+   error: ["Fel", "bg-danger-soft text-danger"],
+-  forwarding_confirmation: ["Bekräfta vidarebefordran", "bg-brand-soft text-brand"],
++  forwarding_confirmation: ["Bekräfta vidarebefordran", "bg-surface-2 text-ink ring-1 ring-line"],
+ };
+ 
+ const when = (d: Date) => d.toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Stockholm" });
+@@ -69,7 +69,7 @@ export default async function InboxSettings({ searchParams }: { searchParams: SP
+         <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+           <div className="min-w-0 space-y-6">
+             {confirmation && (
+-              <div className="rounded-2xl bg-brand-soft p-4 text-[14px] text-brand">
++              <div className="rounded-xl bg-surface-2 p-4 text-[14px] text-ink ring-1 ring-line">
+                 <p className="font-semibold">Gmail vill att du bekräftar vidarebefordran</p>
+                 <p className="mt-1 whitespace-pre-line break-all">{confirmation.detail}</p>
+                 <p className="mt-1 text-[13px]">Öppna länken eller ange koden i Gmail under Inställningar → Vidarebefordran.</p>
+@@ -119,7 +119,7 @@ export default async function InboxSettings({ searchParams }: { searchParams: SP
+                               {m.fileCount > 0 && ` · ${m.fileCount} ${m.fileCount === 1 ? "underlag" : "underlag"}`}
+                             </p>
+                           </div>
+-                          <span className={`w-fit shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${cls}`}>{label}</span>
++                          <span className={`w-fit shrink-0 whitespace-nowrap rounded-md px-2 py-0.5 text-[12px] font-medium ${cls}`}>{label}</span>
+                         </div>
+                         {m.detail && m.status !== "forwarding_confirmation" && <p className="mt-1 break-words text-[12px] text-muted">{m.detail}</p>}
+                       </li>
+diff --git a/app/src/app/(app)/settings/users/page.tsx b/app/src/app/(app)/settings/users/page.tsx
+index a87f9e7..426a6ed 100644
+--- a/app/src/app/(app)/settings/users/page.tsx
++++ b/app/src/app/(app)/settings/users/page.tsx
+@@ -60,7 +60,7 @@ export default async function Users({ searchParams }: { searchParams: SP }) {
+                       )}
+                     </div>
+                   ) : (
+-                    <span className="rounded-full bg-fill px-2.5 py-0.5 text-[12px] font-semibold">{ROLES[m.role as Role]?.label ?? m.role}</span>
++                    <span className="rounded-md bg-fill px-2 py-0.5 text-[12px] font-medium">{ROLES[m.role as Role]?.label ?? m.role}</span>
+                   )}
+                 </li>
+               ))}
+diff --git a/app/src/app/(app)/supplier-invoices/page.tsx b/app/src/app/(app)/supplier-invoices/page.tsx
+index f5321a2..bb71834 100644
+--- a/app/src/app/(app)/supplier-invoices/page.tsx
++++ b/app/src/app/(app)/supplier-invoices/page.tsx
+@@ -2,7 +2,7 @@ import Link from "next/link";
+ import { db } from "@/lib/db";
+ import { requireCompany } from "@/lib/auth";
+ import { dateStr, kr } from "@/lib/money";
+-import { Badge, Card, Empty, Flash, PageHeader, readParams, Segmented, Stat, type SP } from "@/components/ui";
++import { Badge, Card, Empty, Flash, PageHeader, readParams, Segmented, Stat, StatPanel, type SP } from "@/components/ui";
+ import { ConfirmButton } from "@/components/ConfirmButton";
+ import { bookSupplierInvoiceAction, paySupplierInvoiceAction } from "./actions";
+ 
+@@ -36,11 +36,11 @@ export default async function SupplierInvoices({ searchParams }: { searchParams:
+   return <>
+     <PageHeader title="Leverantörsfakturor" subtitle="Registrera inköp, bokför leverantörsskulder och följ upp betalningar" actions={<Link href="/supplier-invoices/new" className="btn-primary">Ny leverantörsfaktura</Link>} />
+     <Flash error={error} notice={notice} />
+-    <div className="mb-6 grid gap-3 sm:grid-cols-3">
++    <StatPanel className="mb-6">
+       <Stat label={company.accountingMethod === "cash" ? "Obetalda" : "Att bokföra"} value={kr(pending.reduce((s, r) => s + r.amount, 0))} hint={`${pending.length} st`} />
+       <Stat label="Obetalda" value={kr(booked.reduce((s, r) => s + r.amount, 0))} hint={`${booked.length} st · ${overdue.length} förfallna`} />
+       <Stat label="Betalda" value={kr(paid.reduce((s, r) => s + r.amount, 0))} hint={`${paid.length} st`} />
+-    </div>
++    </StatPanel>
+     <Card>
+       <div className="px-4 pb-3 pt-4">
+         <Segmented active={filter} items={FILTERS.map(([key, label]) => ({ key, label, href: `/supplier-invoices?status=${key}` }))} />
+diff --git a/app/src/app/(auth)/companies/new/page.tsx b/app/src/app/(auth)/companies/new/page.tsx
+index ec06869..f4ee18d 100644
+--- a/app/src/app/(auth)/companies/new/page.tsx
++++ b/app/src/app/(auth)/companies/new/page.tsx
+@@ -20,7 +20,7 @@ export default async function NewCompany() {
+           </>
+         )}
+       </p>
+-      <p className="mb-5 rounded-xl bg-brand-soft px-3 py-2 text-center text-[13px] text-brand">
++      <p className="mb-5 rounded-xl bg-surface-2 ring-1 ring-line px-3 py-2 text-center text-[13px] text-brand">
+         Nya företag börjar med <strong>Bas</strong>. AI-avläsning, koppling till AI-assistent och kvitton via e-post ingår i Pro.
+       </p>
+       <ActionForm action={addCompany} submit="Skapa företag">
+diff --git a/app/src/app/(auth)/layout.tsx b/app/src/app/(auth)/layout.tsx
+index 9ed9850..cda2412 100644
+--- a/app/src/app/(auth)/layout.tsx
++++ b/app/src/app/(auth)/layout.tsx
+@@ -6,10 +6,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode })
+   return (
+     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
+       <div className="mb-8 flex flex-col items-center text-center">
+-        <span className="mb-4 grid h-16 w-16 place-items-center rounded-[18px] bg-gradient-to-br from-[#2b90ff] to-[#0058d1] text-white shadow-lg shadow-[#0071e3]/25">
+-          <Icon name="book" className="h-8 w-8" />
++        <span className="mb-4 grid h-10 w-10 place-items-center rounded-lg bg-brand text-brand-ink">
++          <Icon name="book" className="h-5 w-5" />
+         </span>
+-        <p className="text-[15px] text-muted">Kapima Bokför</p>
++        <p className="text-[14px] font-medium">Kapima Bokför</p>
+       </div>
+       <div className="card w-full max-w-[440px] p-7 sm:p-9">{children}</div>
+       <p className="mt-8 max-w-sm text-center text-[13px] text-muted">Bokföring, fakturering och moms för småföretag.</p>
+diff --git a/app/src/app/(auth)/oauth/authorize/page.tsx b/app/src/app/(auth)/oauth/authorize/page.tsx
+index 0b533c9..c36efe9 100644
+--- a/app/src/app/(auth)/oauth/authorize/page.tsx
++++ b/app/src/app/(auth)/oauth/authorize/page.tsx
+@@ -35,7 +35,7 @@ export default async function Authorize({ searchParams }: { searchParams: SP })
+   return (
+     <>
+       <div className="mb-5 flex justify-center">
+-        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft text-brand">
++        <span className="grid h-12 w-12 place-items-center rounded-lg border border-line bg-surface-2 text-muted">
+           <Icon name="plug" className="h-6 w-6" />
+         </span>
+       </div>
+@@ -68,7 +68,7 @@ export default async function Authorize({ searchParams }: { searchParams: SP })
+             ).map(([value, title, can, cannot]) => (
+               <label
+                 key={value}
+-                className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-2 p-3 ring-1 ring-transparent transition has-[:checked]:bg-brand-soft has-[:checked]:ring-brand"
++                className="flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 ring-line transition has-[:checked]:bg-surface-2 has-[:checked]:ring-brand"
+               >
+                 <input type="radio" name="level" value={value} defaultChecked={value === "read"} className="mt-1 h-4 w-4 accent-[var(--brand)]" />
+                 <span className="min-w-0">
+diff --git a/app/src/app/(auth)/register/page.tsx b/app/src/app/(auth)/register/page.tsx
+index 848a7a8..bb56e68 100644
+--- a/app/src/app/(auth)/register/page.tsx
++++ b/app/src/app/(auth)/register/page.tsx
+@@ -13,7 +13,7 @@ export default async function Register() {
+       <p className="mb-7 text-center text-[15px] text-muted">
+         Har du redan ett konto? <Link href="/login" className="text-brand">Logga in</Link>
+       </p>
+-      <p className="mb-5 rounded-xl bg-brand-soft px-3 py-2 text-center text-[13px] text-brand">
++      <p className="mb-5 rounded-xl bg-surface-2 ring-1 ring-line px-3 py-2 text-center text-[13px] text-brand">
+         Nya företag börjar med <strong>Bas</strong>. AI-avläsning, koppling till AI-assistent och kvitton via e-post ingår i Pro.
+       </p>
+       <ActionForm action={register} submit="Skapa konto och företag">
+diff --git a/app/src/app/globals.css b/app/src/app/globals.css
+index 1515509..d63f225 100644
+--- a/app/src/app/globals.css
++++ b/app/src/app/globals.css
+@@ -1,96 +1,51 @@
+ @import "tailwindcss";
+ 
+-/* Designsystem inspirerat av Apples plattformar: systemtypsnitt, mjuka ytor, få linjer och tydlig hierarki. */
++/*
++ * Designsystem: varm neutral palett, Geist, svarta huvudknappar och hårfina linjer.
++ * Inga skuggor, inga gradienter och ingen blå accentfärg; hierarkin skapas av yta, linje och typografi.
++ *
++ * Ljust och mörkt tema delar samma tokens via light-dark(): första värdet är ljust, andra mörkt.
++ * color-scheme styr vilket som gäller: användarens val (data-theme) eller operativsystemet (inget data-theme).
++ */
+ :root {
+-  color-scheme: light;
+-  /* Ljust tema: ljus blågrå bakgrund med ett svagt blått sken upptill; vita kort avgränsas med kant och mjuk skugga. */
+-  --bg: #f8fafc;
+-  --bg-glow: radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, 0.075), transparent 55%);
+-  --surface: #ffffff;
+-  --surface-2: #f3f6fa; /* fält, segmentkontroller */
+-  --fill: rgba(100, 116, 139, 0.12); /* sekundära knappar */
+-  --fill-hover: rgba(100, 116, 139, 0.2);
+-  --ink: #0f172a;
+-  --muted: #5b6577; /* 5,8:1 mot vitt, 5,5:1 mot bakgrunden */
+-  --line: #e9edf3;
+-  --line-strong: #cbd3df; /* streckade ytor */
+-  --input-border: #d5dce6;
+-  --card-border: #e9edf3;
+-  --brand: #0071e3;
+-  --brand-ink: #ffffff;
+-  --brand-soft: rgba(0, 113, 227, 0.1);
+-  --success: #248a3d;
+-  --success-soft: rgba(52, 199, 89, 0.14);
+-  --danger: #d70015;
+-  --danger-soft: rgba(255, 59, 48, 0.12);
+-  --warn: #b25000;
+-  --warn-soft: rgba(255, 149, 0, 0.14);
+-  --chart-2: #ff9f0a;
+-  --sidebar: #ffffff;
+-  --sidebar-border: #e9edf3;
+-  --shadow: 0 2px 5px rgba(15, 23, 42, 0.025), 0 12px 28px rgba(15, 23, 42, 0.035);
+-  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.14), 0 1px 1px rgba(0, 0, 0, 0.06);
++  color-scheme: light dark;
++
++  --bg: light-dark(#faf9f7, #141312);
++  --surface: light-dark(#ffffff, #1b1a18);
++  --surface-2: light-dark(#f5f3ef, #232220); /* fält, segmentkontroller, markerade ytor */
++  --fill: light-dark(#eeebe5, #2b2a27); /* hover och dämpade ytor */
++  --fill-hover: light-dark(#e5e1da, #353330);
++  --ink: light-dark(#1c1917, #f2efea);
++  --muted: light-dark(#6f6a63, #a29d95); /* 5,1:1 mot bakgrunden i ljust, 6,8:1 i mörkt */
++  --line: light-dark(#e8e4de, #2d2b28); /* hårfina avgränsningar */
++  --line-strong: light-dark(#d3cdc4, #45423e); /* streckade ytor, aktiva kontroller */
++  --input-border: light-dark(#d9d4cb, #3a3834);
++
++  /* Huvudfärgen är själva bläcket: svart i ljust läge, nästan vitt i mörkt. */
++  --brand: var(--ink);
++  --brand-ink: light-dark(#faf9f7, #141312);
++  --brand-soft: var(--surface-2);
++
++  /* Statusfärger är dämpade och används bara när de betyder något. */
++  --success: light-dark(#2f7a45, #6cc788);
++  --success-soft: light-dark(rgba(47, 122, 69, 0.1), rgba(108, 199, 136, 0.14));
++  --danger: light-dark(#b42318, #f2827a);
++  --danger-soft: light-dark(rgba(180, 35, 24, 0.08), rgba(242, 130, 122, 0.14));
++  --warn: light-dark(#a15c07, #e3a850);
++  --warn-soft: light-dark(rgba(161, 92, 7, 0.1), rgba(227, 168, 80, 0.14));
++
++  --chart-2: light-dark(#b9b1a5, #6b665f);
++
++  --sidebar: var(--bg);
++  --sidebar-border: var(--line);
+ }
+ 
+-/* Mörkt tema: valt av användaren (data-theme="dark") eller följer systemet (ingen data-theme). */
++/* Användarens val av tema slår operativsystemets. */
++:root[data-theme="light"] {
++  color-scheme: light;
++}
+ :root[data-theme="dark"] {
+   color-scheme: dark;
+-  --bg: #000000;
+-  --surface: #1c1c1e;
+-  --surface-2: #2c2c2e;
+-  --fill: rgba(120, 120, 128, 0.24);
+-  --fill-hover: rgba(120, 120, 128, 0.34);
+-  --ink: #f5f5f7;
+-  --muted: #98989d;
+-  --line: rgba(255, 255, 255, 0.1);
+-  --line-strong: rgba(255, 255, 255, 0.22);
+-  --input-border: rgba(255, 255, 255, 0.12);
+-  --card-border: rgba(255, 255, 255, 0.07);
+-  --brand: #0a84ff;
+-  --brand-soft: rgba(10, 132, 255, 0.18);
+-  --success: #30d158;
+-  --success-soft: rgba(48, 209, 88, 0.18);
+-  --danger: #ff453a;
+-  --danger-soft: rgba(255, 69, 58, 0.18);
+-  --warn: #ff9f0a;
+-  --warn-soft: rgba(255, 159, 10, 0.18);
+-  --chart-2: #ffd60a;
+-  --sidebar: rgba(28, 28, 30, 0.72);
+-  --sidebar-border: rgba(255, 255, 255, 0.1);
+-  --bg-glow: radial-gradient(ellipse at 50% 0%, rgba(10, 132, 255, 0.09), transparent 55%);
+-  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+-  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.5);
+-}
+-
+-@media (prefers-color-scheme: dark) {
+-  :root:not([data-theme="light"]) {
+-    color-scheme: dark;
+-    --bg: #000000;
+-    --surface: #1c1c1e;
+-    --surface-2: #2c2c2e;
+-    --fill: rgba(120, 120, 128, 0.24);
+-    --fill-hover: rgba(120, 120, 128, 0.34);
+-    --ink: #f5f5f7;
+-    --muted: #98989d;
+-    --line: rgba(255, 255, 255, 0.1);
+-    --line-strong: rgba(255, 255, 255, 0.22);
+-    --input-border: rgba(255, 255, 255, 0.12);
+-    --card-border: rgba(255, 255, 255, 0.07);
+-    --brand: #0a84ff;
+-    --brand-soft: rgba(10, 132, 255, 0.18);
+-    --success: #30d158;
+-    --success-soft: rgba(48, 209, 88, 0.18);
+-    --danger: #ff453a;
+-    --danger-soft: rgba(255, 69, 58, 0.18);
+-    --warn: #ff9f0a;
+-    --warn-soft: rgba(255, 159, 10, 0.18);
+-    --chart-2: #ffd60a;
+-    --sidebar: rgba(28, 28, 30, 0.72);
+-  --sidebar-border: rgba(255, 255, 255, 0.1);
+-  --bg-glow: radial-gradient(ellipse at 50% 0%, rgba(10, 132, 255, 0.09), transparent 55%);
+-    --shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+-    --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.5);
+-  }
+ }
+ 
+ @theme inline {
+@@ -102,6 +57,7 @@
+   --color-ink: var(--ink);
+   --color-muted: var(--muted);
+   --color-line: var(--line);
++  --color-line-strong: var(--line-strong);
+   --color-brand: var(--brand);
+   --color-brand-ink: var(--brand-ink);
+   --color-brand-soft: var(--brand-soft);
+@@ -111,26 +67,32 @@
+   --color-danger-soft: var(--danger-soft);
+   --color-warn: var(--warn);
+   --color-warn-soft: var(--warn-soft);
+-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-inter), "Segoe UI", system-ui, sans-serif;
++  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
++  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+ }
+ 
+ body {
+-  background: var(--bg-glow), var(--bg);
+-  background-attachment: fixed;
++  background: var(--bg);
+   min-height: 100vh;
+   color: var(--ink);
+-  letter-spacing: -0.01em;
++  letter-spacing: -0.006em;
+   -webkit-font-smoothing: antialiased;
+ }
+ 
+-/* Smala, diskreta rullningslister som i macOS */
++/* Smala, diskreta rullningslister */
+ * {
+   scrollbar-width: thin;
+-  scrollbar-color: rgba(128, 128, 128, 0.35) transparent;
++  scrollbar-color: var(--line-strong) transparent;
+ }
+ 
+ ::selection {
+-  background: var(--brand-soft);
++  background: color-mix(in srgb, var(--ink) 16%, transparent);
++}
++
++/* Tydlig tangentbordsmarkering för allt som inte har en egen (fält har en ring). */
++:focus-visible {
++  outline: 2px solid var(--ink);
++  outline-offset: 2px;
+ }
+ 
+ @layer components {
+@@ -140,24 +102,22 @@ body {
+     white-space: nowrap;
+   }
+   .card {
+-    @apply rounded-2xl bg-surface;
+-    border: 1px solid var(--card-border);
+-    box-shadow: var(--shadow);
++    @apply rounded-xl border border-line bg-surface;
+   }
+   .input {
+-    @apply w-full rounded-[10px] border border-[var(--input-border)] bg-surface-2 px-3 py-2 text-[15px] text-ink outline-none transition placeholder:text-muted/70 focus:border-brand focus:bg-surface focus:ring-4 focus:ring-brand/20;
++    @apply w-full rounded-lg border border-[var(--input-border)] bg-surface px-3 py-2 text-[14px] text-ink outline-none transition placeholder:text-muted/70 focus:border-ink focus:ring-[3px] focus:ring-ink/10;
+   }
+   .label {
+     @apply mb-1.5 block text-[13px] font-medium text-muted;
+   }
+   .btn-primary {
+-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-brand px-4 py-2 text-[15px] font-medium text-brand-ink transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50;
++    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-3.5 py-2 text-[14px] font-medium text-brand-ink transition hover:opacity-80 disabled:opacity-40;
+   }
+   .btn-secondary {
+-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-fill px-4 py-2 text-[15px] font-medium text-ink transition hover:bg-fill-hover active:scale-[0.98] disabled:opacity-50;
++    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[var(--input-border)] bg-surface px-3.5 py-2 text-[14px] font-medium text-ink transition hover:bg-surface-2 disabled:opacity-40;
+   }
+   .btn-danger {
+-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-fill px-4 py-2 text-[15px] font-medium text-danger transition hover:bg-danger-soft active:scale-[0.98] disabled:opacity-50;
++    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[var(--input-border)] bg-surface px-3.5 py-2 text-[14px] font-medium text-danger transition hover:bg-danger-soft disabled:opacity-40;
+   }
+   .table {
+     @apply w-full text-[14px];
+@@ -185,25 +145,41 @@ body {
+   .table-edit tbody tr:hover {
+     background: transparent;
+   }
+-  /* Segmenterad kontroll (iOS/macOS) */
++  /* Segmenterad kontroll för filter och flikar */
+   .segmented {
+-    @apply inline-flex max-w-full gap-0.5 overflow-x-auto rounded-[10px] bg-fill p-0.5;
++    @apply inline-flex max-w-full gap-0.5 overflow-x-auto rounded-lg border border-line bg-surface-2 p-0.5;
+   }
+   .segmented > * {
+-    @apply whitespace-nowrap rounded-[8px] px-3.5 py-1.5 text-[13px] font-medium text-ink/80 transition;
++    @apply whitespace-nowrap rounded-md px-3 py-1 text-[13px] font-medium text-muted transition hover:text-ink;
+   }
+   .segmented > [aria-current="page"] {
+-    @apply bg-surface text-ink;
+-    box-shadow: var(--shadow-raised);
++    @apply bg-surface text-ink ring-1 ring-line-strong;
+   }
+   select.input {
+     @apply appearance-none bg-no-repeat pr-9;
+-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%238e8e93' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 1.75 9 4.5M3 7.5l3 2.75L9 7.5'/%3E%3C/svg%3E");
++    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%2386807a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 1.75 9 4.5M3 7.5l3 2.75L9 7.5'/%3E%3C/svg%3E");
+     background-position: right 0.75rem center;
+   }
++  /* Länkar och textknappar har textens färg; en hårfin understrykning visar att de går att klicka på. */
++  a.text-brand,
++  button.text-brand {
++    text-decoration: underline;
++    text-decoration-thickness: 1px;
++    text-underline-offset: 3px;
++    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
++    transition: text-decoration-color 0.15s;
++  }
++  a.text-brand:hover,
++  button.text-brand:hover {
++    text-decoration-color: currentColor;
++  }
+ }
+ 
+ @media print {
++  /* Utskrifter är alltid ljusa, även om skärmen är i mörkt läge. */
++  :root {
++    color-scheme: light !important;
++  }
+   .no-print {
+     display: none !important;
+   }
+diff --git a/app/src/app/layout.tsx b/app/src/app/layout.tsx
+index c34e636..c150890 100644
+--- a/app/src/app/layout.tsx
++++ b/app/src/app/layout.tsx
+@@ -1,9 +1,10 @@
+ import type { Metadata, Viewport } from "next";
+-import { Inter } from "next/font/google";
++import { Geist, Geist_Mono } from "next/font/google";
+ import { getSession } from "@/lib/auth";
+ import "./globals.css";
+ 
+-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
++const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
++const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+ 
+ export const metadata: Metadata = {
+   title: "Kapima Bokför",
+@@ -12,8 +13,8 @@ export const metadata: Metadata = {
+ 
+ export const viewport: Viewport = {
+   themeColor: [
+-    { media: "(prefers-color-scheme: light)", color: "#f5f5f7" },
+-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
++    { media: "(prefers-color-scheme: light)", color: "#faf9f7" },
++    { media: "(prefers-color-scheme: dark)", color: "#141312" },
+   ],
+ };
+ 
+@@ -22,7 +23,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
+   const theme = (await getSession())?.user.theme;
+   return (
+     <html lang="sv" data-theme={theme === "light" || theme === "dark" ? theme : undefined}>
+-      <body className={`${inter.variable} font-sans antialiased`}>{children}</body>
++      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>{children}</body>
+     </html>
+   );
+ }
+diff --git a/app/src/components/AccountPicker.tsx b/app/src/components/AccountPicker.tsx
+index 0df7df9..b0cc2af 100644
+--- a/app/src/components/AccountPicker.tsx
++++ b/app/src/components/AccountPicker.tsx
+@@ -118,7 +118,7 @@ export function AccountPicker({ accounts, value, onChange, label = "Konto" }: {
+           id={listId}
+           role="listbox"
+           style={{ top: pos.top, left: pos.left, transform: pos.up ? "translateY(-100%)" : undefined }}
+-          className="fixed z-50 max-h-72 w-80 overflow-y-auto rounded-xl bg-surface p-1 shadow-2xl ring-1 ring-line"
++          className="fixed z-50 max-h-72 w-80 overflow-y-auto rounded-xl bg-surface p-1 shadow-lg ring-1 ring-line-strong"
+         >
+           {matches.map((a, i) => (
+             <li
+@@ -130,10 +130,10 @@ export function AccountPicker({ accounts, value, onChange, label = "Konto" }: {
+                 pick(a);
+               }}
+               onMouseEnter={() => setActive(i)}
+-              className={`flex cursor-pointer gap-3 rounded-lg px-2.5 py-1.5 text-[14px] ${i === active ? "bg-brand text-white" : ""}`}
++              className={`flex cursor-pointer gap-3 rounded-lg px-2.5 py-1.5 text-[14px] ${i === active ? "bg-fill" : ""}`}
+             >
+               <span className="w-10 shrink-0 font-semibold tabular-nums">{a.number}</span>
+-              <span className={`truncate ${i === active ? "text-white/90" : "text-muted"}`}>{a.name}</span>
++              <span className="truncate text-muted">{a.name}</span>
+             </li>
+           ))}
+         </ul>
+diff --git a/app/src/components/BankImporter.tsx b/app/src/components/BankImporter.tsx
+index bb7540c..4d454b4 100644
+--- a/app/src/components/BankImporter.tsx
++++ b/app/src/components/BankImporter.tsx
+@@ -50,7 +50,7 @@ export function BankImporter({ bankAccounts }: { bankAccounts: { number: number;
+     const rest = state.created - state.booked;
+     return (
+       <div className="space-y-4">
+-        <div className="flex items-start gap-3 rounded-2xl bg-success-soft p-4 text-success">
++        <div className="flex items-start gap-3 rounded-xl bg-success-soft p-4 text-success">
+           <Icon name="check" className="mt-0.5 h-5 w-5" />
+           <div className="text-[15px]">
+             <p className="font-semibold">{state.created} transaktioner importerade</p>
+@@ -73,8 +73,8 @@ export function BankImporter({ bankAccounts }: { bankAccounts: { number: number;
+ 
+   return (
+     <div className="space-y-4">
+-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-dashed border-[var(--line-strong)] p-5">
+-        <span className="grid h-11 w-11 place-items-center rounded-full bg-brand-soft text-brand">
++      <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-dashed border-[var(--line-strong)] p-5">
++        <span className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface-2 text-muted">
+           <Icon name="bank" className="h-5 w-5" />
+         </span>
+         <div className="min-w-0 flex-1">
+diff --git a/app/src/components/BankQueue.tsx b/app/src/components/BankQueue.tsx
+index 49153c5..59c9b4c 100644
+--- a/app/src/components/BankQueue.tsx
++++ b/app/src/components/BankQueue.tsx
+@@ -186,7 +186,7 @@ export function BankQueue({ rows, templates, accounts }: { rows: Row[]; template
+                     </optgroup>
+                   </select>
+                   {prop && (
+-                    <span className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${prop.confidence === "high" ? "bg-success-soft text-success" : "bg-warn-soft text-warn"}`}>
++                    <span className={`whitespace-nowrap rounded-md px-2 py-0.5 text-[12px] font-medium ${prop.confidence === "high" ? "bg-success-soft text-success" : "bg-warn-soft text-warn"}`}>
+                       {prop.confidence === "high" ? "Säker" : "Kontrollera"}
+                     </span>
+                   )}
+diff --git a/app/src/components/BookingWizard.tsx b/app/src/components/BookingWizard.tsx
+index 1351230..db4836e 100644
+--- a/app/src/components/BookingWizard.tsx
++++ b/app/src/components/BookingWizard.tsx
+@@ -215,7 +215,7 @@ export function BookingWizard({
+       <div>
+         <div className="mb-2 flex items-center gap-2">
+           {step > 1 && (
+-            <button type="button" onClick={() => setStep(step - 1)} className="grid h-8 w-8 place-items-center rounded-full bg-fill text-[18px] hover:bg-fill-hover" aria-label="Tillbaka">
++            <button type="button" onClick={() => setStep(step - 1)} className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--input-border)] bg-surface text-[18px] hover:bg-surface-2" aria-label="Tillbaka">
+               ‹
+             </button>
+           )}
+@@ -230,7 +230,7 @@ export function BookingWizard({
+       </div>
+ 
+       {aiState === "reading" && (
+-        <p role="status" className="flex items-center gap-2 rounded-xl bg-brand-soft px-4 py-3 text-[14px] font-medium text-brand">
++        <p role="status" className="flex items-center gap-2 rounded-xl bg-surface-2 ring-1 ring-line px-4 py-3 text-[14px] font-medium text-brand">
+           <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" aria-hidden /> Läser av kvittot med AI…
+         </p>
+       )}
+@@ -240,7 +240,7 @@ export function BookingWizard({
+         <div className="space-y-4">
+           <Segmented value={tab} onChange={(v) => setTab(v as typeof tab)} items={allowManual ? [["search", "Sök"], ["all", "Alla mallar"], ["manual", "Manuell"]] : [["search", "Sök"], ["all", "Alla mallar"]]} />
+           {aiData && (
+-            <p className="rounded-xl bg-brand-soft px-4 py-3 text-[14px] text-brand">
++            <p className="rounded-xl bg-surface-2 ring-1 ring-line px-4 py-3 text-[14px] text-brand">
+               <Icon name="wand" className="mr-1 inline h-4 w-4" />
+               Avläst med AI: <strong>{[aiData.supplier, aiData.description].filter(Boolean).join(" – ") || "kvitto"}</strong>
+               {aiData.total ? `, ${aiData.total.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} ${aiData.currency}` : ""}. Välj vilken sorts köp det är.
+@@ -262,7 +262,7 @@ export function BookingWizard({
+                   <path d="m16 16 4 4" strokeLinecap="round" />
+                 </svg>
+               </div>
+-              <p className="text-[13px] font-semibold text-muted">{query.trim() ? "Mallar som matchar" : "Dina vanligaste mallar"}</p>
++              <p className="text-[13px] font-medium text-muted">{query.trim() ? "Mallar som matchar" : "Dina vanligaste mallar"}</p>
+               <TemplateList
+                 items={query.trim() ? searched : popular}
+                 onPick={pick}
+@@ -274,7 +274,7 @@ export function BookingWizard({
+             <div className="space-y-5">
+               {byCategory.map(([cat, list]) => (
+                 <section key={cat}>
+-                  <h3 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.04em] text-muted">{cat}</h3>
++                  <h3 className="mb-2 text-[13px] font-medium text-muted">{cat}</h3>
+                   <TemplateList items={list} onPick={pick} />
+                 </section>
+               ))}
+@@ -285,7 +285,7 @@ export function BookingWizard({
+ 
+       {step === 2 && tpl && (
+         <div className="space-y-4">
+-          <div className="rounded-xl bg-brand-soft p-4">
++          <div className="rounded-xl bg-surface-2 p-4 ring-1 ring-line">
+             <div className="flex items-start gap-3">
+               <div className="min-w-0 flex-1">
+                 <p className="text-[15px] font-semibold">{tpl.name}</p>
+@@ -454,7 +454,7 @@ export function BookingWizard({
+                   )}
+                 </span>
+                 <span className="min-w-0 flex-1 truncate text-[14px]">{a.fileName}</span>
+-                <button type="button" aria-label={`Ta bort ${a.fileName}`} onClick={() => setAttachments(attachments.filter((x) => x.id !== a.id))} className="grid h-7 w-7 place-items-center rounded-full hover:bg-fill">
++                <button type="button" aria-label={`Ta bort ${a.fileName}`} onClick={() => setAttachments(attachments.filter((x) => x.id !== a.id))} className="grid h-7 w-7 place-items-center rounded-md hover:bg-fill">
+                   <Icon name="x" className="h-4 w-4" />
+                 </button>
+               </li>
+diff --git a/app/src/components/CustomerTable.tsx b/app/src/components/CustomerTable.tsx
+index 8a0167e..fbb9244 100644
+--- a/app/src/components/CustomerTable.tsx
++++ b/app/src/components/CustomerTable.tsx
+@@ -67,7 +67,7 @@ export function CustomerTable({ rows }: { rows: Row[] }) {
+                     <Link href={`/customers/${c.id}`} className="font-medium hover:text-brand" onClick={(e) => e.stopPropagation()}>
+                       {c.name}
+                     </Link>
+-                    {c.unpaid > 0 && <span className="ml-2 whitespace-nowrap rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-semibold text-warn">Obetalt {kr(c.unpaid, { decimals: false })}</span>}
++                    {c.unpaid > 0 && <span className="ml-2 whitespace-nowrap rounded-md bg-warn-soft px-2 py-0.5 text-[11px] font-medium text-warn">Obetalt {kr(c.unpaid, { decimals: false })}</span>}
+                     <span className="block text-[12px] text-muted md:hidden">{c.orgNumber}</span>
+                   </td>
+                   <td className="hidden md:table-cell">{c.orgNumber}</td>
+diff --git a/app/src/components/FileUploader.tsx b/app/src/components/FileUploader.tsx
+index 00fb2b9..35b2e16 100644
+--- a/app/src/components/FileUploader.tsx
++++ b/app/src/components/FileUploader.tsx
+@@ -84,10 +84,10 @@ export function FileUploader({
+           setDrag(false);
+           send([...e.dataTransfer.files]);
+         }}
+-        className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition ${compact ? "px-4 py-5" : "px-4 py-9"} ${drag ? "border-brand bg-brand-soft" : "border-[var(--line-strong)]"} ${busy ? "opacity-70" : ""}`}
++        className={`flex flex-col items-center justify-center rounded-xl border border-dashed text-center transition ${compact ? "px-4 py-5" : "px-4 py-9"} ${drag ? "border-brand bg-surface-2" : "border-[var(--line-strong)]"} ${busy ? "opacity-70" : ""}`}
+       >
+         {!compact && (
+-          <span className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-brand">
++          <span className="mb-3 grid h-12 w-12 place-items-center rounded-lg border border-line bg-surface-2 text-muted">
+             <Icon name="upload" className="h-6 w-6" />
+           </span>
+         )}
+diff --git a/app/src/components/FiscalSettings.tsx b/app/src/components/FiscalSettings.tsx
+index 7d1750a..4818aba 100644
+--- a/app/src/components/FiscalSettings.tsx
++++ b/app/src/components/FiscalSettings.tsx
+@@ -37,7 +37,7 @@ function Choice<T extends string>({
+         return (
+           <label
+             key={o.value}
+-            className={`flex cursor-pointer flex-col rounded-xl p-3 transition ${on ? "bg-brand-soft ring-2 ring-brand" : "bg-surface-2 hover:bg-fill"} ${o.disabled ? "pointer-events-none opacity-40" : ""}`}
++            className={`flex cursor-pointer flex-col rounded-xl p-3 transition ${on ? "bg-surface-2 ring-1 ring-brand" : "ring-1 ring-line hover:bg-surface-2"} ${o.disabled ? "pointer-events-none opacity-40" : ""}`}
+           >
+             <input type="radio" name={name} value={o.value} checked={on} disabled={o.disabled} onChange={() => onChange(o.value)} className="sr-only" />
+             <span className="text-[15px] font-semibold">{o.label}</span>
+@@ -174,9 +174,9 @@ export function FiscalYearsTable({ years }: { years: FyRow[] }) {
+                 <div className="min-w-0 flex-1">
+                   <p className="text-[15px] font-semibold">
+                     {y.label}
+-                    {y.current && <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-[12px] font-semibold text-brand">Pågår</span>}
+-                    {y.closed && <span className="ml-2 rounded-full bg-success-soft px-2 py-0.5 text-[12px] font-semibold text-success">Stängt</span>}
+-                    {y.months !== 12 && <span className="ml-2 rounded-full bg-warn-soft px-2 py-0.5 text-[12px] font-semibold text-warn">{y.months} månader</span>}
++                    {y.current && <span className="ml-2 rounded-md bg-surface-2 px-2 py-0.5 text-[12px] font-medium text-ink ring-1 ring-line">Pågår</span>}
++                    {y.closed && <span className="ml-2 rounded-md bg-success-soft px-2 py-0.5 text-[12px] font-medium text-success">Stängt</span>}
++                    {y.months !== 12 && <span className="ml-2 rounded-md bg-warn-soft px-2 py-0.5 text-[12px] font-medium text-warn">{y.months} månader</span>}
+                   </p>
+                   <p className="text-[13px] text-muted">
+                     {y.start} – {y.end} · {y.verifications} verifikat
+diff --git a/app/src/components/IdleLogout.tsx b/app/src/components/IdleLogout.tsx
+index 8e80da5..ada55ed 100644
+--- a/app/src/components/IdleLogout.tsx
++++ b/app/src/components/IdleLogout.tsx
+@@ -77,7 +77,7 @@ export function IdleLogout() {
+   const m = Math.floor(left / 60);
+   const s = String(left % 60).padStart(2, "0");
+   return (
+-    <div role="alertdialog" aria-live="assertive" className="no-print fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md items-center gap-4 rounded-2xl bg-surface p-4 shadow-2xl ring-1 ring-line">
++    <div role="alertdialog" aria-live="assertive" className="no-print fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md items-center gap-4 rounded-xl bg-surface p-4 shadow-lg ring-1 ring-line-strong">
+       <div className="min-w-0 flex-1 text-[14px]">
+         <p className="font-semibold">Du loggas snart ut</p>
+         <p className="text-muted">
+diff --git a/app/src/components/InviteForm.tsx b/app/src/components/InviteForm.tsx
+index d0bcd57..bc67031 100644
+--- a/app/src/components/InviteForm.tsx
++++ b/app/src/components/InviteForm.tsx
+@@ -16,7 +16,7 @@ export function InviteForm({ companyName }: { companyName: string }) {
+     const body = `Hej!\n\nDu är inbjuden till ${companyName} i Kapima Bokför med ${label}.\n\nÖppna länken för att gå med:\n${state.link}\n\nLänken gäller i 14 dagar.`;
+     return (
+       <div className="space-y-4">
+-        <div className="flex items-start gap-3 rounded-2xl bg-success-soft p-4 text-success">
++        <div className="flex items-start gap-3 rounded-xl bg-success-soft p-4 text-success">
+           <Icon name="check" className="mt-0.5 h-5 w-5 shrink-0" />
+           <p className="text-[15px]">
+             Inbjudan till <strong>{state.email}</strong> är skapad. Skicka länken till personen – den visas bara nu.
+@@ -56,7 +56,7 @@ export function InviteForm({ companyName }: { companyName: string }) {
+         {(["read", "full"] as const).map((r) => (
+           <label
+             key={r}
+-            className={`flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 transition ${role === r ? "bg-brand-soft ring-brand" : "bg-surface-2 ring-transparent"}`}
++            className={`flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 transition ${role === r ? "bg-surface-2 ring-brand" : "bg-surface-2 ring-transparent"}`}
+           >
+             <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} className="mt-1 h-4 w-4 accent-[var(--brand)]" />
+             <span>
+diff --git a/app/src/components/InvoiceDesigner.tsx b/app/src/components/InvoiceDesigner.tsx
+index 34a19c8..ed662de 100644
+--- a/app/src/components/InvoiceDesigner.tsx
++++ b/app/src/components/InvoiceDesigner.tsx
+@@ -29,7 +29,7 @@ export type DesignValues = {
+ function TemplateThumb({ t, color }: { t: InvoiceTemplate; color: string }) {
+   const line = (w: string, c = "bg-black/10") => <div className={`h-1 rounded-full ${c}`} style={{ width: w }} />;
+   return (
+-    <div className="relative aspect-[1/1.3] w-full overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-black/10">
++    <div className="relative aspect-[1/1.3] w-full overflow-hidden rounded-lg bg-white ring-1 ring-black/10">
+       {t === "modern" && <div className="h-[22%] w-full" style={{ background: color }} />}
+       {t === "elegant" && <div className="absolute inset-y-0 left-0 w-1.5" style={{ background: color }} />}
+       <div className="space-y-1.5 p-2.5">
+@@ -62,9 +62,9 @@ function TemplateThumb({ t, color }: { t: InvoiceTemplate; color: string }) {
+ function Toggle({ name, checked, onChange, label }: { name: string; checked: boolean; onChange: (v: boolean) => void; label: string }) {
+   return (
+     <label className="flex cursor-pointer items-center justify-between gap-4">
+-      <span className="text-[15px]">{label}</span>
++      <span className="text-[14px]">{label}</span>
+       <input type="checkbox" name={name} checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
+-      <span className="relative h-[31px] w-[51px] shrink-0 rounded-full bg-fill transition peer-checked:bg-[#34c759] peer-focus-visible:ring-4 peer-focus-visible:ring-brand/30 after:absolute after:left-[2px] after:top-[2px] after:h-[27px] after:w-[27px] after:rounded-full after:bg-white after:shadow-md after:transition-transform peer-checked:after:translate-x-5" />
++      <span className="relative h-5 w-9 shrink-0 rounded-full bg-line-strong transition peer-checked:bg-brand peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4 peer-checked:after:bg-brand-ink" />
+     </label>
+   );
+ }
+@@ -72,8 +72,8 @@ function Toggle({ name, checked, onChange, label }: { name: string; checked: boo
+ function Section({ title, icon, children, hint }: { title: string; icon?: Parameters<typeof Icon>[0]["name"]; children: React.ReactNode; hint?: string }) {
+   return (
+     <section className="card p-5">
+-      <h2 className="flex items-center gap-2 text-[17px] font-semibold tracking-[-0.01em]">
+-        {icon && <Icon name={icon} className="h-5 w-5 text-brand" />}
++      <h2 className="flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em]">
++        {icon && <Icon name={icon} className="h-[18px] w-[18px] text-muted" />}
+         {title}
+       </h2>
+       {hint && <p className="mt-0.5 text-[13px] text-muted">{hint}</p>}
+@@ -194,7 +194,7 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
+                   role="radio"
+                   aria-checked={on}
+                   onClick={() => set("template", t.key)}
+-                  className={`rounded-2xl p-2 text-left transition ${on ? "bg-brand-soft ring-2 ring-brand" : "bg-surface-2 hover:bg-fill"}`}
++                  className={`rounded-xl p-2 text-left transition ${on ? "bg-surface-2 ring-1 ring-brand" : "ring-1 ring-line hover:bg-surface-2"}`}
+                 >
+                   <TemplateThumb t={t.key} color={v.color} />
+                   <span className="mt-2 block text-[14px] font-semibold">{t.label}</span>
+@@ -222,7 +222,7 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
+                 style={{ background: c.hex }}
+               />
+             ))}
+-            <label className="relative ml-1 flex items-center gap-2 rounded-full bg-fill py-1 pl-1 pr-3 text-[13px]" title="Egen färg">
++            <label className="relative ml-1 flex items-center gap-2 rounded-lg border border-line bg-surface-2 py-1 pl-1 pr-3 text-[13px]" title="Egen färg">
+               <input
+                 type="color"
+                 value={v.color}
+@@ -230,7 +230,7 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
+                   set("color", e.target.value);
+                   setHexDraft(e.target.value);
+                 }}
+-                className="h-7 w-7 cursor-pointer rounded-full border-0 bg-transparent p-0"
++                className="h-7 w-7 cursor-pointer rounded-md border-0 bg-transparent p-0"
+                 aria-label="Välj egen färg"
+               />
+               <input
+@@ -348,7 +348,7 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
+           </div>
+         </Section>
+ 
+-        <div className="no-print sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-full bg-[var(--sidebar)] p-2 pl-5 shadow-lg ring-1 ring-line backdrop-blur-xl">
++        <div className="no-print sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-xl bg-surface p-2 pl-5 ring-1 ring-line-strong">
+           <span role="status" className={`mr-auto text-[14px] font-medium ${state?.error ? "text-danger" : "text-success"}`}>
+             {state?.error ?? state?.ok ?? ""}
+           </span>
+@@ -363,7 +363,7 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
+             <a href={src} target="_blank" className="text-[14px] text-brand">Öppna PDF</a>
+           </div>
+           <div className="bg-surface-2 p-4">
+-            <div className="mx-auto max-w-[520px] overflow-hidden rounded-md shadow-xl ring-1 ring-black/5">
++            <div className="mx-auto max-w-[520px] overflow-hidden rounded-md ring-1 ring-line-strong">
+               <PdfPreview src={src} maxPages={1} label="Förhandsvisning av fakturan" />
+             </div>
+           </div>
+diff --git a/app/src/components/InvoiceEditor.tsx b/app/src/components/InvoiceEditor.tsx
+index 0263c76..59362c0 100644
+--- a/app/src/components/InvoiceEditor.tsx
++++ b/app/src/components/InvoiceEditor.tsx
+@@ -192,7 +192,7 @@ export function InvoiceEditor({
+         </div>
+       </div>
+ 
+-      <div className="grid gap-4 rounded-2xl bg-surface-2 p-4 sm:grid-cols-2">
++      <div className="grid gap-4 rounded-xl bg-surface-2 p-4 sm:grid-cols-2">
+         <div>
+           <label className="label" htmlFor="vatTreatment">Momshantering</label>
+           <select id="vatTreatment" name="vatTreatment" value={treatment} disabled={noVat} onChange={(e) => changeTreatment(e.target.value as VatTreatment)} className="input">
+@@ -214,7 +214,7 @@ export function InvoiceEditor({
+         </div>
+       </div>
+ 
+-      <div className="overflow-x-auto rounded-2xl border border-line">
++      <div className="overflow-x-auto rounded-xl border border-line">
+         <table className="table table-edit min-w-[880px]">
+           <thead>
+             <tr>
+@@ -334,7 +334,7 @@ export function InvoiceEditor({
+       {(errors.length > 0 || warnings.length > 0) && (
+         <div className="space-y-2">
+           {errors.length > 0 && (
+-            <div role="alert" className="rounded-2xl bg-danger-soft p-4 text-[14px] text-danger">
++            <div role="alert" className="rounded-xl bg-danger-soft p-4 text-[14px] text-danger">
+               <p className="mb-1 font-semibold">Det här behöver rättas innan fakturan kan utfärdas</p>
+               <ul className="list-disc space-y-0.5 pl-5">
+                 {errors.map((e) => (
+@@ -349,7 +349,7 @@ export function InvoiceEditor({
+             </div>
+           )}
+           {warnings.length > 0 && (
+-            <ul className="list-disc space-y-0.5 rounded-2xl bg-warn-soft p-4 pl-9 text-[14px] text-warn">
++            <ul className="list-disc space-y-0.5 rounded-xl bg-warn-soft p-4 pl-9 text-[14px] text-warn">
+               {warnings.map((w) => (
+                 <li key={w.field + w.message}>{w.message}</li>
+               ))}
+diff --git a/app/src/components/OpeningBalanceEditor.tsx b/app/src/components/OpeningBalanceEditor.tsx
+index d68951c..be9ee69 100644
+--- a/app/src/components/OpeningBalanceEditor.tsx
++++ b/app/src/components/OpeningBalanceEditor.tsx
+@@ -51,7 +51,7 @@ export function OpeningBalanceEditor({
+           <option key={a.number} value={a.number}>{a.name}</option>
+         ))}
+       </datalist>
+-      <div className="overflow-x-auto rounded-2xl border border-line">
++      <div className="overflow-x-auto rounded-xl border border-line">
+         <table className="table table-edit min-w-[520px]">
+           <thead>
+             <tr>
+diff --git a/app/src/components/Sidebar.tsx b/app/src/components/Sidebar.tsx
+index 14ff6af..15ca967 100644
+--- a/app/src/components/Sidebar.tsx
++++ b/app/src/components/Sidebar.tsx
+@@ -89,26 +89,26 @@ export function Sidebar({ company, companies, userName, readOnly = false, isAdmi
+   return (
+     <>
+       {/* Mobil: genomskinlig toppmeny */}
+-      <header className="no-print sticky top-0 z-30 flex h-12 items-center justify-between border-b border-[var(--sidebar-border)] bg-[var(--sidebar)] px-4 backdrop-blur-xl backdrop-saturate-150 md:hidden">
+-        <button onClick={() => setOpen(!open)} className="flex items-center gap-1.5 text-[15px] font-medium text-brand" aria-expanded={open}>
++      <header className="no-print sticky top-0 z-30 flex h-12 items-center justify-between border-b border-[var(--sidebar-border)] bg-[var(--sidebar)] px-4 md:hidden">
++        <button onClick={() => setOpen(!open)} className="flex items-center gap-1.5 text-[14px] font-medium text-ink" aria-expanded={open}>
+           <Icon name="sidebar" className="h-5 w-5" />
+           Meny
+         </button>
+-        <span className="text-[15px] font-semibold">{current}</span>
++        <span className="text-[14px] font-semibold">{current}</span>
+         <span className="w-14" />
+       </header>
+ 
+-      {open && <div className="fixed inset-0 z-30 bg-black/20 backdrop-blur-[2px] md:hidden" onClick={() => setOpen(false)} />}
++      {open && <div className="fixed inset-0 z-30 bg-black/30 md:hidden" onClick={() => setOpen(false)} />}
+ 
+       <aside
+-        className={`no-print fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] backdrop-blur-2xl backdrop-saturate-150 transition-transform duration-300 ease-out md:sticky md:top-0 md:z-auto md:h-screen md:translate-x-0 ${open ? "translate-x-0 shadow-2xl" : "-translate-x-full"}`}
++        className={`no-print fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] transition-transform duration-300 ease-out md:sticky md:top-0 md:z-auto md:h-screen md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+       >
+         <div className="px-4 pb-3 pt-5">
+           <Link href="/" className="mb-4 flex items-center gap-2.5 px-1">
+-            <span className="grid h-8 w-8 place-items-center rounded-[9px] bg-gradient-to-br from-[#2b90ff] to-[#0058d1] text-white shadow-sm">
+-              <Icon name="book" className="h-[18px] w-[18px]" />
++            <span className="grid h-7 w-7 place-items-center rounded-md bg-brand text-brand-ink">
++              <Icon name="book" className="h-4 w-4" />
+             </span>
+-            <span className="text-[17px] font-semibold tracking-[-0.02em]">Kapima Bokför</span>
++            <span className="text-[15px] font-semibold tracking-[-0.02em]">Kapima Bokför</span>
+           </Link>
+           <form action={switchCompany}>
+             <label className="sr-only" htmlFor="company-switch">Företag</label>
+@@ -121,7 +121,7 @@ export function Sidebar({ company, companies, userName, readOnly = false, isAdmi
+                 if (e.target.value === "new") window.location.href = "/companies/new";
+                 else e.target.form?.requestSubmit();
+               }}
+-              className="input bg-fill py-1.5 text-[13px] font-medium"
++              className="input py-1.5 text-[13px] font-medium"
+             >
+               {companies.map((c) => (
+                 <option key={c.id} value={c.id}>{c.name}</option>
+@@ -134,7 +134,7 @@ export function Sidebar({ company, companies, userName, readOnly = false, isAdmi
+         <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
+           {NAV.map((group, i) => (
+             <div key={i}>
+-              {group.title && <p className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted/80">{group.title}</p>}
++              {group.title && <p className="mb-1 px-2.5 text-[12px] font-medium text-muted">{group.title}</p>}
+               <ul className="space-y-px">
+                 {group.items.filter(([href]) => !(readOnly && WRITE_ONLY.has(href)) && !(href === "/reports/ne" && company.companyType !== "ef") && !(href === "/tax" && company.companyType !== "ef" && company.companyType !== "hb")).map(([href, label, icon]) => {
+                   const on = active === href;
+@@ -146,9 +146,9 @@ export function Sidebar({ company, companies, userName, readOnly = false, isAdmi
+                         onClick={(e) => {
+                           if (!e.metaKey && !e.ctrlKey && href !== activeHref(path)) setPending(href);
+                         }}
+-                        className={`flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[14px] transition-colors ${on ? "bg-brand text-white" : "text-ink hover:bg-fill"}`}
++                        className={`flex items-center gap-2.5 rounded-md px-2.5 py-[6px] text-[14px] transition-colors ${on ? "bg-fill font-medium text-ink" : "text-ink/80 hover:bg-surface-2 hover:text-ink"}`}
+                       >
+-                        <Icon name={icon} className={`h-[18px] w-[18px] shrink-0 ${on ? "text-white" : "text-brand"}`} />
++                        <Icon name={icon} className={`h-[17px] w-[17px] shrink-0 ${on ? "text-ink" : "text-muted"}`} />
+                         {label}
+                       </Link>
+                     </li>
+@@ -160,17 +160,17 @@ export function Sidebar({ company, companies, userName, readOnly = false, isAdmi
+         </nav>
+ 
+         <div className="flex items-center gap-2.5 border-t border-line px-4 py-3">
+-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#a1a1a6] to-[#6e6e73] text-[13px] font-semibold text-white">
++          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line bg-surface-2 text-[13px] font-medium text-ink">
+             {userName.trim().charAt(0).toUpperCase() || "?"}
+           </span>
+           <div className="min-w-0 flex-1">
+             <p className="truncate text-[13px] font-medium">{userName}</p>
+             <div className="flex items-center gap-3">
+               <form action={logout}>
+-                <button className="text-[12px] text-brand hover:underline">Logga ut</button>
++                <button className="text-[12px] text-muted hover:text-ink hover:underline">Logga ut</button>
+               </form>
+               {isAdmin && (
+-                <Link href="/admin" className="text-[12px] text-brand hover:underline">
++                <Link href="/admin" className="text-[12px] text-muted hover:text-ink hover:underline">
+                   Admin
+                 </Link>
+               )}
+diff --git a/app/src/components/SieImporter.tsx b/app/src/components/SieImporter.tsx
+index 413dffb..e315986 100644
+--- a/app/src/components/SieImporter.tsx
++++ b/app/src/components/SieImporter.tsx
+@@ -63,7 +63,7 @@ export function SieImporter() {
+     const r = state.result;
+     return (
+       <div className="space-y-4">
+-        <div className="flex items-start gap-3 rounded-2xl bg-success-soft p-4 text-success">
++        <div className="flex items-start gap-3 rounded-xl bg-success-soft p-4 text-success">
+           <Icon name="check" className="mt-0.5 h-5 w-5" />
+           <div className="text-[15px]">
+             <p className="font-semibold">Importen är klar – räkenskapsår {r.fiscalYear}</p>
+@@ -95,8 +95,8 @@ export function SieImporter() {
+ 
+   return (
+     <div className="space-y-4">
+-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-dashed border-[var(--line-strong)] p-5">
+-        <span className="grid h-11 w-11 place-items-center rounded-full bg-brand-soft text-brand">
++      <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-dashed border-[var(--line-strong)] p-5">
++        <span className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface-2 text-muted">
+           <Icon name="upload" className="h-5 w-5" />
+         </span>
+         <div className="min-w-0 flex-1">
+diff --git a/app/src/components/ThemePicker.tsx b/app/src/components/ThemePicker.tsx
+index 5863b3b..5752cfc 100644
+--- a/app/src/components/ThemePicker.tsx
++++ b/app/src/components/ThemePicker.tsx
+@@ -13,21 +13,21 @@ const OPTIONS = [
+ /** Miniatyr av appen i ljust/mörkt läge, som macOS Utseende-inställning. */
+ function Preview({ mode }: { mode: "light" | "dark" | "system" }) {
+   const pane = (dark: boolean) => (
+-    <div className={`flex h-full flex-1 ${dark ? "bg-[#1c1c1e]" : "bg-[#f5f5f7]"}`}>
+-      <div className={`w-[28%] space-y-1 p-1.5 ${dark ? "bg-[#2c2c2e]" : "bg-white/70"}`}>
+-        <div className="h-1.5 w-3/4 rounded-full bg-[#0a84ff]" />
++    <div className={`flex h-full flex-1 ${dark ? "bg-[#141312]" : "bg-[#faf9f7]"}`}>
++      <div className={`w-[28%] space-y-1 p-1.5 ${dark ? "bg-[#1b1a18]" : "bg-white"}`}>
++        <div className={`h-1.5 w-3/4 rounded-full ${dark ? "bg-[#f2efea]" : "bg-[#1c1917]"}`} />
+         <div className={`h-1.5 w-2/3 rounded-full ${dark ? "bg-white/20" : "bg-black/10"}`} />
+         <div className={`h-1.5 w-1/2 rounded-full ${dark ? "bg-white/20" : "bg-black/10"}`} />
+       </div>
+       <div className="flex-1 space-y-1.5 p-2">
+         <div className={`h-2 w-1/2 rounded-full ${dark ? "bg-white/70" : "bg-black/70"}`} />
+-        <div className={`h-6 rounded-md ${dark ? "bg-[#2c2c2e]" : "bg-white"}`} />
+-        <div className={`h-6 rounded-md ${dark ? "bg-[#2c2c2e]" : "bg-white"}`} />
++        <div className={`h-6 rounded-md border ${dark ? "border-white/10 bg-[#1b1a18]" : "border-black/10 bg-white"}`} />
++        <div className={`h-6 rounded-md border ${dark ? "border-white/10 bg-[#1b1a18]" : "border-black/10 bg-white"}`} />
+       </div>
+     </div>
+   );
+   return (
+-    <div className="flex h-24 w-full overflow-hidden rounded-xl ring-1 ring-black/10">
++    <div className="flex h-24 w-full overflow-hidden rounded-lg ring-1 ring-line-strong">
+       {mode === "system" ? (
+         <>
+           <div className="w-1/2 overflow-hidden">{pane(false)}</div>
+@@ -64,11 +64,11 @@ export function ThemePicker({ current }: { current: string }) {
+                 await setTheme(o.key);
+               })
+             }
+-            className={`rounded-2xl p-3 text-left transition ${on ? "bg-brand-soft ring-2 ring-brand" : "bg-surface-2 hover:bg-fill"}`}
++            className={`rounded-xl p-3 text-left transition ${on ? "bg-surface-2 ring-1 ring-brand" : "ring-1 ring-line hover:bg-surface-2"}`}
+           >
+             <Preview mode={o.key} />
+-            <span className="mt-3 flex items-center gap-2 text-[15px] font-semibold">
+-              <span className={`grid h-5 w-5 place-items-center rounded-full ${on ? "bg-brand text-white" : "ring-1 ring-line"}`}>
++            <span className="mt-3 flex items-center gap-2 text-[14px] font-semibold">
++              <span className={`grid h-5 w-5 place-items-center rounded-full ${on ? "bg-brand text-brand-ink" : "ring-1 ring-line-strong"}`}>
+                 {on && <Icon name="check" className="h-3.5 w-3.5" />}
+               </span>
+               {o.label}
+diff --git a/app/src/components/VerificationEditor.tsx b/app/src/components/VerificationEditor.tsx
+index 3b52313..9d9d889 100644
+--- a/app/src/components/VerificationEditor.tsx
++++ b/app/src/components/VerificationEditor.tsx
+@@ -225,13 +225,13 @@ export function VerificationEditor({
+                     type="button"
+                     onClick={() => apply(s)}
+                     aria-pressed={on}
+-                    className={`flex w-full items-start gap-3 rounded-xl p-3 text-left transition ${on ? "bg-brand-soft ring-2 ring-brand" : "bg-surface-2 hover:bg-fill"}`}
++                    className={`flex w-full items-start gap-3 rounded-xl p-3 text-left transition ${on ? "bg-surface-2 ring-1 ring-brand" : "ring-1 ring-line hover:bg-surface-2"}`}
+                   >
+                     <span className="min-w-0 flex-1">
+                       <span className="block truncate text-[14px] font-semibold">{s.title}</span>
+                       <span className="block truncate text-[12px] text-muted">{s.subtitle}</span>
+                     </span>
+-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${s.source === "history" ? "bg-success-soft text-success" : "bg-fill text-muted"}`}>
++                    <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium ${s.source === "history" ? "bg-success-soft text-success" : "bg-fill text-muted"}`}>
+                       {SOURCE_LABEL[s.source]}
+                     </span>
+                   </button>
+@@ -242,7 +242,7 @@ export function VerificationEditor({
+         </section>
+       )}
+ 
+-      <div className="overflow-x-auto rounded-2xl border border-line">
++      <div className="overflow-x-auto rounded-xl border border-line">
+         <table className="table table-edit">
+           <thead>
+             <tr>
+@@ -311,7 +311,7 @@ export function VerificationEditor({
+                     type="button"
+                     aria-label={`Ta bort ${a.fileName} från verifikatet`}
+                     onClick={() => setAttachments(attachments.filter((x) => x.id !== a.id))}
+-                    className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white opacity-90 hover:opacity-100"
++                    className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-md bg-black/60 text-white opacity-90 hover:opacity-100"
+                   >
+                     <Icon name="x" className="h-3.5 w-3.5" />
+                   </button>
+diff --git a/app/src/components/ui.tsx b/app/src/components/ui.tsx
+index 6b42a91..268c6e6 100644
+--- a/app/src/components/ui.tsx
++++ b/app/src/components/ui.tsx
+@@ -1,12 +1,13 @@
+ import Link from "next/link";
++import { Children } from "react";
+ import { kr } from "@/lib/money";
+ 
+ export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) {
+   return (
+-    <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
++    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+       <div className="min-w-0">
+-        <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.025em] sm:text-[34px]">{title}</h1>
+-        {subtitle && <p className="mt-1 text-[15px] text-muted">{subtitle}</p>}
++        <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.03em] sm:text-[28px]">{title}</h1>
++        {subtitle && <p className="mt-1 text-[14px] text-muted">{subtitle}</p>}
+       </div>
+       {actions && <div className="no-print flex flex-wrap items-center gap-2">{actions}</div>}
+     </div>
+@@ -28,7 +29,7 @@ export function Card({
+     <section className={`card overflow-hidden ${className}`}>
+       {title && (
+         <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-4">
+-          <h2 className="text-[17px] font-semibold tracking-[-0.01em]">{title}</h2>
++          <h2 className="text-[15px] font-semibold tracking-[-0.01em]">{title}</h2>
+           {action}
+         </div>
+       )}
+@@ -37,13 +38,34 @@ export function Card({
+   );
+ }
+ 
++// Antal kolumner efter antal nyckeltal, så att panelen alltid fylls jämnt.
++const STAT_COLS: Record<number, string> = {
++  1: "grid-cols-1",
++  2: "sm:grid-cols-2",
++  3: "sm:grid-cols-3",
++  4: "sm:grid-cols-2 lg:grid-cols-4",
++};
++
++/** Samlar nyckeltal i en enda panel med hårfina skiljelinjer, i stället för ett kort per värde. */
++export function StatPanel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
++  const count = Children.toArray(children).length;
++  const cols = STAT_COLS[count] ?? "sm:grid-cols-2 lg:grid-cols-3";
++  return (
++    <section className={`card overflow-hidden ${className}`}>
++      {/* Varje cell ritar sin övre och vänstra linje; den yttre kanten klipps bort av negativ marginal. */}
++      <div className={`-ml-px -mt-px grid ${cols}`}>{children}</div>
++    </section>
++  );
++}
++
++/** En cell i en StatPanel. */
+ export function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "danger" | "warn" | "brand" | "success" }) {
+-  const color = tone ? { danger: "text-danger", warn: "text-warn", brand: "text-brand", success: "text-success" }[tone] : "";
++  const color = tone ? { danger: "text-danger", warn: "text-warn", brand: "text-ink", success: "text-success" }[tone] : "";
+   return (
+-    <div className="card p-5">
+-      <p className="text-[13px] font-medium text-muted">{label}</p>
+-      <p className={`mt-1.5 text-[26px] font-semibold tabular-nums leading-tight tracking-[-0.02em] ${color}`}>{value}</p>
+-      {hint && <p className="mt-1 text-[13px] text-muted">{hint}</p>}
++    <div className="border-l border-t border-line px-5 py-4">
++      <p className="text-[13px] text-muted">{label}</p>
++      <p className={`mt-1 text-[24px] font-semibold tabular-nums leading-tight tracking-[-0.03em] ${color}`}>{value}</p>
++      {hint && <p className="mt-1 text-[12.5px] text-muted">{hint}</p>}
+     </div>
+   );
+ }
+@@ -52,7 +74,7 @@ const BADGE: Record<string, [string, string]> = {
+   draft: ["Utkast", "bg-fill text-muted"],
+   sent: ["Skickad", "bg-warn-soft text-warn"],
+   accepted: ["Accepterad", "bg-success-soft text-success"],
+-  converted: ["Omvandlad", "bg-brand-soft text-brand"],
++  converted: ["Omvandlad", "bg-surface-2 text-ink ring-1 ring-line"],
+   rejected: ["Avböjd", "bg-danger-soft text-danger"],
+   expired: ["Utgången", "bg-fill text-muted"],
+   overdue: ["Förfallen", "bg-danger-soft text-danger"],
+@@ -60,7 +82,7 @@ const BADGE: Record<string, [string, string]> = {
+   credited: ["Krediterad", "bg-fill text-muted"],
+   credit: ["Kreditfaktura", "bg-fill text-muted"],
+   pending: ["Att bokföra", "bg-warn-soft text-warn"],
+-  booked: ["Ej utbetald", "bg-brand-soft text-brand"],
++  booked: ["Ej utbetald", "bg-surface-2 text-ink ring-1 ring-line"],
+   locked: ["Låst", "bg-success-soft text-success"],
+   open: ["Pågår", "bg-fill text-muted"],
+   late: ["Försenad", "bg-danger-soft text-danger"],
+@@ -70,7 +92,7 @@ const BADGE: Record<string, [string, string]> = {
+ 
+ export function Badge({ status }: { status: string }) {
+   const [label, cls] = BADGE[status] ?? [status, "bg-fill text-muted"];
+-  return <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${cls}`}>{label}</span>;
++  return <span className={`inline-block whitespace-nowrap rounded-md px-2 py-0.5 text-[12px] font-medium ${cls}`}>{label}</span>;
+ }
+ 
+ export function Flash({ error, notice }: { error?: string; notice?: string }) {
+@@ -78,7 +100,7 @@ export function Flash({ error, notice }: { error?: string; notice?: string }) {
+   return (
+     <div
+       role={error ? "alert" : "status"}
+-      className={`mb-6 flex items-start gap-3 rounded-2xl px-4 py-3 text-[14px] ${error ? "bg-danger-soft text-danger" : "bg-success-soft text-success"}`}
++      className={`mb-6 flex items-start gap-3 rounded-xl px-4 py-3 text-[14px] ${error ? "bg-danger-soft text-danger" : "bg-success-soft text-success"}`}
+     >
+       <span aria-hidden className="mt-px font-bold">{error ? "!" : "✓"}</span>
+       <span className="font-medium">{error ?? notice}</span>

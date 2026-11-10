@@ -51,7 +51,7 @@ export function OpeningBalanceEditor({
           <option key={a.number} value={a.number}>{a.name}</option>
         ))}
       </datalist>
-      <div className="overflow-x-auto rounded-2xl border border-line">
+      <div className="overflow-x-auto rounded-xl border border-line">
         <table className="table table-edit min-w-[520px]">
           <thead>
             <tr>

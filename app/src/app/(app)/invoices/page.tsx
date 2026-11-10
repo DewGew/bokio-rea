@@ -4,7 +4,7 @@ import { requireCompany } from "@/lib/auth";
 import { invoiceTotals } from "@/lib/accounting";
 import { dateStr, kr } from "@/lib/money";
 import { displayStatus } from "@/lib/invoice-status";
-import { Badge, Card, Empty, Flash, PageHeader, readParams, Segmented, Stat, type SP } from "@/components/ui";
+import { Badge, Card, Empty, Flash, PageHeader, readParams, Segmented, Stat, StatPanel, type SP } from "@/components/ui";
 
 const FILTERS = [
   ["all", "Alla"],
@@ -39,11 +39,11 @@ export default async function Invoices({ searchParams }: { searchParams: SP }) {
           </>
         } />
       <Flash error={error} notice={notice} />
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <StatPanel className="mb-6">
         <Stat label="Obetalt (inkl. moms)" value={kr(sum(["sent", "overdue"]))} />
         <Stat label="Förfallet (inkl. moms)" value={kr(sum(["overdue"]))} tone={sum(["overdue"]) ? "danger" : undefined} />
         <Stat label="Betalt i år (inkl. moms)" value={kr(rows.filter((r) => r.status === "paid" && r.paidDate && r.paidDate.getUTCFullYear() === new Date().getUTCFullYear()).reduce((a, r) => a + r.total, 0))} tone="success" />
-      </div>
+      </StatPanel>
       <Card>
         <div className="px-4 pb-3 pt-4">
           <Segmented active={filter} items={FILTERS.map(([key, label]) => ({ key, label, href: `/invoices?status=${key}` }))} />

@@ -215,7 +215,7 @@ export function BookingWizard({
       <div>
         <div className="mb-2 flex items-center gap-2">
           {step > 1 && (
-            <button type="button" onClick={() => setStep(step - 1)} className="grid h-8 w-8 place-items-center rounded-full bg-fill text-[18px] hover:bg-fill-hover" aria-label="Tillbaka">
+            <button type="button" onClick={() => setStep(step - 1)} className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--input-border)] bg-surface text-[18px] hover:bg-surface-2" aria-label="Tillbaka">
               ‹
             </button>
           )}
@@ -230,7 +230,7 @@ export function BookingWizard({
       </div>
 
       {aiState === "reading" && (
-        <p role="status" className="flex items-center gap-2 rounded-xl bg-brand-soft px-4 py-3 text-[14px] font-medium text-brand">
+        <p role="status" className="flex items-center gap-2 rounded-xl bg-surface-2 ring-1 ring-line px-4 py-3 text-[14px] font-medium text-brand">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" aria-hidden /> Läser av kvittot med AI…
         </p>
       )}
@@ -240,7 +240,7 @@ export function BookingWizard({
         <div className="space-y-4">
           <Segmented value={tab} onChange={(v) => setTab(v as typeof tab)} items={allowManual ? [["search", "Sök"], ["all", "Alla mallar"], ["manual", "Manuell"]] : [["search", "Sök"], ["all", "Alla mallar"]]} />
           {aiData && (
-            <p className="rounded-xl bg-brand-soft px-4 py-3 text-[14px] text-brand">
+            <p className="rounded-xl bg-surface-2 ring-1 ring-line px-4 py-3 text-[14px] text-brand">
               <Icon name="wand" className="mr-1 inline h-4 w-4" />
               Avläst med AI: <strong>{[aiData.supplier, aiData.description].filter(Boolean).join(" – ") || "kvitto"}</strong>
               {aiData.total ? `, ${aiData.total.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} ${aiData.currency}` : ""}. Välj vilken sorts köp det är.
@@ -262,7 +262,7 @@ export function BookingWizard({
                   <path d="m16 16 4 4" strokeLinecap="round" />
                 </svg>
               </div>
-              <p className="text-[13px] font-semibold text-muted">{query.trim() ? "Mallar som matchar" : "Dina vanligaste mallar"}</p>
+              <p className="text-[13px] font-medium text-muted">{query.trim() ? "Mallar som matchar" : "Dina vanligaste mallar"}</p>
               <TemplateList
                 items={query.trim() ? searched : popular}
                 onPick={pick}
@@ -274,7 +274,7 @@ export function BookingWizard({
             <div className="space-y-5">
               {byCategory.map(([cat, list]) => (
                 <section key={cat}>
-                  <h3 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.04em] text-muted">{cat}</h3>
+                  <h3 className="mb-2 text-[13px] font-medium text-muted">{cat}</h3>
                   <TemplateList items={list} onPick={pick} />
                 </section>
               ))}
@@ -285,7 +285,7 @@ export function BookingWizard({
 
       {step === 2 && tpl && (
         <div className="space-y-4">
-          <div className="rounded-xl bg-brand-soft p-4">
+          <div className="rounded-xl bg-surface-2 p-4 ring-1 ring-line">
             <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-semibold">{tpl.name}</p>
@@ -454,7 +454,7 @@ export function BookingWizard({
                   )}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[14px]">{a.fileName}</span>
-                <button type="button" aria-label={`Ta bort ${a.fileName}`} onClick={() => setAttachments(attachments.filter((x) => x.id !== a.id))} className="grid h-7 w-7 place-items-center rounded-full hover:bg-fill">
+                <button type="button" aria-label={`Ta bort ${a.fileName}`} onClick={() => setAttachments(attachments.filter((x) => x.id !== a.id))} className="grid h-7 w-7 place-items-center rounded-md hover:bg-fill">
                   <Icon name="x" className="h-4 w-4" />
                 </button>
               </li>

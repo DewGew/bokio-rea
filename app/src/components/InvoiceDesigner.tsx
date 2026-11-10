@@ -29,7 +29,7 @@ export type DesignValues = {
 function TemplateThumb({ t, color }: { t: InvoiceTemplate; color: string }) {
   const line = (w: string, c = "bg-black/10") => <div className={`h-1 rounded-full ${c}`} style={{ width: w }} />;
   return (
-    <div className="relative aspect-[1/1.3] w-full overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-black/10">
+    <div className="relative aspect-[1/1.3] w-full overflow-hidden rounded-lg bg-white ring-1 ring-black/10">
       {t === "modern" && <div className="h-[22%] w-full" style={{ background: color }} />}
       {t === "elegant" && <div className="absolute inset-y-0 left-0 w-1.5" style={{ background: color }} />}
       <div className="space-y-1.5 p-2.5">
@@ -62,9 +62,9 @@ function TemplateThumb({ t, color }: { t: InvoiceTemplate; color: string }) {
 function Toggle({ name, checked, onChange, label }: { name: string; checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <label className="flex cursor-pointer items-center justify-between gap-4">
-      <span className="text-[15px]">{label}</span>
+      <span className="text-[14px]">{label}</span>
       <input type="checkbox" name={name} checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
-      <span className="relative h-[31px] w-[51px] shrink-0 rounded-full bg-fill transition peer-checked:bg-[#34c759] peer-focus-visible:ring-4 peer-focus-visible:ring-brand/30 after:absolute after:left-[2px] after:top-[2px] after:h-[27px] after:w-[27px] after:rounded-full after:bg-white after:shadow-md after:transition-transform peer-checked:after:translate-x-5" />
+      <span className="relative h-5 w-9 shrink-0 rounded-full bg-line-strong transition peer-checked:bg-brand peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4 peer-checked:after:bg-brand-ink" />
     </label>
   );
 }
@@ -72,8 +72,8 @@ function Toggle({ name, checked, onChange, label }: { name: string; checked: boo
 function Section({ title, icon, children, hint }: { title: string; icon?: Parameters<typeof Icon>[0]["name"]; children: React.ReactNode; hint?: string }) {
   return (
     <section className="card p-5">
-      <h2 className="flex items-center gap-2 text-[17px] font-semibold tracking-[-0.01em]">
-        {icon && <Icon name={icon} className="h-5 w-5 text-brand" />}
+      <h2 className="flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em]">
+        {icon && <Icon name={icon} className="h-[18px] w-[18px] text-muted" />}
         {title}
       </h2>
       {hint && <p className="mt-0.5 text-[13px] text-muted">{hint}</p>}
@@ -194,7 +194,7 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
                   role="radio"
                   aria-checked={on}
                   onClick={() => set("template", t.key)}
-                  className={`rounded-2xl p-2 text-left transition ${on ? "bg-brand-soft ring-2 ring-brand" : "bg-surface-2 hover:bg-fill"}`}
+                  className={`rounded-xl p-2 text-left transition ${on ? "bg-surface-2 ring-1 ring-brand" : "ring-1 ring-line hover:bg-surface-2"}`}
                 >
                   <TemplateThumb t={t.key} color={v.color} />
                   <span className="mt-2 block text-[14px] font-semibold">{t.label}</span>
@@ -222,7 +222,7 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
                 style={{ background: c.hex }}
               />
             ))}
-            <label className="relative ml-1 flex items-center gap-2 rounded-full bg-fill py-1 pl-1 pr-3 text-[13px]" title="Egen färg">
+            <label className="relative ml-1 flex items-center gap-2 rounded-lg border border-line bg-surface-2 py-1 pl-1 pr-3 text-[13px]" title="Egen färg">
               <input
                 type="color"
                 value={v.color}
@@ -230,7 +230,7 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
                   set("color", e.target.value);
                   setHexDraft(e.target.value);
                 }}
-                className="h-7 w-7 cursor-pointer rounded-full border-0 bg-transparent p-0"
+                className="h-7 w-7 cursor-pointer rounded-md border-0 bg-transparent p-0"
                 aria-label="Välj egen färg"
               />
               <input
@@ -348,7 +348,7 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
           </div>
         </Section>
 
-        <div className="no-print sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-full bg-[var(--sidebar)] p-2 pl-5 shadow-lg ring-1 ring-line backdrop-blur-xl">
+        <div className="no-print sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-xl bg-surface p-2 pl-5 ring-1 ring-line-strong">
           <span role="status" className={`mr-auto text-[14px] font-medium ${state?.error ? "text-danger" : "text-success"}`}>
             {state?.error ?? state?.ok ?? ""}
           </span>
@@ -363,7 +363,7 @@ export function InvoiceDesigner({ initial, hasLogo: initialLogo }: { initial: De
             <a href={src} target="_blank" className="text-[14px] text-brand">Öppna PDF</a>
           </div>
           <div className="bg-surface-2 p-4">
-            <div className="mx-auto max-w-[520px] overflow-hidden rounded-md shadow-xl ring-1 ring-black/5">
+            <div className="mx-auto max-w-[520px] overflow-hidden rounded-md ring-1 ring-line-strong">
               <PdfPreview src={src} maxPages={1} label="Förhandsvisning av fakturan" />
             </div>
           </div>

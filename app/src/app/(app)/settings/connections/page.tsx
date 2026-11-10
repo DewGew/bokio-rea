@@ -26,7 +26,7 @@ export default async function Connections({ searchParams }: { searchParams: SP }
       <PageHeader title="Kopplingar" subtitle={`Ge en AI-assistent (till exempel Claude eller ChatGPT) åtkomst till ${company.name} och fråga om bokföringen med vanliga ord.`} />
       <Flash error={error} notice={notice} />
       {!feature.available && (
-        <p className="mb-6 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+        <p className="mb-6 rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
           {featureMessage(feature, "mcp")} Befintliga kopplingar fungerar inte förrän funktionen är tillgänglig igen.
         </p>
       )}

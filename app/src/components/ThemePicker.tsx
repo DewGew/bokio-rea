@@ -13,21 +13,21 @@ const OPTIONS = [
 /** Miniatyr av appen i ljust/mörkt läge, som macOS Utseende-inställning. */
 function Preview({ mode }: { mode: "light" | "dark" | "system" }) {
   const pane = (dark: boolean) => (
-    <div className={`flex h-full flex-1 ${dark ? "bg-[#1c1c1e]" : "bg-[#f5f5f7]"}`}>
-      <div className={`w-[28%] space-y-1 p-1.5 ${dark ? "bg-[#2c2c2e]" : "bg-white/70"}`}>
-        <div className="h-1.5 w-3/4 rounded-full bg-[#0a84ff]" />
+    <div className={`flex h-full flex-1 ${dark ? "bg-[#141312]" : "bg-[#faf9f7]"}`}>
+      <div className={`w-[28%] space-y-1 p-1.5 ${dark ? "bg-[#1b1a18]" : "bg-white"}`}>
+        <div className={`h-1.5 w-3/4 rounded-full ${dark ? "bg-[#f2efea]" : "bg-[#1c1917]"}`} />
         <div className={`h-1.5 w-2/3 rounded-full ${dark ? "bg-white/20" : "bg-black/10"}`} />
         <div className={`h-1.5 w-1/2 rounded-full ${dark ? "bg-white/20" : "bg-black/10"}`} />
       </div>
       <div className="flex-1 space-y-1.5 p-2">
         <div className={`h-2 w-1/2 rounded-full ${dark ? "bg-white/70" : "bg-black/70"}`} />
-        <div className={`h-6 rounded-md ${dark ? "bg-[#2c2c2e]" : "bg-white"}`} />
-        <div className={`h-6 rounded-md ${dark ? "bg-[#2c2c2e]" : "bg-white"}`} />
+        <div className={`h-6 rounded-md border ${dark ? "border-white/10 bg-[#1b1a18]" : "border-black/10 bg-white"}`} />
+        <div className={`h-6 rounded-md border ${dark ? "border-white/10 bg-[#1b1a18]" : "border-black/10 bg-white"}`} />
       </div>
     </div>
   );
   return (
-    <div className="flex h-24 w-full overflow-hidden rounded-xl ring-1 ring-black/10">
+    <div className="flex h-24 w-full overflow-hidden rounded-lg ring-1 ring-line-strong">
       {mode === "system" ? (
         <>
           <div className="w-1/2 overflow-hidden">{pane(false)}</div>
@@ -64,11 +64,11 @@ export function ThemePicker({ current }: { current: string }) {
                 await setTheme(o.key);
               })
             }
-            className={`rounded-2xl p-3 text-left transition ${on ? "bg-brand-soft ring-2 ring-brand" : "bg-surface-2 hover:bg-fill"}`}
+            className={`rounded-xl p-3 text-left transition ${on ? "bg-surface-2 ring-1 ring-brand" : "ring-1 ring-line hover:bg-surface-2"}`}
           >
             <Preview mode={o.key} />
-            <span className="mt-3 flex items-center gap-2 text-[15px] font-semibold">
-              <span className={`grid h-5 w-5 place-items-center rounded-full ${on ? "bg-brand text-white" : "ring-1 ring-line"}`}>
+            <span className="mt-3 flex items-center gap-2 text-[14px] font-semibold">
+              <span className={`grid h-5 w-5 place-items-center rounded-full ${on ? "bg-brand text-brand-ink" : "ring-1 ring-line-strong"}`}>
                 {on && <Icon name="check" className="h-3.5 w-3.5" />}
               </span>
               {o.label}
