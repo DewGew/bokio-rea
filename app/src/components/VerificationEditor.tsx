@@ -225,13 +225,13 @@ export function VerificationEditor({
                     type="button"
                     onClick={() => apply(s)}
                     aria-pressed={on}
-                    className={`flex w-full items-start gap-3 rounded-xl p-3 text-left transition ${on ? "bg-brand-soft ring-2 ring-brand" : "bg-surface-2 hover:bg-fill"}`}
+                    className={`flex w-full items-start gap-3 rounded-xl p-3 text-left transition ${on ? "bg-surface-2 ring-1 ring-brand" : "ring-1 ring-line hover:bg-surface-2"}`}
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[14px] font-semibold">{s.title}</span>
                       <span className="block truncate text-[12px] text-muted">{s.subtitle}</span>
                     </span>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${s.source === "history" ? "bg-success-soft text-success" : "bg-fill text-muted"}`}>
+                    <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium ${s.source === "history" ? "bg-success-soft text-success" : "bg-fill text-muted"}`}>
                       {SOURCE_LABEL[s.source]}
                     </span>
                   </button>
@@ -242,7 +242,7 @@ export function VerificationEditor({
         </section>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-line">
+      <div className="overflow-x-auto rounded-xl border border-line">
         <table className="table table-edit">
           <thead>
             <tr>
@@ -311,7 +311,7 @@ export function VerificationEditor({
                     type="button"
                     aria-label={`Ta bort ${a.fileName} från verifikatet`}
                     onClick={() => setAttachments(attachments.filter((x) => x.id !== a.id))}
-                    className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white opacity-90 hover:opacity-100"
+                    className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-md bg-black/60 text-white opacity-90 hover:opacity-100"
                   >
                     <Icon name="x" className="h-3.5 w-3.5" />
                   </button>

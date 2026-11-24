@@ -29,7 +29,7 @@ export default async function Closing() {
                       <p className="text-[15px] font-semibold">{fyLabel(y)}</p>
                       <p className="text-[13px] text-muted">{fyRange(y)}</p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${tone}`}>{status}</span>
+                    <span className={`rounded-md px-2 py-0.5 text-[12px] font-medium ${tone}`}>{status}</span>
                     <span className="text-muted">›</span>
                   </Link>
                 </li>

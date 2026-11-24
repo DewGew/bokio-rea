@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/admin";
 import { FEATURES, FEATURE_KEYS, globalSwitches } from "@/lib/features";
 import { AdminTabs } from "@/components/AdminTabs";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
+import { Card, Flash, PageHeader, readParams, Stat, StatPanel, type SP } from "@/components/ui";
 import { setFeatureSwitch } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -32,10 +32,10 @@ export default async function AdminFeatures({ searchParams }: { searchParams: SP
       <AdminTabs active="/admin/features" />
       <Flash notice={notice} error={error} />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2">
+      <StatPanel className="mb-6">
         <Stat label="Företag med Pro" value={String(pro)} tone="brand" />
         <Stat label="Basföretag" value={String(free)} />
-      </div>
+      </StatPanel>
 
       <Card title="Funktioner">
         <ul className="divide-y divide-line">

@@ -35,7 +35,7 @@ export default async function Authorize({ searchParams }: { searchParams: SP }) 
   return (
     <>
       <div className="mb-5 flex justify-center">
-        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft text-brand">
+        <span className="grid h-12 w-12 place-items-center rounded-lg border border-line bg-surface-2 text-muted">
           <Icon name="plug" className="h-6 w-6" />
         </span>
       </div>
@@ -68,7 +68,7 @@ export default async function Authorize({ searchParams }: { searchParams: SP }) 
             ).map(([value, title, can, cannot]) => (
               <label
                 key={value}
-                className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-2 p-3 ring-1 ring-transparent transition has-[:checked]:bg-brand-soft has-[:checked]:ring-brand"
+                className="flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 ring-line transition has-[:checked]:bg-surface-2 has-[:checked]:ring-brand"
               >
                 <input type="radio" name="level" value={value} defaultChecked={value === "read"} className="mt-1 h-4 w-4 accent-[var(--brand)]" />
                 <span className="min-w-0">

@@ -26,7 +26,7 @@ export default async function MfaPage({ searchParams }: { searchParams: SP }) {
       <PageHeader title="Tvåfaktorsinloggning" subtitle="Skydda kontot med en kod från en autentiseringsapp, till exempel Google Authenticator, Microsoft Authenticator eller 1Password." />
       <Flash notice={notice} error={error} />
       {admin && !enabled && (
-        <p className="mb-6 max-w-3xl rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+        <p className="mb-6 max-w-3xl rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
           <strong>Tvåfaktorsinloggning krävs för administratörer.</strong> Aktivera den nedan för att komma åt administrationen.
           {get("required") ? " Du skickades hit eftersom du försökte öppna administrationen." : ""}
         </p>

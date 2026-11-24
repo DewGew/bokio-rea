@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
 import { dateStr, kr } from "@/lib/money";
-import { Badge, Card, Empty, Flash, PageHeader, readParams, Segmented, Stat, type SP } from "@/components/ui";
+import { Badge, Card, Empty, Flash, PageHeader, readParams, Segmented, Stat, StatPanel, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { bookSupplierInvoiceAction, paySupplierInvoiceAction } from "./actions";
 
@@ -36,11 +36,11 @@ export default async function SupplierInvoices({ searchParams }: { searchParams:
   return <>
     <PageHeader title="Leverantörsfakturor" subtitle="Registrera inköp, bokför leverantörsskulder och följ upp betalningar" actions={<Link href="/supplier-invoices/new" className="btn-primary">Ny leverantörsfaktura</Link>} />
     <Flash error={error} notice={notice} />
-    <div className="mb-6 grid gap-3 sm:grid-cols-3">
+    <StatPanel className="mb-6">
       <Stat label={company.accountingMethod === "cash" ? "Obetalda" : "Att bokföra"} value={kr(pending.reduce((s, r) => s + r.amount, 0))} hint={`${pending.length} st`} />
       <Stat label="Obetalda" value={kr(booked.reduce((s, r) => s + r.amount, 0))} hint={`${booked.length} st · ${overdue.length} förfallna`} />
       <Stat label="Betalda" value={kr(paid.reduce((s, r) => s + r.amount, 0))} hint={`${paid.length} st`} />
-    </div>
+    </StatPanel>
     <Card>
       <div className="px-4 pb-3 pt-4">
         <Segmented active={filter} items={FILTERS.map(([key, label]) => ({ key, label, href: `/supplier-invoices?status=${key}` }))} />

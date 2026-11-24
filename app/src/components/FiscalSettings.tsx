@@ -37,7 +37,7 @@ function Choice<T extends string>({
         return (
           <label
             key={o.value}
-            className={`flex cursor-pointer flex-col rounded-xl p-3 transition ${on ? "bg-brand-soft ring-2 ring-brand" : "bg-surface-2 hover:bg-fill"} ${o.disabled ? "pointer-events-none opacity-40" : ""}`}
+            className={`flex cursor-pointer flex-col rounded-xl p-3 transition ${on ? "bg-surface-2 ring-1 ring-brand" : "ring-1 ring-line hover:bg-surface-2"} ${o.disabled ? "pointer-events-none opacity-40" : ""}`}
           >
             <input type="radio" name={name} value={o.value} checked={on} disabled={o.disabled} onChange={() => onChange(o.value)} className="sr-only" />
             <span className="text-[15px] font-semibold">{o.label}</span>
@@ -174,9 +174,9 @@ export function FiscalYearsTable({ years }: { years: FyRow[] }) {
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-semibold">
                     {y.label}
-                    {y.current && <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-[12px] font-semibold text-brand">Pågår</span>}
-                    {y.closed && <span className="ml-2 rounded-full bg-success-soft px-2 py-0.5 text-[12px] font-semibold text-success">Stängt</span>}
-                    {y.months !== 12 && <span className="ml-2 rounded-full bg-warn-soft px-2 py-0.5 text-[12px] font-semibold text-warn">{y.months} månader</span>}
+                    {y.current && <span className="ml-2 rounded-md bg-surface-2 px-2 py-0.5 text-[12px] font-medium text-ink ring-1 ring-line">Pågår</span>}
+                    {y.closed && <span className="ml-2 rounded-md bg-success-soft px-2 py-0.5 text-[12px] font-medium text-success">Stängt</span>}
+                    {y.months !== 12 && <span className="ml-2 rounded-md bg-warn-soft px-2 py-0.5 text-[12px] font-medium text-warn">{y.months} månader</span>}
                   </p>
                   <p className="text-[13px] text-muted">
                     {y.start} – {y.end} · {y.verifications} verifikat

@@ -16,7 +16,7 @@ const STATUS: Record<string, [string, string]> = {
   feature_off: ["Funktionen avstängd", "bg-warn-soft text-warn"],
   limit: ["Över gränsen", "bg-danger-soft text-danger"],
   error: ["Fel", "bg-danger-soft text-danger"],
-  forwarding_confirmation: ["Bekräfta vidarebefordran", "bg-brand-soft text-brand"],
+  forwarding_confirmation: ["Bekräfta vidarebefordran", "bg-surface-2 text-ink ring-1 ring-line"],
 };
 
 const when = (d: Date) => d.toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Stockholm" });
@@ -69,7 +69,7 @@ export default async function InboxSettings({ searchParams }: { searchParams: SP
         <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
           <div className="min-w-0 space-y-6">
             {confirmation && (
-              <div className="rounded-2xl bg-brand-soft p-4 text-[14px] text-brand">
+              <div className="rounded-xl bg-surface-2 p-4 text-[14px] text-ink ring-1 ring-line">
                 <p className="font-semibold">Gmail vill att du bekräftar vidarebefordran</p>
                 <p className="mt-1 whitespace-pre-line break-all">{confirmation.detail}</p>
                 <p className="mt-1 text-[13px]">Öppna länken eller ange koden i Gmail under Inställningar → Vidarebefordran.</p>
@@ -119,7 +119,7 @@ export default async function InboxSettings({ searchParams }: { searchParams: SP
                               {m.fileCount > 0 && ` · ${m.fileCount} ${m.fileCount === 1 ? "underlag" : "underlag"}`}
                             </p>
                           </div>
-                          <span className={`w-fit shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${cls}`}>{label}</span>
+                          <span className={`w-fit shrink-0 whitespace-nowrap rounded-md px-2 py-0.5 text-[12px] font-medium ${cls}`}>{label}</span>
                         </div>
                         {m.detail && m.status !== "forwarding_confirmation" && <p className="mt-1 break-words text-[12px] text-muted">{m.detail}</p>}
                       </li>

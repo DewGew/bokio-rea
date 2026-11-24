@@ -1,96 +1,51 @@
 @import "tailwindcss";
 
-/* Designsystem inspirerat av Apples plattformar: systemtypsnitt, mjuka ytor, få linjer och tydlig hierarki. */
+/*
+ * Designsystem: varm neutral palett, Geist, svarta huvudknappar och hårfina linjer.
+ * Inga skuggor, inga gradienter och ingen blå accentfärg; hierarkin skapas av yta, linje och typografi.
+ *
+ * Ljust och mörkt tema delar samma tokens via light-dark(): första värdet är ljust, andra mörkt.
+ * color-scheme styr vilket som gäller: användarens val (data-theme) eller operativsystemet (inget data-theme).
+ */
 :root {
-  color-scheme: light;
-  /* Ljust tema: ljus blågrå bakgrund med ett svagt blått sken upptill; vita kort avgränsas med kant och mjuk skugga. */
-  --bg: #f8fafc;
-  --bg-glow: radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, 0.075), transparent 55%);
-  --surface: #ffffff;
-  --surface-2: #f3f6fa; /* fält, segmentkontroller */
-  --fill: rgba(100, 116, 139, 0.12); /* sekundära knappar */
-  --fill-hover: rgba(100, 116, 139, 0.2);
-  --ink: #0f172a;
-  --muted: #5b6577; /* 5,8:1 mot vitt, 5,5:1 mot bakgrunden */
-  --line: #e9edf3;
-  --line-strong: #cbd3df; /* streckade ytor */
-  --input-border: #d5dce6;
-  --card-border: #e9edf3;
-  --brand: #0071e3;
-  --brand-ink: #ffffff;
-  --brand-soft: rgba(0, 113, 227, 0.1);
-  --success: #248a3d;
-  --success-soft: rgba(52, 199, 89, 0.14);
-  --danger: #d70015;
-  --danger-soft: rgba(255, 59, 48, 0.12);
-  --warn: #b25000;
-  --warn-soft: rgba(255, 149, 0, 0.14);
-  --chart-2: #ff9f0a;
-  --sidebar: #ffffff;
-  --sidebar-border: #e9edf3;
-  --shadow: 0 2px 5px rgba(15, 23, 42, 0.025), 0 12px 28px rgba(15, 23, 42, 0.035);
-  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.14), 0 1px 1px rgba(0, 0, 0, 0.06);
+  color-scheme: light dark;
+
+  --bg: light-dark(#faf9f7, #141312);
+  --surface: light-dark(#ffffff, #1b1a18);
+  --surface-2: light-dark(#f5f3ef, #232220); /* fält, segmentkontroller, markerade ytor */
+  --fill: light-dark(#eeebe5, #2b2a27); /* hover och dämpade ytor */
+  --fill-hover: light-dark(#e5e1da, #353330);
+  --ink: light-dark(#1c1917, #f2efea);
+  --muted: light-dark(#6f6a63, #a29d95); /* 5,1:1 mot bakgrunden i ljust, 6,8:1 i mörkt */
+  --line: light-dark(#e8e4de, #2d2b28); /* hårfina avgränsningar */
+  --line-strong: light-dark(#d3cdc4, #45423e); /* streckade ytor, aktiva kontroller */
+  --input-border: light-dark(#d9d4cb, #3a3834);
+
+  /* Huvudfärgen är själva bläcket: svart i ljust läge, nästan vitt i mörkt. */
+  --brand: var(--ink);
+  --brand-ink: light-dark(#faf9f7, #141312);
+  --brand-soft: var(--surface-2);
+
+  /* Statusfärger är dämpade och används bara när de betyder något. */
+  --success: light-dark(#2f7a45, #6cc788);
+  --success-soft: light-dark(rgba(47, 122, 69, 0.1), rgba(108, 199, 136, 0.14));
+  --danger: light-dark(#b42318, #f2827a);
+  --danger-soft: light-dark(rgba(180, 35, 24, 0.08), rgba(242, 130, 122, 0.14));
+  --warn: light-dark(#a15c07, #e3a850);
+  --warn-soft: light-dark(rgba(161, 92, 7, 0.1), rgba(227, 168, 80, 0.14));
+
+  --chart-2: light-dark(#b9b1a5, #6b665f);
+
+  --sidebar: var(--bg);
+  --sidebar-border: var(--line);
 }
 
-/* Mörkt tema: valt av användaren (data-theme="dark") eller följer systemet (ingen data-theme). */
+/* Användarens val av tema slår operativsystemets. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #000000;
-  --surface: #1c1c1e;
-  --surface-2: #2c2c2e;
-  --fill: rgba(120, 120, 128, 0.24);
-  --fill-hover: rgba(120, 120, 128, 0.34);
-  --ink: #f5f5f7;
-  --muted: #98989d;
-  --line: rgba(255, 255, 255, 0.1);
-  --line-strong: rgba(255, 255, 255, 0.22);
-  --input-border: rgba(255, 255, 255, 0.12);
-  --card-border: rgba(255, 255, 255, 0.07);
-  --brand: #0a84ff;
-  --brand-soft: rgba(10, 132, 255, 0.18);
-  --success: #30d158;
-  --success-soft: rgba(48, 209, 88, 0.18);
-  --danger: #ff453a;
-  --danger-soft: rgba(255, 69, 58, 0.18);
-  --warn: #ff9f0a;
-  --warn-soft: rgba(255, 159, 10, 0.18);
-  --chart-2: #ffd60a;
-  --sidebar: rgba(28, 28, 30, 0.72);
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --bg-glow: radial-gradient(ellipse at 50% 0%, rgba(10, 132, 255, 0.09), transparent 55%);
-  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.5);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg: #000000;
-    --surface: #1c1c1e;
-    --surface-2: #2c2c2e;
-    --fill: rgba(120, 120, 128, 0.24);
-    --fill-hover: rgba(120, 120, 128, 0.34);
-    --ink: #f5f5f7;
-    --muted: #98989d;
-    --line: rgba(255, 255, 255, 0.1);
-    --line-strong: rgba(255, 255, 255, 0.22);
-    --input-border: rgba(255, 255, 255, 0.12);
-    --card-border: rgba(255, 255, 255, 0.07);
-    --brand: #0a84ff;
-    --brand-soft: rgba(10, 132, 255, 0.18);
-    --success: #30d158;
-    --success-soft: rgba(48, 209, 88, 0.18);
-    --danger: #ff453a;
-    --danger-soft: rgba(255, 69, 58, 0.18);
-    --warn: #ff9f0a;
-    --warn-soft: rgba(255, 159, 10, 0.18);
-    --chart-2: #ffd60a;
-    --sidebar: rgba(28, 28, 30, 0.72);
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --bg-glow: radial-gradient(ellipse at 50% 0%, rgba(10, 132, 255, 0.09), transparent 55%);
-    --shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
-    --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.5);
-  }
 }
 
 @theme inline {
@@ -102,6 +57,7 @@
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-brand: var(--brand);
   --color-brand-ink: var(--brand-ink);
   --color-brand-soft: var(--brand-soft);
@@ -111,26 +67,32 @@
   --color-danger-soft: var(--danger-soft);
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-inter), "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 body {
-  background: var(--bg-glow), var(--bg);
-  background-attachment: fixed;
+  background: var(--bg);
   min-height: 100vh;
   color: var(--ink);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.006em;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Smala, diskreta rullningslister som i macOS */
+/* Smala, diskreta rullningslister */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(128, 128, 128, 0.35) transparent;
+  scrollbar-color: var(--line-strong) transparent;
 }
 
 ::selection {
-  background: var(--brand-soft);
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
+}
+
+/* Tydlig tangentbordsmarkering för allt som inte har en egen (fält har en ring). */
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
 @layer components {
@@ -140,24 +102,22 @@ body {
     white-space: nowrap;
   }
   .card {
-    @apply rounded-2xl bg-surface;
-    border: 1px solid var(--card-border);
-    box-shadow: var(--shadow);
+    @apply rounded-xl border border-line bg-surface;
   }
   .input {
-    @apply w-full rounded-[10px] border border-[var(--input-border)] bg-surface-2 px-3 py-2 text-[15px] text-ink outline-none transition placeholder:text-muted/70 focus:border-brand focus:bg-surface focus:ring-4 focus:ring-brand/20;
+    @apply w-full rounded-lg border border-[var(--input-border)] bg-surface px-3 py-2 text-[14px] text-ink outline-none transition placeholder:text-muted/70 focus:border-ink focus:ring-[3px] focus:ring-ink/10;
   }
   .label {
     @apply mb-1.5 block text-[13px] font-medium text-muted;
   }
   .btn-primary {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-brand px-4 py-2 text-[15px] font-medium text-brand-ink transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-brand bg-brand px-3.5 py-2 text-[14px] font-medium text-brand-ink transition hover:opacity-80 disabled:opacity-40;
   }
   .btn-secondary {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-fill px-4 py-2 text-[15px] font-medium text-ink transition hover:bg-fill-hover active:scale-[0.98] disabled:opacity-50;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[var(--input-border)] bg-surface px-3.5 py-2 text-[14px] font-medium text-ink transition hover:bg-surface-2 disabled:opacity-40;
   }
   .btn-danger {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-fill px-4 py-2 text-[15px] font-medium text-danger transition hover:bg-danger-soft active:scale-[0.98] disabled:opacity-50;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[var(--input-border)] bg-surface px-3.5 py-2 text-[14px] font-medium text-danger transition hover:bg-danger-soft disabled:opacity-40;
   }
   .table {
     @apply w-full text-[14px];
@@ -185,25 +145,41 @@ body {
   .table-edit tbody tr:hover {
     background: transparent;
   }
-  /* Segmenterad kontroll (iOS/macOS) */
+  /* Segmenterad kontroll för filter och flikar */
   .segmented {
-    @apply inline-flex max-w-full gap-0.5 overflow-x-auto rounded-[10px] bg-fill p-0.5;
+    @apply inline-flex max-w-full gap-0.5 overflow-x-auto rounded-lg border border-line bg-surface-2 p-0.5;
   }
   .segmented > * {
-    @apply whitespace-nowrap rounded-[8px] px-3.5 py-1.5 text-[13px] font-medium text-ink/80 transition;
+    @apply whitespace-nowrap rounded-md px-3 py-1 text-[13px] font-medium text-muted transition hover:text-ink;
   }
   .segmented > [aria-current="page"] {
-    @apply bg-surface text-ink;
-    box-shadow: var(--shadow-raised);
+    @apply bg-surface text-ink ring-1 ring-line-strong;
   }
   select.input {
     @apply appearance-none bg-no-repeat pr-9;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%238e8e93' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 1.75 9 4.5M3 7.5l3 2.75L9 7.5'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%2386807a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 1.75 9 4.5M3 7.5l3 2.75L9 7.5'/%3E%3C/svg%3E");
     background-position: right 0.75rem center;
+  }
+  /* Länkar och textknappar har textens färg; en hårfin understrykning visar att de går att klicka på. */
+  a.text-brand,
+  button.text-brand {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+    transition: text-decoration-color 0.15s;
+  }
+  a.text-brand:hover,
+  button.text-brand:hover {
+    text-decoration-color: currentColor;
   }
 }
 
 @media print {
+  /* Utskrifter är alltid ljusa, även om skärmen är i mörkt läge. */
+  :root {
+    color-scheme: light !important;
+  }
   .no-print {
     display: none !important;
   }

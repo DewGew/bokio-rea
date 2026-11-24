@@ -118,7 +118,7 @@ export function AccountPicker({ accounts, value, onChange, label = "Konto" }: { 
           id={listId}
           role="listbox"
           style={{ top: pos.top, left: pos.left, transform: pos.up ? "translateY(-100%)" : undefined }}
-          className="fixed z-50 max-h-72 w-80 overflow-y-auto rounded-xl bg-surface p-1 shadow-2xl ring-1 ring-line"
+          className="fixed z-50 max-h-72 w-80 overflow-y-auto rounded-xl bg-surface p-1 shadow-lg ring-1 ring-line-strong"
         >
           {matches.map((a, i) => (
             <li
@@ -130,10 +130,10 @@ export function AccountPicker({ accounts, value, onChange, label = "Konto" }: { 
                 pick(a);
               }}
               onMouseEnter={() => setActive(i)}
-              className={`flex cursor-pointer gap-3 rounded-lg px-2.5 py-1.5 text-[14px] ${i === active ? "bg-brand text-white" : ""}`}
+              className={`flex cursor-pointer gap-3 rounded-lg px-2.5 py-1.5 text-[14px] ${i === active ? "bg-fill" : ""}`}
             >
               <span className="w-10 shrink-0 font-semibold tabular-nums">{a.number}</span>
-              <span className={`truncate ${i === active ? "text-white/90" : "text-muted"}`}>{a.name}</span>
+              <span className="truncate text-muted">{a.name}</span>
             </li>
           ))}
         </ul>

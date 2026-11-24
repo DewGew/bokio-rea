@@ -123,7 +123,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         <Card className="overflow-hidden">
           <div className="bg-surface-2 p-3 sm:p-6">
-            <div className="mx-auto max-w-[640px] overflow-hidden rounded-md shadow-xl ring-1 ring-black/5">
+            <div className="mx-auto max-w-[640px] overflow-hidden rounded-md ring-1 ring-line-strong">
               <PdfPreview src={`/api/invoices/${invoice.id}/pdf?v=${invoice.status}`} label={`${label} ${invoice.number}`} />
             </div>
             <p className="mt-3 text-center text-[13px] text-muted">

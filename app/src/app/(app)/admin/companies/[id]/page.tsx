@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { dateTime, requireAdmin } from "@/lib/admin";
 import { fyLabel } from "@/lib/fiscal";
 import { dateStr } from "@/lib/money";
-import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
+import { Card, Flash, PageHeader, readParams, Stat, StatPanel, type SP } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { companyBookkeeping } from "@/lib/company-delete";
 import { FEATURES, FEATURE_KEYS, planLabel } from "@/lib/features";
@@ -53,17 +53,17 @@ export default async function AdminCompany({ params, searchParams }: { params: P
       </div>
       <Flash notice={notice} error={error} />
       {company.lockedAt && (
-        <p className="mb-4 rounded-2xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
+        <p className="mb-4 rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
           <strong>Låst {dateTime(company.lockedAt)}.</strong> {company.lockedReason}
         </p>
       )}
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-4">
+      <StatPanel className="mb-6">
         <Stat label="Verifikationer" value={String(totalVer)} />
         <Stat label="Fakturor (utfärdade)" value={`${invoices} (${issued})`} />
         <Stat label="Kunder" value={String(customers)} />
         <Stat label="Uppladdade filer" value={`${uploads._count._all} · ${mb(uploads._sum.size ?? 0)}`} />
-      </div>
+      </StatPanel>
 
       <div className="space-y-6">
         <Card title="Användare">
@@ -97,7 +97,7 @@ export default async function AdminCompany({ params, searchParams }: { params: P
         <Card title="Räkenskapsår">
           <table className="w-full text-[14px]">
             <thead>
-              <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
+              <tr className="text-left text-[12px] text-muted">
                 <th className="px-5 py-2">År</th>
                 <th className="px-3 py-2">Verifikationer</th>
                 <th className="px-3 py-2">Senaste bokföring</th>

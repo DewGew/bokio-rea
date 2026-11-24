@@ -6,7 +6,7 @@ import { invoiceTotals } from "@/lib/accounting";
 import { dateStr, kr } from "@/lib/money";
 import { displayStatus } from "@/lib/invoice-status";
 import { countryName } from "@/lib/invoice-doc";
-import { Badge, Card, Empty, Money, PageHeader, Stat } from "@/components/ui";
+import { Badge, Card, Empty, Money, PageHeader, Stat, StatPanel } from "@/components/ui";
 
 type Link_ = { key: string; date: Date; title: string; detail: string; href: string; amount: number };
 
@@ -78,12 +78,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         }
       />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <StatPanel className="mb-6">
         <Stat label="Fakturor" value={String(issued.filter((i) => i.kind !== "credit").length)} hint={invoices.length > issued.length ? `+ ${invoices.length - issued.length} utkast` : undefined} />
         <Stat label="Fakturerat (inkl. moms)" value={kr(sum(issued.filter((i) => i.status !== "credited" && i.kind !== "credit")))} />
         <Stat label="Obetalt" value={kr(sum(unpaid))} tone={unpaid.length ? "warn" : undefined} hint={unpaid.length ? `${unpaid.length} ${unpaid.length === 1 ? "faktura" : "fakturor"}` : "Inget obetalt"} />
         <Stat label="Förfallet" value={kr(sum(overdue))} tone={overdue.length ? "danger" : undefined} />
-      </div>
+      </StatPanel>
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="space-y-6">

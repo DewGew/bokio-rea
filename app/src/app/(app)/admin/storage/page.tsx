@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/admin";
 import { findOrphans } from "@/lib/admin-system";
 import { AdminTabs } from "@/components/AdminTabs";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { Card, Flash, PageHeader, readParams, Stat, type SP } from "@/components/ui";
+import { Card, Flash, PageHeader, readParams, Stat, StatPanel, type SP } from "@/components/ui";
 import { deleteOrphans } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -29,17 +29,17 @@ export default async function AdminStorage({ searchParams }: { searchParams: SP 
       <AdminTabs active="/admin/storage" />
       <Flash notice={notice} error={error} />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+      <StatPanel className="mb-6">
         <Stat label="Uppladdade filer" value={String(total._count._all)} />
         <Stat label="Total storlek" value={mb(total._sum.size ?? 0)} />
         <Stat label="Genomsnitt per fil" value={total._count._all ? mb((total._sum.size ?? 0) / total._count._all) : "–"} />
-      </div>
+      </StatPanel>
 
       <div className="space-y-6">
         <Card title="Störst lagringsanvändning (20 företag)">
           <table className="w-full text-[14px]">
             <thead>
-              <tr className="text-left text-[12px] uppercase tracking-[0.06em] text-muted">
+              <tr className="text-left text-[12px] text-muted">
                 <th className="px-5 py-2">Företag</th>
                 <th className="px-3 py-2">Filer</th>
                 <th className="px-5 py-2">Storlek</th>

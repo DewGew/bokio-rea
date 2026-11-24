@@ -20,7 +20,7 @@ export default async function NewCompany() {
           </>
         )}
       </p>
-      <p className="mb-5 rounded-xl bg-brand-soft px-3 py-2 text-center text-[13px] text-brand">
+      <p className="mb-5 rounded-xl bg-surface-2 ring-1 ring-line px-3 py-2 text-center text-[13px] text-brand">
         Nya företag börjar med <strong>Bas</strong>. AI-avläsning, koppling till AI-assistent och kvitton via e-post ingår i Pro.
       </p>
       <ActionForm action={addCompany} submit="Skapa företag">

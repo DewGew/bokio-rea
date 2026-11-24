@@ -186,7 +186,7 @@ export function BankQueue({ rows, templates, accounts }: { rows: Row[]; template
                     </optgroup>
                   </select>
                   {prop && (
-                    <span className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${prop.confidence === "high" ? "bg-success-soft text-success" : "bg-warn-soft text-warn"}`}>
+                    <span className={`whitespace-nowrap rounded-md px-2 py-0.5 text-[12px] font-medium ${prop.confidence === "high" ? "bg-success-soft text-success" : "bg-warn-soft text-warn"}`}>
                       {prop.confidence === "high" ? "Säker" : "Kontrollera"}
                     </span>
                   )}

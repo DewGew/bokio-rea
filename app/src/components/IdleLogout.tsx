@@ -77,7 +77,7 @@ export function IdleLogout() {
   const m = Math.floor(left / 60);
   const s = String(left % 60).padStart(2, "0");
   return (
-    <div role="alertdialog" aria-live="assertive" className="no-print fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md items-center gap-4 rounded-2xl bg-surface p-4 shadow-2xl ring-1 ring-line">
+    <div role="alertdialog" aria-live="assertive" className="no-print fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md items-center gap-4 rounded-xl bg-surface p-4 shadow-lg ring-1 ring-line-strong">
       <div className="min-w-0 flex-1 text-[14px]">
         <p className="font-semibold">Du loggas snart ut</p>
         <p className="text-muted">

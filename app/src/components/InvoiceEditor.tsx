@@ -192,7 +192,7 @@ export function InvoiceEditor({
         </div>
       </div>
 
-      <div className="grid gap-4 rounded-2xl bg-surface-2 p-4 sm:grid-cols-2">
+      <div className="grid gap-4 rounded-xl bg-surface-2 p-4 sm:grid-cols-2">
         <div>
           <label className="label" htmlFor="vatTreatment">Momshantering</label>
           <select id="vatTreatment" name="vatTreatment" value={treatment} disabled={noVat} onChange={(e) => changeTreatment(e.target.value as VatTreatment)} className="input">
@@ -214,7 +214,7 @@ export function InvoiceEditor({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-line">
+      <div className="overflow-x-auto rounded-xl border border-line">
         <table className="table table-edit min-w-[880px]">
           <thead>
             <tr>
@@ -334,7 +334,7 @@ export function InvoiceEditor({
       {(errors.length > 0 || warnings.length > 0) && (
         <div className="space-y-2">
           {errors.length > 0 && (
-            <div role="alert" className="rounded-2xl bg-danger-soft p-4 text-[14px] text-danger">
+            <div role="alert" className="rounded-xl bg-danger-soft p-4 text-[14px] text-danger">
               <p className="mb-1 font-semibold">Det här behöver rättas innan fakturan kan utfärdas</p>
               <ul className="list-disc space-y-0.5 pl-5">
                 {errors.map((e) => (
@@ -349,7 +349,7 @@ export function InvoiceEditor({
             </div>
           )}
           {warnings.length > 0 && (
-            <ul className="list-disc space-y-0.5 rounded-2xl bg-warn-soft p-4 pl-9 text-[14px] text-warn">
+            <ul className="list-disc space-y-0.5 rounded-xl bg-warn-soft p-4 pl-9 text-[14px] text-warn">
               {warnings.map((w) => (
                 <li key={w.field + w.message}>{w.message}</li>
               ))}
