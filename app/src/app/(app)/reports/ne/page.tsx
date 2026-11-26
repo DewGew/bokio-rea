@@ -47,7 +47,7 @@ function MappingRow({ row, fy, readOnly }: { row: NeAccountRow; fy: number; read
 export default async function NeReport({ searchParams }: { searchParams: SP }) {
   const { company, companyId, role } = await requireCompany();
   const { notice, error } = await readParams(searchParams);
-  const { fy } = await selectedFiscalYear(companyId);
+  const { all: years, fy } = await selectedFiscalYear(companyId);
 
   if (company.companyType !== "ef") {
     return (
@@ -65,6 +65,9 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
   const income = NE_FIELDS.filter((f) => f.kind === "income");
   const cost = NE_FIELDS.filter((f) => f.kind === "cost");
   const diff = ne.result - ne.booked;
+  const balanceDate = fy.end.toISOString().slice(0, 10);
+  // Tidigare år utan bokslut: deras resultat ligger kvar i balansräkningen tills bokslutet är gjort.
+  const unclosed = years.filter((y) => y.start < fy.start && !y.closedAt);
 
   return (
     <>
@@ -102,7 +105,13 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
         </form>
       </Card>
 
-      <Card title="Balansräkning / räkenskapsschema">
+      <Card title={`Balansräkning / räkenskapsschema per ${balanceDate}`}>
+        {unclosed.length > 0 && (
+          <p className="no-print border-b border-line px-5 py-3 text-[13px] text-muted">
+            Balansräkningen visar tillgångar och skulder per {balanceDate}, inte bara för {fyLabel(fy)}. Saldona förs vidare från tidigare år, och eftersom {unclosed.length === 1 ? "räkenskapsår" : "räkenskapsåren"}{" "}
+            {unclosed.map((y) => fyLabel(y)).join(", ")} saknar bokslut ingår {unclosed.length === 1 ? "dess" : "deras"} resultat fortfarande i eget kapital (B10). Resultaträkningen (R1–R11) gäller bara {fyLabel(fy)}.
+          </p>
+        )}
         <div className="overflow-x-auto">
           <table className="table">
             <thead><tr><th>Fält</th><th>Benämning</th><th className="num">Belopp</th><th className="no-print">Koppling</th></tr></thead>

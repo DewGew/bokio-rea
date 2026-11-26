@@ -50,7 +50,7 @@ export async function GET(req: Request) {
   line(`Räkenskapsår ${fyLabel(fy)}`, "", { size: 11, gap: 4 });
   line(`${NE_SCHEMES[ne.scheme].label} (${NE_SCHEMES[ne.scheme].plan}), BAS kopplingstabell för NE`, "", { size: 9, gap: 14 });
 
-    line("Balansräkning / räkenskapsschema", "Hela kr", { f: bold, size: 12, gap: 8 });
+    line(`Balansräkning / räkenskapsschema per ${fy.end.toISOString().slice(0, 10)}`, "Hela kr", { f: bold, size: 12, gap: 8 });
   for (const section of ["Anläggningstillgångar", "Omsättningstillgångar", "Eget kapital", "Obeskattade reserver", "Avsättningar", "Skulder"]) {
     const fields = NE_BALANCE_FIELDS.filter((x) => x.section === section && ne.balanceFields[x.code].kr !== 0);
     if (!fields.length) continue;
