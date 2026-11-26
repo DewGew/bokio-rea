@@ -1,0 +1,281 @@
+diff --git a/app/src/app/(app)/reports/ne/page.tsx b/app/src/app/(app)/reports/ne/page.tsx
+index c1b8094..557c3e6 100644
+--- a/app/src/app/(app)/reports/ne/page.tsx
++++ b/app/src/app/(app)/reports/ne/page.tsx
+@@ -74,6 +74,8 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
+         actions={
+           <div className="no-print flex gap-2">
+             <a href={`/api/reports/ne?fy=${fy.id}`} target="_blank" rel="noopener noreferrer" className="btn-secondary">Ladda ner PDF</a>
++            <a href={`/api/reports/ne/sru?fy=${fy.id}&file=info`} className="btn-secondary">INFO.SRU</a>
++            <a href={`/api/reports/ne/sru?fy=${fy.id}&file=blanketter`} className="btn-secondary">BLANKETTER.SRU</a>
+             <PrintButton />
+           </div>
+         }
+@@ -162,6 +164,9 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
+                 ne.unmapped.length || ne.excluded.length ? "Orsaken är resultatkonton som saknar fält eller lämnats utanför." : "Orsaken kan vara avrundning till hela kronor."
+               }`}
+         </p>
++        <p className="no-print text-muted">
++          SRU-filerna <strong>INFO.SRU</strong> och <strong>BLANKETTER.SRU</strong> laddas upp tillsammans i Skatteverkets e-tjänst Filöverföring. De innehåller räkenskapsåret, B1–B16 och R1–R11 (poster med 0 kr tas inte med). Företagets personnummer, namn, postnummer och postort hämtas från företagets inställningar.
++        </p>
+         <p className="text-muted">
+           Det här är ett underlag och inte en färdig deklaration. Kontrollera fälten mot NE-blanketten (SKV 2161) för inkomståret innan du lämnar in. Egenavgifter, schablonavdrag,
+           periodiserings- och expansionsfond, räntefördelning och andra justeringar görs i själva deklarationen och ingår inte här. Bokfört resultat på konto 899x räknas inte med. Kopplingen följer BAS kopplingstabell för NE och kan ändras per konto.
+diff --git a/app/src/app/api/reports/ne/sru/route.ts b/app/src/app/api/reports/ne/sru/route.ts
+new file mode 100644
+index 0000000..ff5e70b
+--- /dev/null
++++ b/app/src/app/api/reports/ne/sru/route.ts
+@@ -0,0 +1,36 @@
++import { apiCompany } from "@/lib/auth";
++import { db } from "@/lib/db";
++import { loadNe } from "@/lib/ne-data";
++import { SRU_BLANKETTER_FILE, SRU_INFO_FILE, SruError, buildBlanketterSru, buildInfoSru, toLatin1 } from "@/lib/sru";
++
++/** NE-bilagan som SRU-filer för Skatteverkets filöverföring: ?file=info (INFO.SRU) eller ?file=blanketter (BLANKETTER.SRU). */
++export async function GET(req: Request) {
++  const ctx = await apiCompany();
++  if (!ctx) return new Response("Inte inloggad", { status: 401 });
++  const params = new URL(req.url).searchParams;
++  const file = params.get("file");
++  if (file !== "info" && file !== "blanketter") return new Response("Ange file=info eller file=blanketter.", { status: 400 });
++  const fyId = Number(params.get("fy"));
++  const [company, fy] = await Promise.all([
++    db.company.findUniqueOrThrow({ where: { id: ctx.companyId }, select: { name: true, orgNumber: true, address: true, postalCode: true, city: true, email: true, companyType: true } }),
++    db.fiscalYear.findFirst({ where: { id: fyId || -1, companyId: ctx.companyId } }),
++  ]);
++  if (!fy) return new Response("Räkenskapsåret finns inte", { status: 404 });
++  if (company.companyType !== "ef") return new Response("NE-bilagan gäller enskild firma.", { status: 400 });
++
++  let text: string;
++  try {
++    const now = new Date();
++    text = file === "info" ? buildInfoSru(company, now) : buildBlanketterSru(company, await loadNe(ctx.companyId, fy), fy, now);
++  } catch (e) {
++    if (e instanceof SruError) return new Response(e.message, { status: 400 });
++    throw e;
++  }
++  return new Response(new Uint8Array(toLatin1(text)), {
++    headers: {
++      "Content-Type": "text/plain; charset=iso-8859-1",
++      "Content-Disposition": `attachment; filename="${file === "info" ? SRU_INFO_FILE : SRU_BLANKETTER_FILE}"`,
++      "Cache-Control": "private, no-store",
++    },
++  });
++}
+diff --git a/app/src/lib/sru.ts b/app/src/lib/sru.ts
+new file mode 100644
+index 0000000..2a5615b
+--- /dev/null
++++ b/app/src/lib/sru.ts
+@@ -0,0 +1,134 @@
++/**
++ * SRU-filer för NE-bilagan (Skatteverkets filöverföring av inkomstdeklaration).
++ * Specifikation: https://www.skatteverket.se/foretag/inkomstdeklaration/forredovisningsbyraer/tekniskinformationomfiloverforing.4.13948c0e18e810bfa0cca8.html
++ *
++ * - INFO.SRU innehåller uppgiftslämnaren, BLANKETTER.SRU själva blankettblocken. Båda filerna laddas upp tillsammans.
++ * - Teckenuppsättning ISO 8859-1, en post per rad, belopp i hela kronor (negativa med "-" först).
++ * - Poster utan värde lämnas inte, så fält med 0 kr tas inte med.
++ */
++import { NE_BALANCE_CODES, NE_CODES, type NeBalanceField, type NeField, type NeResult } from "./ne";
++
++/** Fältkoder för NE enligt BAS/Skatteverkets kopplingstabell (B = balansräkning, R = resultaträkning). */
++export const NE_SRU_CODES: Record<NeBalanceField | NeField | "R11", string> = {
++  B1: "7200", B2: "7210", B3: "7211", B4: "7212", B5: "7213",
++  B6: "7240", B7: "7250", B8: "7260", B9: "7280",
++  B10: "7300", B11: "7320", B12: "7330",
++  B13: "7380", B14: "7381", B15: "7382", B16: "7383",
++  R1: "7400", R2: "7401", R3: "7402", R4: "7403",
++  R5: "7500", R6: "7501", R7: "7502", R8: "7503", R9: "7504", R10: "7505",
++  R11: "7440",
++};
++/** Fältkoder för räkenskapsårets första och sista dag. */
++const FY_START = "7011";
++const FY_END = "7012";
++
++export const SRU_INFO_FILE = "INFO.SRU";
++export const SRU_BLANKETTER_FILE = "BLANKETTER.SRU";
++
++export class SruError extends Error {}
++
++export type SruCompany = { name: string; orgNumber: string; address: string; postalCode: string; city: string; email: string };
++
++/** Datum och klockslag i svensk tid som ÅÅÅÅMMDD och TTMMSS. */
++export function sruStamp(now: Date) {
++  const p = Object.fromEntries(
++    new Intl.DateTimeFormat("sv-SE", {
++      timeZone: "Europe/Stockholm", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
++    })
++      .formatToParts(now)
++      .map((x) => [x.type, x.value]),
++  );
++  return { date: `${p.year}${p.month}${p.day}`, time: `${p.hour}${p.minute}${p.second}` };
++}
++
++export const sruDate = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "");
++
++/**
++ * Beskattningsperiod för blankettyp, t.ex. "2025P4". Året är det år räkenskapsåret slutar och P1–P4 anger
++ * slutmånad: P1 jan–apr, P2 maj–jun, P3 jul–aug, P4 sep–dec (kalenderår = P4).
++ */
++export function sruPeriod(fyEnd: Date) {
++  const m = fyEnd.getUTCMonth() + 1;
++  const p = m <= 4 ? 1 : m <= 6 ? 2 : m <= 8 ? 3 : 4;
++  return `${fyEnd.getUTCFullYear()}P${p}`;
++}
++
++/**
++ * Person-/organisationsnummer som tolv siffror utan bindestreck: sekelsiffror före personnummer (19/20, "+" ger
++ * 100 år äldre) och 16 före organisationsnummer. Returnerar null om numret inte har 10 eller 12 siffror.
++ */
++export function sruOrgNumber(input: string, today = new Date()): string | null {
++  const d = input.replace(/\D/g, "");
++  if (d.length === 12) return d;
++  if (d.length !== 10) return null;
++  if (Number(d.slice(2, 4)) >= 20) return `16${d}`; // juridisk person (tredje siffran minst 2)
++  const nowYear = today.getUTCFullYear();
++  let year = Math.floor(nowYear / 100) * 100 + Number(d.slice(0, 2));
++  if (year > nowYear) year -= 100;
++  if (input.includes("+")) year -= 100;
++  return `${year}${d.slice(2)}`;
++}
++
++/** Text till en post: utan #, radbrytningar och tecken utanför ISO 8859-1, högst 250 tecken. */
++const clean = (s: string) =>
++  s
++    .replace(/[#\r\n\t]+/g, " ")
++    .replace(/[^\x20-\x7e\u00a0-\u00ff]/g, "?")
++    .replace(/\s+/g, " ")
++    .trim()
++    .slice(0, 250);
++
++/** Kontrollerar uppgifterna som INFO.SRU kräver. Skatteverket avvisar hela överföringen om de saknas. */
++export function sruCompanyProblems(c: SruCompany): string[] {
++  const problems: string[] = [];
++  if (!clean(c.name)) problems.push("företagets namn");
++  if (!sruOrgNumber(c.orgNumber)) problems.push("ett personnummer eller organisationsnummer med 10 siffror");
++  if (!/^\d{5}$/.test(c.postalCode.replace(/\s/g, ""))) problems.push("ett postnummer med 5 siffror");
++  if (!clean(c.city)) problems.push("postort");
++  return problems;
++}
++
++const lines = (rows: string[]) => rows.join("\r\n") + "\r\n";
++
++export function buildInfoSru(c: SruCompany, now = new Date(), program = "bokio-rea"): string {
++  const problems = sruCompanyProblems(c);
++  if (problems.length) throw new SruError(`Fyll i ${problems.join(", ")} under företagets inställningar.`);
++  const { date, time } = sruStamp(now);
++  const rows = [
++    "#DATABESKRIVNING_START",
++    "#PRODUKT SRU",
++    `#SKAPAD ${date} ${time}`,
++    `#PROGRAM ${clean(program)}`,
++    `#FILNAMN ${SRU_BLANKETTER_FILE}`,
++    "#DATABESKRIVNING_SLUT",
++    "#MEDIELEV_START",
++    `#ORGNR ${sruOrgNumber(c.orgNumber, now)}`,
++    `#NAMN ${clean(c.name)}`,
++  ];
++  if (clean(c.address)) rows.push(`#ADRESS ${clean(c.address)}`);
++  rows.push(`#POSTNR ${c.postalCode.replace(/\s/g, "")}`, `#POSTORT ${clean(c.city)}`);
++  if (clean(c.email)) rows.push(`#EMAIL ${clean(c.email)}`);
++  rows.push("#MEDIELEV_SLUT");
++  return lines(rows);
++}
++
++export function buildBlanketterSru(c: SruCompany, ne: NeResult, fy: { start: Date; end: Date }, now = new Date()): string {
++  const problems = sruCompanyProblems(c);
++  if (problems.length) throw new SruError(`Fyll i ${problems.join(", ")} under företagets inställningar.`);
++  const { date, time } = sruStamp(now);
++  const rows = [`#BLANKETT NE-${sruPeriod(fy.end)}`, `#IDENTITET ${sruOrgNumber(c.orgNumber, now)} ${date} ${time}`, `#NAMN ${clean(c.name)}`];
++  rows.push(`#UPPGIFT ${FY_START} ${sruDate(fy.start)}`, `#UPPGIFT ${FY_END} ${sruDate(fy.end)}`);
++  const amounts: [keyof typeof NE_SRU_CODES, number][] = [
++    ...NE_BALANCE_CODES.map((k): [NeBalanceField, number] => [k, ne.balanceFields[k].kr]),
++    ...NE_CODES.map((k): [NeField, number] => [k, ne.fields[k].kr]),
++    ["R11", ne.result],
++  ];
++  for (const [field, kr] of amounts) {
++    if (kr !== 0) rows.push(`#UPPGIFT ${NE_SRU_CODES[field]} ${kr}`);
++  }
++  rows.push("#BLANKETTSLUT", "#FIL_SLUT");
++  return lines(rows);
++}
++
++/** Filinnehållet som ISO 8859-1. */
++export const toLatin1 = (s: string) => Buffer.from(s, "latin1");
+diff --git a/app/tests/sru.test.ts b/app/tests/sru.test.ts
+new file mode 100644
+index 0000000..36a2a0a
+--- /dev/null
++++ b/app/tests/sru.test.ts
+@@ -0,0 +1,70 @@
++import assert from "node:assert/strict";
++import { test } from "node:test";
++import { computeNe } from "../src/lib/ne";
++import { NE_SRU_CODES, SruError, buildBlanketterSru, buildInfoSru, sruOrgNumber, sruPeriod, toLatin1 } from "../src/lib/sru";
++
++const company = { name: "Åsa Öberg", orgNumber: "850709-9805", address: "Storgatan 1", postalCode: "371 30", city: "Karlskrona", email: "asa@example.se" };
++const fy = { start: new Date("2026-01-01T00:00:00Z"), end: new Date("2026-12-31T00:00:00Z") };
++const now = new Date("2026-11-26T14:30:12Z"); // 15:30:12 svensk tid
++const accounts = new Map([[3001, { name: "Försäljning", vatCode: "25" }], [1930, { name: "Bank", vatCode: "" }], [2611, { name: "Utgående moms", vatCode: "" }], [2650, { name: "Moms", vatCode: "" }], [2641, { name: "Ingående moms", vatCode: "" }]]);
++const closing = new Map([[1930, 75_00], [2611, -9_625_00], [2650, -5_625_00], [2018, 0]]);
++const ne = computeNe(new Map([[3001, -16_000_00]]), accounts, new Map(), "ej_k1", closing);
++
++test("INFO.SRU har posterna i den ordning Skatteverket kräver", () => {
++  const rows = buildInfoSru(company, now).trimEnd().split("\r\n");
++  assert.deepEqual(rows, [
++    "#DATABESKRIVNING_START", "#PRODUKT SRU", "#SKAPAD 20261126 153012", "#PROGRAM bokio-rea", "#FILNAMN BLANKETTER.SRU", "#DATABESKRIVNING_SLUT",
++    "#MEDIELEV_START", "#ORGNR 198507099805", "#NAMN Åsa Öberg", "#ADRESS Storgatan 1", "#POSTNR 37130", "#POSTORT Karlskrona", "#EMAIL asa@example.se", "#MEDIELEV_SLUT",
++  ]);
++});
++
++test("BLANKETTER.SRU: blankettblock, räkenskapsår och poster utan nollvärden", () => {
++  const rows = buildBlanketterSru(company, ne, fy, now).trimEnd().split("\r\n");
++  assert.equal(rows[0], "#BLANKETT NE-2026P4");
++  assert.equal(rows[1], "#IDENTITET 198507099805 20261126 153012");
++  assert.equal(rows[2], "#NAMN Åsa Öberg");
++  assert.ok(rows.includes("#UPPGIFT 7011 20260101") && rows.includes("#UPPGIFT 7012 20261231"));
++  assert.ok(rows.includes("#UPPGIFT 7280 75"), "B9 kassa och bank");
++  assert.ok(rows.includes("#UPPGIFT 7381 15250"), "B14 skatteskulder (2611 + 2650)");
++  assert.ok(rows.includes("#UPPGIFT 7300 -15175"), "B10 eget kapital, negativt med minustecken");
++  assert.ok(rows.includes("#UPPGIFT 7400 16000") && rows.includes("#UPPGIFT 7440 16000"), "R1 och R11");
++  assert.ok(!rows.some((r) => / 0$/.test(r)), "inga poster med 0");
++  assert.equal(rows.at(-2), "#BLANKETTSLUT");
++  assert.equal(rows.at(-1), "#FIL_SLUT");
++  const codes = rows.filter((r) => r.startsWith("#UPPGIFT")).map((r) => r.split(" ")[1]);
++  assert.equal(new Set(codes).size, codes.length, "varje fältkod högst en gång");
++});
++
++test("fältkoderna är unika och följer kopplingstabellen", () => {
++  const v = Object.values(NE_SRU_CODES);
++  assert.equal(new Set(v).size, v.length);
++  assert.equal(NE_SRU_CODES.B1, "7200");
++  assert.equal(NE_SRU_CODES.B16, "7383");
++  assert.equal(NE_SRU_CODES.R1, "7400");
++  assert.equal(NE_SRU_CODES.R11, "7440");
++});
++
++test("beskattningsperiod efter räkenskapsårets slut", () => {
++  assert.equal(sruPeriod(new Date("2026-12-31T00:00:00Z")), "2026P4");
++  assert.equal(sruPeriod(new Date("2026-04-30T00:00:00Z")), "2026P1");
++  assert.equal(sruPeriod(new Date("2026-06-30T00:00:00Z")), "2026P2");
++  assert.equal(sruPeriod(new Date("2026-08-31T00:00:00Z")), "2026P3");
++});
++
++test("person- och organisationsnummer får sekelsiffror", () => {
++  const today = new Date("2026-11-26T00:00:00Z");
++  assert.equal(sruOrgNumber("111111-1116", today), "201111111116");
++  assert.equal(sruOrgNumber("640823-3234", today), "196408233234");
++  assert.equal(sruOrgNumber("030910+1416", today), "190309101416");
++  assert.equal(sruOrgNumber("556000-0100", today), "165560000100");
++  assert.equal(sruOrgNumber("19640823-3234", today), "196408233234");
++  assert.equal(sruOrgNumber("12345", today), null);
++});
++
++test("saknade uppgifter ger tydligt fel och filen kodas som ISO 8859-1", () => {
++  assert.throws(() => buildInfoSru({ ...company, postalCode: "", city: "" }, now), (e) => e instanceof SruError && /postnummer/.test(e.message) && /postort/.test(e.message));
++  assert.throws(() => buildBlanketterSru({ ...company, orgNumber: "123" }, ne, fy, now), SruError);
++  const bytes = toLatin1(buildInfoSru({ ...company, name: "Åsa # Ö\nB 😀" }, now));
++  assert.ok(bytes.includes(0xc5), "Å som en byte (0xC5)");
++  assert.ok(!bytes.includes(0x23) || bytes.toString("latin1").split("#").length - 1 === bytes.toString("latin1").split("\r\n").filter((r) => r.startsWith("#")).length, "# bara i postnamn");
++});

@@ -74,6 +74,8 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
         actions={
           <div className="no-print flex gap-2">
             <a href={`/api/reports/ne?fy=${fy.id}`} target="_blank" rel="noopener noreferrer" className="btn-secondary">Ladda ner PDF</a>
+            <a href={`/api/reports/ne/sru?fy=${fy.id}&file=info`} className="btn-secondary">INFO.SRU</a>
+            <a href={`/api/reports/ne/sru?fy=${fy.id}&file=blanketter`} className="btn-secondary">BLANKETTER.SRU</a>
             <PrintButton />
           </div>
         }
@@ -161,6 +163,9 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
             : `Avviker från bokfört resultat enligt kontona 3000–8799 (${wholeKr(ne.booked)}) med ${wholeKr(diff)}. ${
                 ne.unmapped.length || ne.excluded.length ? "Orsaken är resultatkonton som saknar fält eller lämnats utanför." : "Orsaken kan vara avrundning till hela kronor."
               }`}
+        </p>
+        <p className="no-print text-muted">
+          SRU-filerna <strong>INFO.SRU</strong> och <strong>BLANKETTER.SRU</strong> laddas upp tillsammans i Skatteverkets e-tjänst Filöverföring. De innehåller räkenskapsåret, B1–B16 och R1–R11 (poster med 0 kr tas inte med). Företagets personnummer, namn, postnummer och postort hämtas från företagets inställningar.
         </p>
         <p className="text-muted">
           Det här är ett underlag och inte en färdig deklaration. Kontrollera fälten mot NE-blanketten (SKV 2161) för inkomståret innan du lämnar in. Egenavgifter, schablonavdrag,
