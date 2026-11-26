@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
 import { balances, sumRange } from "@/lib/accounting";
-import { currentFiscalYear, fyLabel } from "@/lib/fiscal";
+import { fyLabel } from "@/lib/fiscal";
+import { selectedFiscalYear } from "@/lib/fiscal-select";
 import { kr } from "@/lib/money";
 import { Card, Flash, PageHeader } from "@/components/ui";
 import { addTaxPartnerAction, deleteTaxPartnerAction, saveTaxPartnerAction } from "./actions";
@@ -16,8 +17,8 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
   if (!["ef", "hb"].includes(company.companyType)) {
     return <><PageHeader title="Årets skatt" /><Card><p className="p-5 text-sm text-muted">Skatteuppskattningen är tillgänglig för enskild firma och handelsbolag.</p></Card></>;
   }
-  const [fy, partners] = await Promise.all([
-    currentFiscalYear(companyId),
+  const [{ fy }, partners] = await Promise.all([
+    selectedFiscalYear(companyId),
     db.taxPartner.findMany({ where: { companyId }, orderBy: { id: "asc" } }),
   ]);
   const yearBalances = await balances(companyId, { from: fy.start, to: fy.end });
@@ -25,7 +26,7 @@ export default async function AnnualTaxPage({ searchParams }: { searchParams: Pr
   const shares = partners.reduce((sum, partner) => sum + partner.sharePercent, 0);
   const canWrite = role !== "read";
   const year = new Date().getFullYear();
-  const taxYear = new Date().getFullYear();
+  const taxYear = fy.end.getUTCFullYear();
 
   return (
     <>

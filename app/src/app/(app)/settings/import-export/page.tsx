@@ -1,11 +1,12 @@
 import { requireCompany } from "@/lib/auth";
-import { currentFiscalYear, fiscalYears, fyLabel } from "@/lib/fiscal";
+import { fyLabel } from "@/lib/fiscal";
+import { selectedFiscalYear } from "@/lib/fiscal-select";
 import { Card, PageHeader } from "@/components/ui";
 import { SieImporter } from "@/components/SieImporter";
 
 export default async function ImportExport() {
   const { companyId } = await requireCompany();
-  const [years, current] = await Promise.all([fiscalYears(companyId), currentFiscalYear(companyId)]);
+  const { all: years, fy: current } = await selectedFiscalYear(companyId);
 
   return (
     <>

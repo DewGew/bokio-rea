@@ -5,7 +5,8 @@ import { balances, invoiceTotals, sumRange } from "@/lib/accounting";
 import { kr } from "@/lib/money";
 import { estimateAnnualTax } from "@/lib/tax-calculation";
 import { periodLabel, vatPeriods, vatReport } from "@/lib/vat";
-import { currentFiscalYear, fyLabel } from "@/lib/fiscal";
+import { fyLabel } from "@/lib/fiscal";
+import { selectedFiscalYear } from "@/lib/fiscal-select";
 import { Card, Flash, PageHeader, readParams, Stat, StatPanel, type SP } from "@/components/ui";
 import { BarChart } from "@/components/BarChart";
 
@@ -13,15 +14,18 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const { notice } = await readParams(searchParams);
   const { companyId, company } = await requireCompany();
   const now = new Date();
-  // Räkenskapsåret och momsperioden som pågår idag.
-  const [fy, periods] = await Promise.all([currentFiscalYear(companyId), vatPeriods(companyId)]);
+  // Räkenskapsåret som valts i sidopanelen (annars det som pågår idag) och momsperioden som pågår idag.
+  const [{ fy }, periods] = await Promise.all([selectedFiscalYear(companyId), vatPeriods(companyId)]);
   const yearStart = fy.start;
+  // Ett avslutat år visas per sista dagen; det pågående året per idag.
+  const past = fy.end < now;
+  const asOf = past ? fy.end : now;
   const vatPeriod = periods.find((p) => p.current) ?? null;
-  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
+  const from = new Date(Date.UTC(asOf.getUTCFullYear(), asOf.getUTCMonth() - 11, 1));
   // Alla frågor körs parallellt; varje databasrundresa kostar tid, särskilt i serverless.
   const [yearBal, allBal, openInvoices, unpaidSupplierInvoices, overdueSupplierInvoices, pendingSupplierInvoices, toBook, pendingExpenses, drafts, quoteDrafts, sentQuotes, vat, lines, bankToBook, taxYearBal, taxPartners] = await Promise.all([
-    balances(companyId, { from: yearStart, to: now }),
-    balances(companyId),
+    balances(companyId, { from: yearStart, to: asOf }),
+    balances(companyId, past ? { to: fy.end } : {}),
     db.invoice.findMany({ where: { companyId, status: "sent" }, include: { lines: true } }),
     db.supplierInvoice.aggregate({ where: { companyId, status: { in: ["pending", "booked"] } }, _sum: { amount: true } }),
     db.supplierInvoice.aggregate({ where: { companyId, status: { in: ["pending", "booked"] }, dueDate: { lt: new Date(new Date().toISOString().slice(0, 10)) } }, _sum: { amount: true } }),
@@ -34,7 +38,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
     vatPeriod ? vatReport(companyId, vatPeriod.start, vatPeriod.end) : null,
     // Inkomster och kostnader per månad, senaste 12 månaderna.
     db.verificationLine.findMany({
-      where: { companyId, accountNumber: { gte: 3000, lte: 8989 }, verification: { date: { gte: from } } },
+      where: { companyId, accountNumber: { gte: 3000, lte: 8989 }, verification: { date: { gte: from, ...(past ? { lte: fy.end } : {}) } } },
       select: { debit: true, credit: true, accountNumber: true, verification: { select: { date: true } }, account: { select: { name: true } } },
     }),
     db.bankTransaction.count({ where: { companyId, status: "new" } }),
@@ -47,7 +51,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const overdue = openInvoices.filter((i) => i.dueDate < now).reduce((s, i) => s + invoiceTotals(i.lines).total, 0);
   const unpaidSupplierTotal = unpaidSupplierInvoices._sum.amount ?? 0;
   const overdueSupplierTotal = overdueSupplierInvoices._sum.amount ?? 0;
-  const taxYear = now.getFullYear();
+  const taxYear = fy.end.getUTCFullYear();
   const taxProfit = -sumRange(taxYearBal, 3000, 8989) / 100;
   const estimatedTax = taxPartners.reduce((sum, partner) => {
     const estimate = estimateAnnualTax({
@@ -108,7 +112,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
       <Flash notice={notice} />
       <StatPanel>
         <Stat label="Årets resultat" value={kr(result)} tone={result < 0 ? "danger" : "success"} />
-        <Stat label="Saldo bank och kassa" value={kr(bank)} hint="Enligt bokföringen (19xx)" />
+        <Stat label="Saldo bank och kassa" value={kr(bank)} hint={past ? `Per ${fy.end.toISOString().slice(0, 10)} (19xx)` : "Enligt bokföringen (19xx)"} />
         <Stat label="Obetalda kundfakturor" value={kr(unpaid)} hint={overdue ? `varav förfallet ${kr(overdue)}` : "Inget förfallet"} tone={overdue ? "warn" : undefined} />
         <Stat label="Obetalda leverantörsfakturor" value={kr(unpaidSupplierTotal)} hint={overdueSupplierTotal > 0 ? `varav förfallet ${kr(overdueSupplierTotal)}` : "Inget förfallet"} tone={overdueSupplierTotal > 0 ? "warn" : undefined} />
         <Stat
@@ -122,7 +126,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
       </StatPanel>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
-        <Card title="Inkomster och kostnader, senaste 12 månaderna" className="xl:col-span-2">
+        <Card title={past ? `Inkomster och kostnader, 12 månader till ${fy.end.toISOString().slice(0, 7)}` : "Inkomster och kostnader, senaste 12 månaderna"} className="xl:col-span-2">
           <div className="p-4">
             <div className="mb-3 flex flex-wrap gap-4 text-sm">
               <span>Inkomster <strong className="tabular-nums">{kr(income12, { decimals: false })}</strong></span>

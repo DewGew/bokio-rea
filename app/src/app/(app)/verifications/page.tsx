@@ -3,12 +3,12 @@ import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/auth";
 import { dateStr, kr } from "@/lib/money";
 import { Badge, Card, Empty, Flash, PageHeader, readParams, type SP } from "@/components/ui";
-import { fyLabel, pickFiscalYear } from "@/lib/fiscal";
+import { selectedFiscalYear } from "@/lib/fiscal-select";
 
 export default async function Verifications({ searchParams }: { searchParams: SP }) {
   const { companyId } = await requireCompany();
   const { get, error, notice } = await readParams(searchParams);
-  const { all: years, fy } = await pickFiscalYear(companyId, get("fy"));
+  const { fy } = await selectedFiscalYear(companyId);
   const q = get("q") ?? "";
 
   const list = await db.verification.findMany({
@@ -42,14 +42,6 @@ export default async function Verifications({ searchParams }: { searchParams: SP
       <Flash error={error} notice={notice} />
       <Card>
         <form className="flex flex-wrap items-end gap-3 border-b border-line p-4">
-          <div>
-            <label className="label" htmlFor="fy">Räkenskapsår</label>
-            <select id="fy" name="fy" defaultValue={fy.id} className="input w-48">
-              {[...years].reverse().map((y) => (
-                <option key={y.id} value={y.id}>{fyLabel(y)}</option>
-              ))}
-            </select>
-          </div>
           <div className="min-w-48 flex-1">
             <label className="label" htmlFor="q">Sök</label>
             <input id="q" name="q" defaultValue={q} placeholder="Titel, konto eller nummer" className="input" />

@@ -96,6 +96,9 @@ const inRange=(a:number,lo:number,hi:number)=>a>=lo&&a<=hi;
 function defaultBalanceField(a:number,scheme:NeScheme,balance=0):NeBalanceField|null{
  // Nettomoms på 1650/2650 placeras efter saldots riktning: fordran i B8, skuld i B14.
  if(a===1650||a===2650)return balance<0?"B14":"B8";
+ // Utgående moms (2611) är alltid skatteskuld (B14) och ingående moms (2641) alltid övrig fordran (B8).
+ if(a===2611)return "B14";
+ if(a===2641)return "B8";
  if(scheme==="k1"){
   if(a===1000)return "B1";
   if(a===1110||a===1150)return "B2";
