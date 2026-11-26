@@ -90,7 +90,7 @@ export function sruCompanyProblems(c: SruCompany): string[] {
 
 const lines = (rows: string[]) => rows.join("\r\n") + "\r\n";
 
-export function buildInfoSru(c: SruCompany, now = new Date(), program = "bokio-rea"): string {
+export function buildInfoSru(c: SruCompany, now = new Date(), program = "Kapima bokför"): string {
   const problems = sruCompanyProblems(c);
   if (problems.length) throw new SruError(`Fyll i ${problems.join(", ")} under företagets inställningar.`);
   const { date, time } = sruStamp(now);

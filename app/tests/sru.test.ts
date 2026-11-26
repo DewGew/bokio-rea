@@ -13,7 +13,7 @@ const ne = computeNe(new Map([[3001, -16_000_00]]), accounts, new Map(), "ej_k1"
 test("INFO.SRU har posterna i den ordning Skatteverket kräver", () => {
   const rows = buildInfoSru(company, now).trimEnd().split("\r\n");
   assert.deepEqual(rows, [
-    "#DATABESKRIVNING_START", "#PRODUKT SRU", "#SKAPAD 20261126 153012", "#PROGRAM bokio-rea", "#FILNAMN BLANKETTER.SRU", "#DATABESKRIVNING_SLUT",
+    "#DATABESKRIVNING_START", "#PRODUKT SRU", "#SKAPAD 20261126 153012", "#PROGRAM Kapima bokför", "#FILNAMN BLANKETTER.SRU", "#DATABESKRIVNING_SLUT",
     "#MEDIELEV_START", "#ORGNR 198507099805", "#NAMN Åsa Öberg", "#ADRESS Storgatan 1", "#POSTNR 37130", "#POSTORT Karlskrona", "#EMAIL asa@example.se", "#MEDIELEV_SLUT",
   ]);
 });
