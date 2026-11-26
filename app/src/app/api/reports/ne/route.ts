@@ -56,6 +56,7 @@ export async function GET(req: Request) {
     line(section, "", { f: bold, size: 9.5, gap: 3 });
     for (const f of NE_BALANCE_FIELDS.filter((x) => x.section === section)) {
       line(`${f.code}  ${f.name}`, kr(ne.balanceFields[f.code].kr), { indent: 8, size: 9, gap: 3 });
+      for (const r of ne.balanceFields[f.code].accounts) line(`${r.number}  ${r.name}`, krOre(r.amount), { indent: 24, size: 8, gap: 2, f: font });
     }
   }
   line("Summa tillgångar (B1–B9)", kr(ne.balanceAssets), { f: bold, size: 9 });
@@ -64,7 +65,10 @@ export async function GET(req: Request) {
   line("Räkenskapsschema, resultaträkning", "Hela kr", { f: bold, gap: 8 });
   const group = (title: string, kind: "income" | "cost") => {
     line(title, "", { f: bold, gap: 4 });
-    for (const f of NE_FIELDS.filter((x) => x.kind === kind)) line(`${f.code}  ${f.name}`, kr(ne.fields[f.code].kr), { indent: 8 });
+    for (const f of NE_FIELDS.filter((x) => x.kind === kind)) {
+      line(`${f.code}  ${f.name}`, kr(ne.fields[f.code].kr), { indent: 8 });
+      for (const r of ne.fields[f.code].accounts) line(`${r.number}  ${r.name}`, krOre(r.amount), { indent: 24, size: 8, gap: 2 });
+    }
     y -= 4;
   };
   group("Intäkter", "income");
@@ -79,24 +83,6 @@ export async function GET(req: Request) {
   line("Underlag, inte en färdig deklaration. Kontrollera fälten mot NE-blanketten (SKV 2161) för inkomståret.", "", { size: 8.5, gap: 3 });
   line("Egenavgifter, schablonavdrag, fonder och räntefördelning ingår inte. Konto 899x (bokfört resultat) räknas inte med.", "", { size: 8.5, gap: 16 });
 
-  line("Balanskonton per fält", "Belopp, kr", { f: bold, size: 12, gap: 8 });
-  for (const f of NE_BALANCE_FIELDS) {
-    const rows = ne.balanceFields[f.code].accounts;
-    if (!rows.length) continue;
-    ensure(30);
-    line(`${f.code}  ${f.name}`, "", { f: bold, size: 9.5, gap: 3 });
-    for (const r of rows) line(`${r.number}  ${r.name}`, krOre(r.amount), { size: 9, indent: 8, gap: 3 });
-    y -= 6;
-  }
-  line("Resultatkonton per fält", "Belopp, kr", { f: bold, size: 12, gap: 8 });
-  for (const f of NE_FIELDS) {
-    const rows = ne.fields[f.code].accounts;
-    if (!rows.length) continue;
-    ensure(30);
-    line(`${f.code}  ${f.name}`, "", { f: bold, size: 9.5, gap: 3 });
-    for (const r of rows) line(`${r.number}  ${r.name}`, krOre(r.amount), { size: 9, indent: 8, gap: 3 });
-    y -= 6;
-  }
   if (ne.unmapped.length || ne.balanceUnmapped.length) {
     ensure(30);
     line("Saknar fält", "", { f: bold, size: 9.5, gap: 3 });

@@ -14,14 +14,14 @@ function MappingRow({ row, fy, readOnly }: { row: NeAccountRow; fy: number; read
   const current = row.source === "none" ? NE_NONE : row.source === "override" ? row.field! : "default";
   return (
     <tr>
-      <td className="whitespace-nowrap">
+      <td className="whitespace-nowrap pl-8 text-[13px] text-muted">
         <a href={`/reports/ledger?account=${row.number}&fy=${fy}`} className="hover:text-brand">{row.number}</a>
       </td>
-      <td>
+      <td className="text-[13px]">
         {row.name}
         {row.note && <span className="block text-[12px] text-warn">{row.note}</span>}
       </td>
-      <td className="num whitespace-nowrap">{kr(row.amount)}</td>
+      <td className="num whitespace-nowrap text-[13px]">{kr(row.amount)}</td>
       <td className="no-print">
         {readOnly ? (
           <span className="text-muted">{row.field ?? "Ej kopplad"}</span>
@@ -65,7 +65,6 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
   const income = NE_FIELDS.filter((f) => f.kind === "income");
   const cost = NE_FIELDS.filter((f) => f.kind === "cost");
   const diff = ne.result - ne.booked;
-  const allRows = [...NE_FIELDS.flatMap((f) => ne.fields[f.code].accounts), ...NE_BALANCE_FIELDS.flatMap((f) => ne.balanceFields[f.code].accounts), ...ne.unmapped, ...ne.excluded, ...ne.balanceUnmapped, ...ne.balanceExcluded].sort((a, b) => a.number - b.number);
 
   return (
     <>
@@ -104,12 +103,12 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
       <Card title="Balansräkning / räkenskapsschema">
         <div className="overflow-x-auto">
           <table className="table">
-            <thead><tr><th>Fält</th><th>Benämning</th><th className="num">Belopp, hela kr</th></tr></thead>
+            <thead><tr><th>Fält</th><th>Benämning</th><th className="num">Belopp</th><th className="no-print">Koppling</th></tr></thead>
             <tbody>
               {["Anläggningstillgångar","Omsättningstillgångar","Eget kapital","Obeskattade reserver","Avsättningar","Skulder"].flatMap((section) => [
-                <tr key={`section-${section}`} className="bg-surface-2"><th colSpan={3} className="text-ink">{section}</th></tr>,
+                <tr key={`section-${section}`} className="bg-surface-2"><th colSpan={4} className="text-ink">{section}</th></tr>,
                 ...NE_BALANCE_FIELDS.filter((f) => f.section === section).map((f) => (
-                  <tr key={f.code}><td className="font-medium">{f.code}</td><td>{f.name}</td><td className="num">{wholeKr(ne.balanceFields[f.code].kr)}</td></tr>
+                  <FieldWithAccounts key={f.code} code={f.code} name={f.name} amount={wholeKr(ne.balanceFields[f.code].kr)} rows={ne.balanceFields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
                 )),
               ])}
               <tr className="font-semibold"><td colSpan={2}>Summa tillgångar (B1–B9)</td><td className="num">{wholeKr(ne.balanceAssets)}</td></tr>
@@ -128,29 +127,22 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
               <tr>
                 <th>Fält</th>
                 <th>Benämning</th>
-                <th className="num">Belopp, hela kr</th>
+                <th className="num">Belopp</th>
+                <th className="no-print">Koppling</th>
               </tr>
             </thead>
             <tbody>
               <tr className="bg-surface-2">
-                <th colSpan={3} className="text-ink">Intäkter</th>
+                <th colSpan={4} className="text-ink">Intäkter</th>
               </tr>
               {income.map((f) => (
-                <tr key={f.code}>
-                  <td className="font-medium">{f.code}</td>
-                  <td>{f.name}</td>
-                  <td className="num">{wholeKr(ne.fields[f.code].kr)}</td>
-                </tr>
+                <FieldWithAccounts key={f.code} code={f.code} name={f.name} amount={wholeKr(ne.fields[f.code].kr)} rows={ne.fields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
               ))}
               <tr className="bg-surface-2">
-                <th colSpan={3} className="text-ink">Kostnader</th>
+                <th colSpan={4} className="text-ink">Kostnader</th>
               </tr>
               {cost.map((f) => (
-                <tr key={f.code}>
-                  <td className="font-medium">{f.code}</td>
-                  <td>{f.name}</td>
-                  <td className="num">{wholeKr(ne.fields[f.code].kr)}</td>
-                </tr>
+                <FieldWithAccounts key={f.code} code={f.code} name={f.name} amount={wholeKr(ne.fields[f.code].kr)} rows={ne.fields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
               ))}
               <tr className="font-semibold">
                 <td>R11</td>
@@ -176,57 +168,56 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
         </p>
       </div>
 
-      <Card title="Konton och kopplingar" className="mt-6">
-        <div className="overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Konto</th>
-                <th>Namn</th>
-                <th className="num">Belopp</th>
-                <th className="no-print">Fält</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(ne.unmapped.length + ne.balanceUnmapped.length) > 0 && (
-                <>
-                  <tr className="bg-warn-soft">
-                    <th colSpan={4} className="text-warn">Saknar fält</th>
-                  </tr>
-                  {[...ne.unmapped, ...ne.balanceUnmapped].map((r) => (
-                    <MappingRow key={r.number} row={r} fy={fy.id} readOnly={readOnly} />
-                  ))}
-                </>
-              )}
-              {NE_BALANCE_FIELDS.map((f) =>
-                ne.balanceFields[f.code].accounts.length ? (
-                  <FieldGroup key={f.code} title={`${f.code} ${f.name}`} rows={ne.balanceFields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
-                ) : null,
-              )}
-              {NE_FIELDS.map((f) =>
-                ne.fields[f.code].accounts.length ? (
-                  <FieldGroup key={f.code} title={`${f.code} ${f.name}`} rows={ne.fields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
-                ) : null,
-              )}
-              {(ne.excluded.length + ne.balanceExcluded.length) > 0 && <FieldGroup title="Lämnas utanför" rows={[...ne.excluded, ...ne.balanceExcluded]} fy={fy.id} readOnly={readOnly} />}
-              {allRows.length === 0 && (
+      {(ne.unmapped.length + ne.balanceUnmapped.length + ne.excluded.length + ne.balanceExcluded.length) > 0 && (
+        <Card title="Konton som inte ingår" className="no-print mt-6">
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
                 <tr>
-                  <td colSpan={4} className="text-muted">Inga resultatkonton har saldo under räkenskapsåret.</td>
+                  <th>Konto</th>
+                  <th>Namn</th>
+                  <th className="num">Belopp</th>
+                  <th>Koppling</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+              </thead>
+              <tbody>
+                {(ne.unmapped.length + ne.balanceUnmapped.length) > 0 && (
+                  <FieldGroup title="Saknar fält" rows={[...ne.balanceUnmapped, ...ne.unmapped]} fy={fy.id} readOnly={readOnly} warn />
+                )}
+                {(ne.excluded.length + ne.balanceExcluded.length) > 0 && (
+                  <FieldGroup title="Lämnas utanför" rows={[...ne.balanceExcluded, ...ne.excluded]} fy={fy.id} readOnly={readOnly} />
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
     </>
   );
 }
 
-function FieldGroup({ title, rows, fy, readOnly }: { title: string; rows: NeAccountRow[]; fy: number; readOnly: boolean }) {
+/** En post (t.ex. B9 eller R1) med kontona och deras koppling direkt under. */
+function FieldWithAccounts({ code, name, amount, rows, fy, readOnly }: { code: string; name: string; amount: string; rows: NeAccountRow[]; fy: number; readOnly: boolean }) {
   return (
     <>
-      <tr className="bg-surface-2">
-        <th colSpan={4} className="text-ink">{title}</th>
+      <tr>
+        <td className="font-medium">{code}</td>
+        <td>{name}</td>
+        <td className="num">{amount}</td>
+        <td className="no-print" />
+      </tr>
+      {rows.map((r) => (
+        <MappingRow key={r.number} row={r} fy={fy} readOnly={readOnly} />
+      ))}
+    </>
+  );
+}
+
+function FieldGroup({ title, rows, fy, readOnly, warn }: { title: string; rows: NeAccountRow[]; fy: number; readOnly: boolean; warn?: boolean }) {
+  return (
+    <>
+      <tr className={warn ? "bg-warn-soft" : "bg-surface-2"}>
+        <th colSpan={4} className={warn ? "text-warn" : "text-ink"}>{title}</th>
       </tr>
       {rows.map((r) => (
         <MappingRow key={r.number} row={r} fy={fy} readOnly={readOnly} />
