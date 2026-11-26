@@ -1,11 +1,11 @@
 import { requireCompany } from "@/lib/auth";
-import { fyLabel, pickFiscalYear } from "@/lib/fiscal";
+import { fyLabel } from "@/lib/fiscal";
+import { selectedFiscalYear } from "@/lib/fiscal-select";
 import { kr } from "@/lib/money";
 import { loadNe } from "@/lib/ne-data";
 import { NE_BALANCE_FIELDS, NE_FIELDS, NE_NONE, NE_SCHEMES, type NeAccountRow, type NeScheme } from "@/lib/ne";
 import { Card, Flash, PageHeader, readParams, type SP } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
-import { YearForm } from "@/components/YearSelect";
 import { setNeMapping, setNeScheme } from "./actions";
 
 const wholeKr = (n: number) => kr(n * 100, { decimals: false });
@@ -46,8 +46,8 @@ function MappingRow({ row, fy, readOnly }: { row: NeAccountRow; fy: number; read
 
 export default async function NeReport({ searchParams }: { searchParams: SP }) {
   const { company, companyId, role } = await requireCompany();
-  const { get, notice, error } = await readParams(searchParams);
-  const { all: years, fy } = await pickFiscalYear(companyId, get("fy"));
+  const { notice, error } = await readParams(searchParams);
+  const { fy } = await selectedFiscalYear(companyId);
 
   if (company.companyType !== "ef") {
     return (
@@ -122,7 +122,6 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
       </Card>
 
       <Card>
-        <YearForm years={years} fy={fy} />
         <div className="overflow-x-auto">
           <table className="table">
             <thead>

@@ -6,12 +6,13 @@ import { dateStr, num } from "@/lib/money";
 import { Card, Empty, PageHeader, readParams, type SP } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
 import { YearForm } from "@/components/YearSelect";
-import { fyLabel, pickFiscalYear } from "@/lib/fiscal";
+import { fyLabel } from "@/lib/fiscal";
+import { selectedFiscalYear } from "@/lib/fiscal-select";
 
 export default async function Ledger({ searchParams }: { searchParams: SP }) {
   const { companyId } = await requireCompany();
   const { get } = await readParams(searchParams);
-  const { all: years, fy } = await pickFiscalYear(companyId, get("fy"));
+  const { fy } = await selectedFiscalYear(companyId);
   const only = Number(get("account")) || undefined;
   const from = fy.start;
   const to = fy.end;
@@ -38,7 +39,7 @@ export default async function Ledger({ searchParams }: { searchParams: SP }) {
     <>
       <PageHeader title="Huvudbok" subtitle={only ? `Konto ${only}` : `Alla konton med transaktioner, räkenskapsår ${fyLabel(fy)}`} actions={<PrintButton />} />
       <Card>
-        <YearForm years={years} fy={fy}>
+        <YearForm>
           <div>
             <label className="label" htmlFor="account">Konto</label>
             <select id="account" name="account" defaultValue={only ?? ""} className="input w-72">

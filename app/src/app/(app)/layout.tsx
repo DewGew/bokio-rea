@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Sidebar } from "@/components/Sidebar";
 import { requireCompany } from "@/lib/auth";
+import { fyLabel } from "@/lib/fiscal";
+import { selectedFiscalYear } from "@/lib/fiscal-select";
+import { switchFiscalYear } from "./fiscal-actions";
 import { isAdminEmail } from "@/lib/admin";
 import { mfaAvailable } from "@/lib/mfa";
 import { IdleLogout } from "@/components/IdleLogout";
@@ -10,6 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { company, companies, user, role } = await requireCompany();
   const locked = !!company.lockedAt || !!user.lockedAt;
+  const { all: years, fy, current } = await selectedFiscalYear(company.id);
   return (
     <div className="md:flex md:min-h-screen">
       <Sidebar
@@ -18,9 +22,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         userName={user.name}
         readOnly={role === "read"}
         isAdmin={isAdminEmail(user.email)}
+        fiscalYears={[...years].reverse().map((y) => ({ id: y.id, label: fyLabel(y) + (y.closedAt ? " (stängt)" : "") }))}
+        fiscalYearId={fy.id}
       />
       <main className="min-w-0 flex-1 px-4 pb-16 pt-6 sm:px-6 md:px-10 md:pt-10">
         <div className="mx-auto max-w-[1180px]">
+          {fy.id !== current.id && (
+            <form action={switchFiscalYear} className="no-print mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-2 px-4 py-3 text-[14px] ring-1 ring-line">
+              <span>
+                <strong>Du tittar på räkenskapsår {fyLabel(fy)}.</strong> Det pågående året är {fyLabel(current)}.
+              </span>
+              <input type="hidden" name="fyId" value={current.id} />
+              <button className="btn-secondary">Visa {fyLabel(current)}</button>
+            </form>
+          )}
           {company.lockedAt && !user.lockedAt && (
             <p className="no-print mb-6 rounded-xl bg-warn-soft px-4 py-3 text-[14px] text-warn">
               <strong>{company.name} är låst av en administratör.</strong> Du kan se allt men inte ändra något.

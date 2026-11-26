@@ -3,15 +3,14 @@ import { requireCompany } from "@/lib/auth";
 import { IB_SERIES, balances, sumRange } from "@/lib/accounting";
 import { BALANCE_SECTIONS } from "@/lib/bas";
 import { num } from "@/lib/money";
-import { Card, PageHeader, readParams, type SP } from "@/components/ui";
+import { Card, PageHeader } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
-import { YearForm } from "@/components/YearSelect";
-import { fyLabel, pickFiscalYear } from "@/lib/fiscal";
+import { fyLabel } from "@/lib/fiscal";
+import { selectedFiscalYear } from "@/lib/fiscal-select";
 
-export default async function BalanceReport({ searchParams }: { searchParams: SP }) {
+export default async function BalanceReport() {
   const { companyId } = await requireCompany();
-  const { get } = await readParams(searchParams);
-  const { all: years, fy } = await pickFiscalYear(companyId, get("fy"));
+  const { fy } = await selectedFiscalYear(companyId);
   const [before, ib, closing] = await Promise.all([
     balances(companyId, { to: new Date(fy.start.getTime() - 1) }),
     balances(companyId, { from: fy.start, to: fy.end, series: { in: [IB_SERIES] } }),
@@ -31,7 +30,6 @@ export default async function BalanceReport({ searchParams }: { searchParams: SP
     <>
       <PageHeader title="Balansrapport" subtitle={`Räkenskapsår ${fyLabel(fy)} · per ${fy.end.toISOString().slice(0, 10)}`} actions={<PrintButton />} />
       <Card>
-        <YearForm years={years} fy={fy} />
         <div className="overflow-x-auto">
           <table className="table">
             {BALANCE_SECTIONS.map((section, si) => {

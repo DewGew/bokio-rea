@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { logout, switchCompany } from "@/app/(auth)/actions";
+import { switchFiscalYear } from "@/app/(app)/fiscal-actions";
 import { Icon, type IconName } from "./Icon";
 
 const NAV: { title?: string; items: [string, string, IconName][] }[] = [
@@ -73,7 +74,7 @@ type C = { id: number; name: string; companyType?: string };
 // Sidor för att lägga till bokföring döljs för användare med läsbehörighet.
 const WRITE_ONLY = new Set(["/verifications/new"]);
 
-export function Sidebar({ company, companies, userName, readOnly = false, isAdmin = false }: { company: C; companies: C[]; userName: string; readOnly?: boolean; isAdmin?: boolean }) {
+export function Sidebar({ company, companies, userName, readOnly = false, isAdmin = false, fiscalYears, fiscalYearId }: { company: C; companies: C[]; userName: string; readOnly?: boolean; isAdmin?: boolean; fiscalYears: { id: number; label: string }[]; fiscalYearId: number }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   // Markera den klickade länken direkt, innan nästa sida hunnit laddas.
@@ -127,6 +128,21 @@ export function Sidebar({ company, companies, userName, readOnly = false, isAdmi
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
               <option value="new">Lägg till företag…</option>
+            </select>
+          </form>
+          <form action={switchFiscalYear} className="mt-2">
+            <label className="sr-only" htmlFor="fiscal-year-switch">Räkenskapsår</label>
+            <select
+              key={fiscalYearId}
+              id="fiscal-year-switch"
+              name="fyId"
+              defaultValue={fiscalYearId}
+              onChange={(e) => e.target.form?.requestSubmit()}
+              className="input py-1.5 text-[13px]"
+            >
+              {fiscalYears.map((y) => (
+                <option key={y.id} value={y.id}>Räkenskapsår {y.label}</option>
+              ))}
             </select>
           </form>
         </div>

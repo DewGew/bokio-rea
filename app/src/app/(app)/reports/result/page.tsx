@@ -6,12 +6,13 @@ import { num } from "@/lib/money";
 import { Card, PageHeader, readParams, type SP } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
 import { YearForm } from "@/components/YearSelect";
-import { fyLabel, pickFiscalYear } from "@/lib/fiscal";
+import { fyLabel } from "@/lib/fiscal";
+import { selectedFiscalYear } from "@/lib/fiscal-select";
 
 export default async function ResultReport({ searchParams }: { searchParams: SP }) {
   const { companyId } = await requireCompany();
   const { get } = await readParams(searchParams);
-  const { all: years, fy } = await pickFiscalYear(companyId, get("fy"));
+  const { all: years, fy } = await selectedFiscalYear(companyId);
   const decimals = get("dec") === "1";
   // Valt räkenskapsår jämfört med föregående (om det finns).
   const prev = years[years.findIndex((y) => y.id === fy.id) - 1];
@@ -29,7 +30,7 @@ export default async function ResultReport({ searchParams }: { searchParams: SP 
     <>
       <PageHeader title="Resultatrapport" actions={<PrintButton />} />
       <Card>
-        <YearForm years={years} fy={fy}>
+        <YearForm>
           <label className="flex items-center gap-2 pb-2 text-sm">
             <input type="checkbox" name="dec" value="1" defaultChecked={decimals} /> Visa decimaler
           </label>
