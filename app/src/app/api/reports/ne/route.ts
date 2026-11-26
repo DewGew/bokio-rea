@@ -8,7 +8,6 @@ import { NE_BALANCE_FIELDS, NE_FIELDS, NE_SCHEMES } from "@/lib/ne";
 // Helvetica klarar å, ä och ö men inte smala mellanslag eller riktigt minustecken.
 const txt = (s: string) => s.replace(/[\u00a0\u2009\u202f]/g, " ").replace(/\u2212/g, "-").replace(/[^\x20-\x7e\u00c0-\u00ff]/g, "?");
 const kr = (n: number) => txt(n.toLocaleString("sv-SE", { maximumFractionDigits: 0 }));
-const krOre = (ore: number) => txt((ore / 100).toLocaleString("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
 /** NE-underlaget som PDF: fälten R1–R11 och kontona bakom varje fält. */
 export async function GET(req: Request) {
@@ -53,22 +52,20 @@ export async function GET(req: Request) {
 
     line("Balansräkning / räkenskapsschema", "Hela kr", { f: bold, size: 12, gap: 8 });
   for (const section of ["Anläggningstillgångar", "Omsättningstillgångar", "Eget kapital", "Obeskattade reserver", "Avsättningar", "Skulder"]) {
+    const fields = NE_BALANCE_FIELDS.filter((x) => x.section === section && ne.balanceFields[x.code].kr !== 0);
+    if (!fields.length) continue;
     line(section, "", { f: bold, size: 9.5, gap: 3 });
-    for (const f of NE_BALANCE_FIELDS.filter((x) => x.section === section)) {
-      line(`${f.code}  ${f.name}`, kr(ne.balanceFields[f.code].kr), { indent: 8, size: 9, gap: 3 });
-      for (const r of ne.balanceFields[f.code].accounts) line(`${r.number}  ${r.name}`, krOre(r.amount), { indent: 24, size: 8, gap: 2, f: font });
-    }
+    for (const f of fields) line(`${f.code}  ${f.name}`, kr(ne.balanceFields[f.code].kr), { indent: 8, size: 9, gap: 3 });
   }
   line("Summa tillgångar (B1–B9)", kr(ne.balanceAssets), { f: bold, size: 9 });
   line("Summa eget kapital och skulder (B10–B16)", kr(ne.balanceEquityLiabilities), { f: bold, size: 9 });
   line(`Differens (ska vara 0): ${kr(ne.balanceDifference)} kr`, "", { size: 9, gap: 12 });
   line("Räkenskapsschema, resultaträkning", "Hela kr", { f: bold, gap: 8 });
   const group = (title: string, kind: "income" | "cost") => {
+    const fields = NE_FIELDS.filter((x) => x.kind === kind && ne.fields[x.code].kr !== 0);
+    if (!fields.length) return;
     line(title, "", { f: bold, gap: 4 });
-    for (const f of NE_FIELDS.filter((x) => x.kind === kind)) {
-      line(`${f.code}  ${f.name}`, kr(ne.fields[f.code].kr), { indent: 8 });
-      for (const r of ne.fields[f.code].accounts) line(`${r.number}  ${r.name}`, krOre(r.amount), { indent: 24, size: 8, gap: 2 });
-    }
+    for (const f of fields) line(`${f.code}  ${f.name}`, kr(ne.fields[f.code].kr), { indent: 8 });
     y -= 4;
   };
   group("Intäkter", "income");
@@ -79,24 +76,11 @@ export async function GET(req: Request) {
     "",
     { size: 9, gap: 8 },
   );
-  if (ne.unmapped.length) line(`${ne.unmapped.length} konto(n) saknar fält och ingår inte i summorna.`, "", { size: 9, f: bold, gap: 8 });
+  const unmappedCount = ne.unmapped.length + ne.balanceUnmapped.length;
+  if (unmappedCount) line(`${unmappedCount} konto(n) saknar fält och ingår inte i summorna.`, "", { size: 9, f: bold, gap: 8 });
   line("Underlag, inte en färdig deklaration. Kontrollera fälten mot NE-blanketten (SKV 2161) för inkomståret.", "", { size: 8.5, gap: 3 });
   line("Egenavgifter, schablonavdrag, fonder och räntefördelning ingår inte. Konto 899x (bokfört resultat) räknas inte med.", "", { size: 8.5, gap: 16 });
 
-  if (ne.unmapped.length || ne.balanceUnmapped.length) {
-    ensure(30);
-    line("Saknar fält", "", { f: bold, size: 9.5, gap: 3 });
-    for (const r of [...ne.balanceUnmapped, ...ne.unmapped]) {
-      line(`${r.number}  ${r.name}`, krOre(r.amount), { size: 9, indent: 8, gap: 3 });
-      if (r.note) line(`Obs: ${r.note}`, "", { size: 8, indent: 18, gap: 3 });
-    }
-    y -= 6;
-  }
-  if (ne.excluded.length || ne.balanceExcluded.length) {
-    ensure(30);
-    line("Lämnas utanför", "", { f: bold, size: 9.5, gap: 3 });
-    for (const r of [...ne.balanceExcluded, ...ne.excluded]) line(`${r.number}  ${r.name}`, krOre(r.amount), { size: 9, indent: 8, gap: 3 });
-  }
 
   const bytes = await pdf.save();
   return new Response(Buffer.from(bytes), {

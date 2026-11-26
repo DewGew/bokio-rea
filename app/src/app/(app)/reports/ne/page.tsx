@@ -13,7 +13,7 @@ const wholeKr = (n: number) => kr(n * 100, { decimals: false });
 function MappingRow({ row, fy, readOnly }: { row: NeAccountRow; fy: number; readOnly: boolean }) {
   const current = row.source === "none" ? NE_NONE : row.source === "override" ? row.field! : "default";
   return (
-    <tr>
+    <tr className="no-print">
       <td className="whitespace-nowrap pl-8 text-[13px] text-muted">
         <a href={`/reports/ledger?account=${row.number}&fy=${fy}`} className="hover:text-brand">{row.number}</a>
       </td>
@@ -106,9 +106,9 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
             <thead><tr><th>Fält</th><th>Benämning</th><th className="num">Belopp</th><th className="no-print">Koppling</th></tr></thead>
             <tbody>
               {["Anläggningstillgångar","Omsättningstillgångar","Eget kapital","Obeskattade reserver","Avsättningar","Skulder"].flatMap((section) => [
-                <tr key={`section-${section}`} className="bg-surface-2"><th colSpan={4} className="text-ink">{section}</th></tr>,
+                <tr key={`section-${section}`} className={NE_BALANCE_FIELDS.some((f) => f.section === section && ne.balanceFields[f.code].kr !== 0) ? "bg-surface-2" : "bg-surface-2 no-print"}><th colSpan={4} className="text-ink">{section}</th></tr>,
                 ...NE_BALANCE_FIELDS.filter((f) => f.section === section).map((f) => (
-                  <FieldWithAccounts key={f.code} code={f.code} name={f.name} amount={wholeKr(ne.balanceFields[f.code].kr)} rows={ne.balanceFields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
+                  <FieldWithAccounts key={f.code} code={f.code} name={f.name} value={ne.balanceFields[f.code].kr} rows={ne.balanceFields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
                 )),
               ])}
               <tr className="font-semibold"><td colSpan={2}>Summa tillgångar (B1–B9)</td><td className="num">{wholeKr(ne.balanceAssets)}</td></tr>
@@ -132,17 +132,17 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
               </tr>
             </thead>
             <tbody>
-              <tr className="bg-surface-2">
+              <tr className={income.some((f) => ne.fields[f.code].kr !== 0) ? "bg-surface-2" : "bg-surface-2 no-print"}>
                 <th colSpan={4} className="text-ink">Intäkter</th>
               </tr>
               {income.map((f) => (
-                <FieldWithAccounts key={f.code} code={f.code} name={f.name} amount={wholeKr(ne.fields[f.code].kr)} rows={ne.fields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
+                <FieldWithAccounts key={f.code} code={f.code} name={f.name} value={ne.fields[f.code].kr} rows={ne.fields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
               ))}
-              <tr className="bg-surface-2">
+              <tr className={cost.some((f) => ne.fields[f.code].kr !== 0) ? "bg-surface-2" : "bg-surface-2 no-print"}>
                 <th colSpan={4} className="text-ink">Kostnader</th>
               </tr>
               {cost.map((f) => (
-                <FieldWithAccounts key={f.code} code={f.code} name={f.name} amount={wholeKr(ne.fields[f.code].kr)} rows={ne.fields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
+                <FieldWithAccounts key={f.code} code={f.code} name={f.name} value={ne.fields[f.code].kr} rows={ne.fields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
               ))}
               <tr className="font-semibold">
                 <td>R11</td>
@@ -197,13 +197,13 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
 }
 
 /** En post (t.ex. B9 eller R1) med kontona och deras koppling direkt under. */
-function FieldWithAccounts({ code, name, amount, rows, fy, readOnly }: { code: string; name: string; amount: string; rows: NeAccountRow[]; fy: number; readOnly: boolean }) {
+function FieldWithAccounts({ code, name, value, rows, fy, readOnly }: { code: string; name: string; value: number; rows: NeAccountRow[]; fy: number; readOnly: boolean }) {
   return (
     <>
-      <tr>
+      <tr className={value === 0 ? "no-print" : undefined}>
         <td className="font-medium">{code}</td>
         <td>{name}</td>
-        <td className="num">{amount}</td>
+        <td className="num">{wholeKr(value)}</td>
         <td className="no-print" />
       </tr>
       {rows.map((r) => (

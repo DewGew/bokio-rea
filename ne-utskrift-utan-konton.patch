@@ -1,0 +1,132 @@
+diff --git a/app/src/app/(app)/reports/ne/page.tsx b/app/src/app/(app)/reports/ne/page.tsx
+index 328a6c5..c1b8094 100644
+--- a/app/src/app/(app)/reports/ne/page.tsx
++++ b/app/src/app/(app)/reports/ne/page.tsx
+@@ -13,7 +13,7 @@ const wholeKr = (n: number) => kr(n * 100, { decimals: false });
+ function MappingRow({ row, fy, readOnly }: { row: NeAccountRow; fy: number; readOnly: boolean }) {
+   const current = row.source === "none" ? NE_NONE : row.source === "override" ? row.field! : "default";
+   return (
+-    <tr>
++    <tr className="no-print">
+       <td className="whitespace-nowrap pl-8 text-[13px] text-muted">
+         <a href={`/reports/ledger?account=${row.number}&fy=${fy}`} className="hover:text-brand">{row.number}</a>
+       </td>
+@@ -106,9 +106,9 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
+             <thead><tr><th>Fält</th><th>Benämning</th><th className="num">Belopp</th><th className="no-print">Koppling</th></tr></thead>
+             <tbody>
+               {["Anläggningstillgångar","Omsättningstillgångar","Eget kapital","Obeskattade reserver","Avsättningar","Skulder"].flatMap((section) => [
+-                <tr key={`section-${section}`} className="bg-surface-2"><th colSpan={4} className="text-ink">{section}</th></tr>,
++                <tr key={`section-${section}`} className={NE_BALANCE_FIELDS.some((f) => f.section === section && ne.balanceFields[f.code].kr !== 0) ? "bg-surface-2" : "bg-surface-2 no-print"}><th colSpan={4} className="text-ink">{section}</th></tr>,
+                 ...NE_BALANCE_FIELDS.filter((f) => f.section === section).map((f) => (
+-                  <FieldWithAccounts key={f.code} code={f.code} name={f.name} amount={wholeKr(ne.balanceFields[f.code].kr)} rows={ne.balanceFields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
++                  <FieldWithAccounts key={f.code} code={f.code} name={f.name} value={ne.balanceFields[f.code].kr} rows={ne.balanceFields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
+                 )),
+               ])}
+               <tr className="font-semibold"><td colSpan={2}>Summa tillgångar (B1–B9)</td><td className="num">{wholeKr(ne.balanceAssets)}</td></tr>
+@@ -132,17 +132,17 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
+               </tr>
+             </thead>
+             <tbody>
+-              <tr className="bg-surface-2">
++              <tr className={income.some((f) => ne.fields[f.code].kr !== 0) ? "bg-surface-2" : "bg-surface-2 no-print"}>
+                 <th colSpan={4} className="text-ink">Intäkter</th>
+               </tr>
+               {income.map((f) => (
+-                <FieldWithAccounts key={f.code} code={f.code} name={f.name} amount={wholeKr(ne.fields[f.code].kr)} rows={ne.fields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
++                <FieldWithAccounts key={f.code} code={f.code} name={f.name} value={ne.fields[f.code].kr} rows={ne.fields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
+               ))}
+-              <tr className="bg-surface-2">
++              <tr className={cost.some((f) => ne.fields[f.code].kr !== 0) ? "bg-surface-2" : "bg-surface-2 no-print"}>
+                 <th colSpan={4} className="text-ink">Kostnader</th>
+               </tr>
+               {cost.map((f) => (
+-                <FieldWithAccounts key={f.code} code={f.code} name={f.name} amount={wholeKr(ne.fields[f.code].kr)} rows={ne.fields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
++                <FieldWithAccounts key={f.code} code={f.code} name={f.name} value={ne.fields[f.code].kr} rows={ne.fields[f.code].accounts} fy={fy.id} readOnly={readOnly} />
+               ))}
+               <tr className="font-semibold">
+                 <td>R11</td>
+@@ -197,13 +197,13 @@ export default async function NeReport({ searchParams }: { searchParams: SP }) {
+ }
+ 
+ /** En post (t.ex. B9 eller R1) med kontona och deras koppling direkt under. */
+-function FieldWithAccounts({ code, name, amount, rows, fy, readOnly }: { code: string; name: string; amount: string; rows: NeAccountRow[]; fy: number; readOnly: boolean }) {
++function FieldWithAccounts({ code, name, value, rows, fy, readOnly }: { code: string; name: string; value: number; rows: NeAccountRow[]; fy: number; readOnly: boolean }) {
+   return (
+     <>
+-      <tr>
++      <tr className={value === 0 ? "no-print" : undefined}>
+         <td className="font-medium">{code}</td>
+         <td>{name}</td>
+-        <td className="num">{amount}</td>
++        <td className="num">{wholeKr(value)}</td>
+         <td className="no-print" />
+       </tr>
+       {rows.map((r) => (
+diff --git a/app/src/app/api/reports/ne/route.ts b/app/src/app/api/reports/ne/route.ts
+index 6bf7614..7f41c92 100644
+--- a/app/src/app/api/reports/ne/route.ts
++++ b/app/src/app/api/reports/ne/route.ts
+@@ -8,7 +8,6 @@ import { NE_BALANCE_FIELDS, NE_FIELDS, NE_SCHEMES } from "@/lib/ne";
+ // Helvetica klarar å, ä och ö men inte smala mellanslag eller riktigt minustecken.
+ const txt = (s: string) => s.replace(/[\u00a0\u2009\u202f]/g, " ").replace(/\u2212/g, "-").replace(/[^\x20-\x7e\u00c0-\u00ff]/g, "?");
+ const kr = (n: number) => txt(n.toLocaleString("sv-SE", { maximumFractionDigits: 0 }));
+-const krOre = (ore: number) => txt((ore / 100).toLocaleString("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+ 
+ /** NE-underlaget som PDF: fälten R1–R11 och kontona bakom varje fält. */
+ export async function GET(req: Request) {
+@@ -53,22 +52,20 @@ export async function GET(req: Request) {
+ 
+     line("Balansräkning / räkenskapsschema", "Hela kr", { f: bold, size: 12, gap: 8 });
+   for (const section of ["Anläggningstillgångar", "Omsättningstillgångar", "Eget kapital", "Obeskattade reserver", "Avsättningar", "Skulder"]) {
++    const fields = NE_BALANCE_FIELDS.filter((x) => x.section === section && ne.balanceFields[x.code].kr !== 0);
++    if (!fields.length) continue;
+     line(section, "", { f: bold, size: 9.5, gap: 3 });
+-    for (const f of NE_BALANCE_FIELDS.filter((x) => x.section === section)) {
+-      line(`${f.code}  ${f.name}`, kr(ne.balanceFields[f.code].kr), { indent: 8, size: 9, gap: 3 });
+-      for (const r of ne.balanceFields[f.code].accounts) line(`${r.number}  ${r.name}`, krOre(r.amount), { indent: 24, size: 8, gap: 2, f: font });
+-    }
++    for (const f of fields) line(`${f.code}  ${f.name}`, kr(ne.balanceFields[f.code].kr), { indent: 8, size: 9, gap: 3 });
+   }
+   line("Summa tillgångar (B1–B9)", kr(ne.balanceAssets), { f: bold, size: 9 });
+   line("Summa eget kapital och skulder (B10–B16)", kr(ne.balanceEquityLiabilities), { f: bold, size: 9 });
+   line(`Differens (ska vara 0): ${kr(ne.balanceDifference)} kr`, "", { size: 9, gap: 12 });
+   line("Räkenskapsschema, resultaträkning", "Hela kr", { f: bold, gap: 8 });
+   const group = (title: string, kind: "income" | "cost") => {
++    const fields = NE_FIELDS.filter((x) => x.kind === kind && ne.fields[x.code].kr !== 0);
++    if (!fields.length) return;
+     line(title, "", { f: bold, gap: 4 });
+-    for (const f of NE_FIELDS.filter((x) => x.kind === kind)) {
+-      line(`${f.code}  ${f.name}`, kr(ne.fields[f.code].kr), { indent: 8 });
+-      for (const r of ne.fields[f.code].accounts) line(`${r.number}  ${r.name}`, krOre(r.amount), { indent: 24, size: 8, gap: 2 });
+-    }
++    for (const f of fields) line(`${f.code}  ${f.name}`, kr(ne.fields[f.code].kr), { indent: 8 });
+     y -= 4;
+   };
+   group("Intäkter", "income");
+@@ -79,24 +76,11 @@ export async function GET(req: Request) {
+     "",
+     { size: 9, gap: 8 },
+   );
+-  if (ne.unmapped.length) line(`${ne.unmapped.length} konto(n) saknar fält och ingår inte i summorna.`, "", { size: 9, f: bold, gap: 8 });
++  const unmappedCount = ne.unmapped.length + ne.balanceUnmapped.length;
++  if (unmappedCount) line(`${unmappedCount} konto(n) saknar fält och ingår inte i summorna.`, "", { size: 9, f: bold, gap: 8 });
+   line("Underlag, inte en färdig deklaration. Kontrollera fälten mot NE-blanketten (SKV 2161) för inkomståret.", "", { size: 8.5, gap: 3 });
+   line("Egenavgifter, schablonavdrag, fonder och räntefördelning ingår inte. Konto 899x (bokfört resultat) räknas inte med.", "", { size: 8.5, gap: 16 });
+ 
+-  if (ne.unmapped.length || ne.balanceUnmapped.length) {
+-    ensure(30);
+-    line("Saknar fält", "", { f: bold, size: 9.5, gap: 3 });
+-    for (const r of [...ne.balanceUnmapped, ...ne.unmapped]) {
+-      line(`${r.number}  ${r.name}`, krOre(r.amount), { size: 9, indent: 8, gap: 3 });
+-      if (r.note) line(`Obs: ${r.note}`, "", { size: 8, indent: 18, gap: 3 });
+-    }
+-    y -= 6;
+-  }
+-  if (ne.excluded.length || ne.balanceExcluded.length) {
+-    ensure(30);
+-    line("Lämnas utanför", "", { f: bold, size: 9.5, gap: 3 });
+-    for (const r of [...ne.balanceExcluded, ...ne.excluded]) line(`${r.number}  ${r.name}`, krOre(r.amount), { size: 9, indent: 8, gap: 3 });
+-  }
+ 
+   const bytes = await pdf.save();
+   return new Response(Buffer.from(bytes), {
